@@ -15,13 +15,15 @@ declare global {
 
 const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
     const gross = result.grossAnnual;
+    const safeGross = gross > 0 ? gross : 1; // Prevent division by zero
+
     const tax = result.totalDeductionsMonthly * 12;
     const costs = result.personalCostsTotal * 12;
     const disposable = Math.max(0, result.netAnnual - costs);
     
-    const taxPct = (tax / gross) * 100;
-    const costsPct = (costs / gross) * 100;
-    const dispPct = (disposable / gross) * 100;
+    const taxPct = (tax / safeGross) * 100;
+    const costsPct = (costs / safeGross) * 100;
+    const dispPct = (disposable / safeGross) * 100;
     
     const r = 15.9155;
 
@@ -51,7 +53,7 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
                     )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-900">
-                    <span className="text-xl font-extrabold tracking-tight">{((result.netAnnual / gross) * 100).toFixed(0)}%</span>
+                    <span className="text-xl font-extrabold tracking-tight">{gross > 0 ? ((result.netAnnual / gross) * 100).toFixed(0) : '0'}%</span>
                 </div>
             </div>
             <div className="flex gap-3 mt-6">
@@ -132,7 +134,13 @@ const App: React.FC = () => {
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                setInputs(prev => ({ ...prev, ...parsed }));
+                // Deep merge for robustness
+                setInputs(prev => ({ 
+                    ...prev, 
+                    ...parsed,
+                    costs: { ...prev.costs, ...(parsed.costs || {}) },
+                    details: { ...prev.details, ...(parsed.details || {}) }
+                }));
             } catch (e) {}
         }
     }
@@ -219,7 +227,7 @@ const App: React.FC = () => {
         // A4 size
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
+        // const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgProps = pdf.getImageProperties(imgData);
         const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
         
@@ -301,35 +309,18 @@ const App: React.FC = () => {
             </div>
             <div className="flex gap-3">
                 <button 
-                    onClick={() => {
-                        setInputs({
-                            grossIncome: 50000,
-                            frequency: 'annual',
-                            country: CountryCode.USA,
-                            costs: { rent: 0, groceries: 0, utilities: 0, transport: 0, insurance: 0, emergencyFund: 0, debt: 0, freedomFund: 0 },
-                            details: { age: 30, maritalStatus: 'single', churchTax: false },
-                            annualBonus: 0
-                        });
-                        setMode('gross');
-                    }}
-                    className="h-8 px-4 rounded-full bg-white border border-gray-200/60 text-[13px] font-semibold text-slate-700 hover:bg-gray-50 transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
-                >
-                    <i className="fas fa-redo-alt text-slate-400"></i>
-                    Reset
-                </button>
-                <button 
                     onClick={shareLink}
-                    className="h-8 px-4 rounded-full bg-white border border-gray-200/60 text-[13px] font-semibold text-slate-700 hover:bg-gray-50 transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
+                    className="h-9 px-5 rounded-full bg-white border border-gray-200/60 text-[13px] font-bold text-slate-700 hover:bg-gray-50 transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
                 >
                     {copyFeedback ? <i className="fas fa-check text-green-500"></i> : <i className="fas fa-share-square text-blue-500"></i>}
-                    {copyFeedback ? 'Copied' : 'Share'}
+                    {copyFeedback ? 'Copied!' : 'Share'}
                 </button>
                 <button 
                     onClick={() => setShowSources(!showSources)}
-                    className="h-8 w-8 rounded-full bg-white border border-gray-200/60 flex items-center justify-center hover:bg-gray-50 transition shadow-sm active:scale-95 duration-150"
-                    title="Sources"
+                    className="h-9 w-9 rounded-full bg-white border border-gray-200/60 flex items-center justify-center hover:bg-gray-50 transition shadow-sm active:scale-95 duration-150"
+                    title="Data Sources"
                 >
-                    <i className="fas fa-info text-slate-500 text-xs"></i>
+                    <i className="fas fa-info text-slate-500 text-sm"></i>
                 </button>
             </div>
         </div>
@@ -440,7 +431,7 @@ const App: React.FC = () => {
                                 type="number" 
                                 min="0"
                                 autoComplete="off"
-                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
+                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-gray-400 focus:bg-white focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
                                 value={mode === 'gross' ? inputs.grossIncome : targetNet}
                                 onChange={(e) => {
                                     const val = parseFloat(e.target.value) || 0;
@@ -469,7 +460,7 @@ const App: React.FC = () => {
                                 min="0"
                                 autoComplete="off"
                                 placeholder="0"
-                                className="w-full p-4 pl-10 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-lg"
+                                className="w-full p-4 pl-10 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-lg"
                                 value={inputs.annualBonus || ''}
                                 onChange={(e) => setInputs({...inputs, annualBonus: parseFloat(e.target.value) || 0})}
                             />
@@ -553,7 +544,7 @@ const App: React.FC = () => {
                                     <input 
                                         type="number"
                                         autoComplete="off"
-                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] border-none rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
+                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] border-none rounded-xl text-slate-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
                                         value={(inputs.costs as any)[field.key] || ''}
                                         placeholder="0"
                                         onChange={(e) => handleCostChange(field.key as any, e.target.value)}
@@ -731,7 +722,7 @@ const App: React.FC = () => {
                                         type="number"
                                         value={convertAmount}
                                         onChange={(e) => setConvertAmount(parseFloat(e.target.value) || 0)}
-                                        className="w-full p-3 pl-8 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg"
+                                        className="w-full p-3 pl-8 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg placeholder-gray-400"
                                     />
                                  </div>
                              </div>
@@ -786,8 +777,8 @@ const App: React.FC = () => {
                                  </div>
                              </div>
                              <div className="flex-1 w-full bg-[#A0E870]/10 rounded-2xl p-3 border border-[#A0E870]/20 text-right">
-                                 <label className="block text-[10px] font-bold text-[#7ac74f] uppercase tracking-wider mb-1">Result</label>
-                                 <div className="text-xl font-extrabold text-[#5a8c3e] truncate">
+                                 <label className="block text-[10px] font-bold text-[#5a8c3e] uppercase tracking-wider mb-1">Result</label>
+                                 <div className="text-xl font-extrabold text-[#46752d] truncate">
                                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: COUNTRY_RULES[toCurrency].currency }).format(convertedResult)}
                                  </div>
                              </div>
@@ -810,14 +801,14 @@ const App: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="p-0">
-                            <table className="w-full text-sm text-left">
+                        <div className="p-0 overflow-x-auto">
+                            <table className="w-full text-sm text-left min-w-[600px]">
                                 <thead className="text-xs text-[#86868b] uppercase font-bold bg-[#F5F5F7] border-b border-gray-100">
                                     <tr>
                                         <th className="px-6 py-4 pl-8">Item</th>
                                         <th className="px-6 py-4 text-right">Annual</th>
                                         <th className="px-6 py-4 text-right">Monthly</th>
-                                        <th className="px-6 py-4 text-right hidden sm:table-cell">%</th>
+                                        <th className="px-6 py-4 text-right">%</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
@@ -825,7 +816,7 @@ const App: React.FC = () => {
                                         <td className="px-6 py-4 pl-8 font-bold">Gross Income</td>
                                         <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossAnnual)}</td>
                                         <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossMonthly)}</td>
-                                        <td className="px-6 py-4 text-right text-slate-400 font-semibold hidden sm:table-cell">100%</td>
+                                        <td className="px-6 py-4 text-right text-slate-400 font-semibold">100%</td>
                                     </tr>
                                     {result.deductionsBreakdown.map((d, idx) => (
                                         <tr key={idx} className={`hover:bg-gray-50 transition-colors ${d.isEmployer ? 'text-slate-400' : 'text-[#FF3B30]'}`}>
@@ -843,8 +834,8 @@ const App: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right font-bold">-{formatCurrency(d.amount)}</td>
                                             <td className="px-6 py-4 text-right font-bold">-{formatCurrency(d.amount / 12)}</td>
-                                            <td className="px-6 py-4 text-right text-slate-400 font-semibold hidden sm:table-cell">
-                                                {(d.amount / result.grossAnnual * 100).toFixed(1)}%
+                                            <td className="px-6 py-4 text-right text-slate-400 font-semibold">
+                                                {(d.amount / (result.grossAnnual || 1) * 100).toFixed(1)}%
                                             </td>
                                         </tr>
                                     ))}
@@ -852,8 +843,8 @@ const App: React.FC = () => {
                                         <td className="px-6 py-4 pl-8 font-extrabold">Net Income</td>
                                         <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netAnnual)}</td>
                                         <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netMonthly)}</td>
-                                        <td className="px-6 py-4 text-right text-slate-500 font-bold hidden sm:table-cell">
-                                            {(result.netAnnual / result.grossAnnual * 100).toFixed(1)}%
+                                        <td className="px-6 py-4 text-right text-slate-500 font-bold">
+                                            {(result.netAnnual / (result.grossAnnual || 1) * 100).toFixed(1)}%
                                         </td>
                                     </tr>
                                 </tbody>
@@ -941,14 +932,14 @@ const App: React.FC = () => {
                                    </td>
                                    <td className="py-4 px-4 text-right font-medium">-{formatCurrency(d.amount)}</td>
                                    <td className="py-4 px-4 text-right font-medium">-{formatCurrency(d.amount/12)}</td>
-                                   <td className="py-4 px-4 text-right font-medium">{(d.amount/result.grossAnnual * 100).toFixed(1)}%</td>
+                                   <td className="py-4 px-4 text-right font-medium">{(d.amount/(result.grossAnnual || 1) * 100).toFixed(1)}%</td>
                                </tr>
                            ))}
                            <tr className="bg-slate-100 font-extrabold text-slate-900 border-t-2 border-slate-300">
                                <td className="py-4 px-4 text-lg">NET INCOME</td>
                                <td className="py-4 px-4 text-right text-lg">{formatCurrency(result.netAnnual)}</td>
                                <td className="py-4 px-4 text-right text-lg">{formatCurrency(result.netMonthly)}</td>
-                               <td className="py-4 px-4 text-right text-lg">{(result.netAnnual/result.grossAnnual*100).toFixed(1)}%</td>
+                               <td className="py-4 px-4 text-right text-lg">{(result.netAnnual/(result.grossAnnual || 1)*100).toFixed(1)}%</td>
                            </tr>
                       </tbody>
                   </table>
