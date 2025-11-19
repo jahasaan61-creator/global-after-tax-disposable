@@ -1,0 +1,5 @@
+{
+  "name": " Global Net Pay Calculator",
+  "description": "A client-side, zero-cost salary calculator for 8 countries (USA, CH, CA, DE, IE, NZ, NO, SG) featuring accurate tax deduction breakdowns, disposable income estimation, PDF export, and an AI-powered tax assistant using Gemini Search Grounding.",
+  "requestFramePermissions": []
+}
