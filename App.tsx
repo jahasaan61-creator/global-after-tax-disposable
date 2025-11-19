@@ -287,7 +287,7 @@ const App: React.FC = () => {
           {/* Left Column: Inputs */}
           <div className="lg:col-span-4 space-y-6">
             {/* Income Section */}
-            <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+            <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-cyan-500 p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
@@ -426,7 +426,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Costs Section */}
-            <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+            <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
@@ -476,9 +476,11 @@ const App: React.FC = () => {
              {result && (
                  <>
                     {/* Hero Card (Gross) - Redesigned */}
-                    <div className="bg-gradient-to-br from-[#2c2c2e] to-[#1c1c1e] p-6 md:p-8 rounded-[32px] shadow-2xl text-white relative overflow-hidden group border border-white/10">
+                    <div className="bg-gradient-to-br from-[#2c2c2e] to-[#1c1c1e] p-6 md:p-8 rounded-[32px] shadow-2xl text-white relative overflow-hidden group border border-white/10 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                         <div className="absolute -right-6 -bottom-6 text-white/5 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                            <i className="fas fa-coins"></i>
+                            <div className="text-yellow-500/20">
+                                <i className="fas fa-coins"></i>
+                            </div>
                         </div>
                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div>
@@ -506,7 +508,7 @@ const App: React.FC = () => {
                     {/* Key Metrics Row */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Net Pay Card - Gradient Redesign */}
-                        <div className="bg-gradient-to-br from-[#007AFF] to-[#0055ff] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col h-full">
+                        <div className="bg-gradient-to-br from-[#007AFF] to-[#0055ff] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col h-full transition-all duration-300 hover:shadow-2xl">
                             <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-money-bill-wave"></i>
                             </div>
@@ -539,7 +541,7 @@ const App: React.FC = () => {
                         </div>
 
                         {/* Disposable Card - Gradient Redesign */}
-                        <div className="bg-gradient-to-br from-[#34C759] to-[#2a9d48] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col h-full">
+                        <div className="bg-gradient-to-br from-[#34C759] to-[#2a9d48] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col h-full transition-all duration-300 hover:shadow-2xl">
                              <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-star"></i>
                             </div>
@@ -572,7 +574,7 @@ const App: React.FC = () => {
                         </div>
                         
                         {/* Chart Card - Light Theme Redesign */}
-                        <div className="bg-white p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white text-slate-900 relative overflow-hidden group flex flex-col justify-between h-full">
+                        <div className="bg-white p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white text-slate-900 relative overflow-hidden group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl">
                              <div className="absolute -right-8 -bottom-8 text-slate-50 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-chart-pie"></i>
                              </div>
@@ -591,7 +593,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Detailed Breakdown Table */}
-                    <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+                    <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
                          {/* Gradient Header */}
                         <div className="bg-gradient-to-r from-slate-700 to-slate-800 p-6 flex justify-between items-center relative">
                              <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
