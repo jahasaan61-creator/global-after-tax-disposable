@@ -34,7 +34,9 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
         <div className="flex flex-col items-center justify-center w-full h-full">
             <div className="relative w-32 h-32 md:w-40 md:h-40">
                 <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90 origin-center">
-                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
+                    {/* Track - Light Gray for Light Theme */}
+                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#F1F5F9" strokeWidth="6" />
+                    
                     {taxPct > 0 && (
                     <circle cx="21" cy="21" r={r} fill="transparent" stroke="#FF3B30" strokeWidth="6" 
                         strokeDasharray={`${taxPct} ${100 - taxPct}`} strokeDashoffset={0} strokeLinecap="round" />
@@ -48,23 +50,23 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
                         strokeDasharray={`${costsPct} ${100 - costsPct}`} strokeDashoffset={-(taxPct + netPct)} strokeLinecap="round" />
                     )}
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-                    <span className="text-[10px] text-white/50 uppercase font-extrabold tracking-wide">Net</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-900">
+                    <span className="text-[10px] text-slate-400 uppercase font-extrabold tracking-wide">Net</span>
                     <span className="text-xl font-extrabold tracking-tight">{((result.netAnnual / gross) * 100).toFixed(0)}%</span>
                 </div>
             </div>
             <div className="flex gap-3 mt-6">
                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#FF3B30] shadow-[0_0_8px_rgba(255,59,48,0.6)]"></div>
-                    <span className="text-[11px] text-white/70 font-bold uppercase tracking-wide">Tax</span>
+                    <div className="w-2 h-2 rounded-full bg-[#FF3B30]"></div>
+                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Tax</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#007AFF] shadow-[0_0_8px_rgba(0,122,255,0.6)]"></div>
-                    <span className="text-[11px] text-white/70 font-bold uppercase tracking-wide">Costs</span>
+                    <div className="w-2 h-2 rounded-full bg-[#007AFF]"></div>
+                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Costs</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#34C759] shadow-[0_0_8px_rgba(52,199,89,0.6)]"></div>
-                    <span className="text-[11px] text-white/70 font-bold uppercase tracking-wide">Net</span>
+                    <div className="w-2 h-2 rounded-full bg-[#34C759]"></div>
+                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Net</span>
                 </div>
             </div>
         </div>
@@ -287,7 +289,7 @@ const App: React.FC = () => {
             {/* Income Section */}
             <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
                 {/* Gradient Header */}
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 md:p-8 pb-10 relative text-white">
+                <div className="bg-gradient-to-r from-blue-600 to-cyan-500 p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
                      <div className="relative z-10 flex justify-between items-center">
                         <div className="flex items-center gap-3">
@@ -426,7 +428,7 @@ const App: React.FC = () => {
             {/* Costs Section */}
             <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
                 {/* Gradient Header */}
-                <div className="bg-gradient-to-r from-rose-500 to-orange-500 p-6 md:p-8 pb-10 relative text-white">
+                <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
                      <div className="relative z-10 flex justify-between items-center">
                         <div className="flex items-center gap-3">
@@ -504,70 +506,82 @@ const App: React.FC = () => {
                     {/* Key Metrics Row */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Net Pay Card - Gradient Redesign */}
-                        <div className="bg-gradient-to-br from-[#007AFF] to-[#0055ff] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col justify-between">
+                        <div className="bg-gradient-to-br from-[#007AFF] to-[#0055ff] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col h-full">
                             <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-money-bill-wave"></i>
                             </div>
-                            <div className="relative z-10 mb-4">
-                                <div className="flex items-center justify-between mb-3">
+                            
+                            <div className="relative z-10 flex flex-col h-full justify-between">
+                                <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
                                         <i className="fas fa-wallet text-lg text-white"></i>
                                     </div>
-                                    <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-1 rounded-full uppercase tracking-wide border border-white/10">
-                                        Net
-                                    </span>
+                                    <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
+                                        <div>Net Monthly</div>
+                                        <div>Pay</div>
+                                    </div>
                                 </div>
-                                <p className="text-white/80 text-[11px] uppercase font-extrabold tracking-wide mb-1">Net Monthly Pay</p>
-                                <h3 className="text-3xl font-extrabold text-white tracking-tight">{formatCurrency(result.netMonthly)}</h3>
-                            </div>
-                            <div className="relative z-10 mt-auto pt-4 border-t border-white/20 flex justify-between items-end">
-                                <div>
-                                    <p className="text-white/60 text-[10px] uppercase font-bold mb-0.5">Annual Net</p>
-                                    <p className="text-white font-bold text-sm">{formatCurrency(result.netAnnual)}</p>
+
+                                <div className="mt-6 mb-4">
+                                    <h3 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-none">
+                                        {formatCurrency(result.netMonthly)}
+                                    </h3>
                                 </div>
-                                <i className="fas fa-arrow-right text-white/50 text-xs group-hover:text-white group-hover:translate-x-1 transition-all"></i>
+
+                                <div className="pt-4 border-t border-white/20 flex justify-between items-end">
+                                    <div>
+                                        <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Net</p>
+                                        <p className="text-white font-extrabold text-xl">{formatCurrency(result.netAnnual)}</p>
+                                    </div>
+                                    <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
+                                </div>
                             </div>
                         </div>
 
                         {/* Disposable Card - Gradient Redesign */}
-                        <div className="bg-gradient-to-br from-[#34C759] to-[#2a9d48] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col justify-between">
-                            <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                        <div className="bg-gradient-to-br from-[#34C759] to-[#2a9d48] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col h-full">
+                             <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-star"></i>
                             </div>
-                            <div className="relative z-10 mb-4">
-                                 <div className="flex items-center justify-between mb-3">
+                            
+                            <div className="relative z-10 flex flex-col h-full justify-between">
+                                <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
                                         <i className="fas fa-smile-beam text-lg text-white"></i>
                                     </div>
-                                     <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-1 rounded-full uppercase tracking-wide border border-white/10">
-                                        Free
-                                    </span>
+                                    <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
+                                        <div>Disposable</div>
+                                        <div>Monthly</div>
+                                    </div>
                                 </div>
-                                <p className="text-white/80 text-[11px] uppercase font-extrabold tracking-wide mb-1">Disposable Monthly</p>
-                                <h3 className="text-3xl font-extrabold text-white tracking-tight">{formatCurrency(result.disposableMonthly)}</h3>
-                            </div>
-                            <div className="relative z-10 mt-auto pt-4 border-t border-white/20 flex justify-between items-end">
-                                <div>
-                                    <p className="text-white/60 text-[10px] uppercase font-bold mb-0.5">Annual Disposable</p>
-                                    <p className="text-white font-bold text-sm">{formatCurrency(result.disposableMonthly * 12)}</p>
+
+                                <div className="mt-6 mb-4">
+                                    <h3 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-none">
+                                        {formatCurrency(result.disposableMonthly)}
+                                    </h3>
                                 </div>
-                                <i className="fas fa-arrow-right text-white/50 text-xs group-hover:text-white group-hover:translate-x-1 transition-all"></i>
+
+                                <div className="pt-4 border-t border-white/20 flex justify-between items-end">
+                                    <div>
+                                        <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Disposable</p>
+                                        <p className="text-white font-extrabold text-xl">{formatCurrency(result.disposableMonthly * 12)}</p>
+                                    </div>
+                                    <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
+                                </div>
                             </div>
                         </div>
                         
-                        {/* Chart Card - Redesigned Dark Theme */}
-                        <div className="bg-gradient-to-br from-[#2c2c2e] to-[#000000] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col justify-between h-full">
-                             <div className="absolute -right-8 -bottom-8 text-white/5 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                        {/* Chart Card - Light Theme Redesign */}
+                        <div className="bg-white p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white text-slate-900 relative overflow-hidden group flex flex-col justify-between h-full">
+                             <div className="absolute -right-8 -bottom-8 text-slate-50 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-chart-pie"></i>
                              </div>
                              <div className="relative z-10 w-full h-full flex flex-col">
-                                <div className="flex items-center justify-between mb-2">
-                                     <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
-                                        <i className="fas fa-chart-pie text-lg text-white"></i>
+                                <div className="flex items-center gap-3 mb-2">
+                                     <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-50">
+                                        <i className="fas fa-chart-pie text-lg text-slate-900"></i>
                                      </div>
-                                     <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-1 rounded-full uppercase tracking-wide border border-white/10">
-                                        Ratio
-                                    </span>
+                                     <p className="text-slate-500 text-[13px] font-bold uppercase tracking-wider">Tax / Cost Ratio</p>
                                 </div>
                                 <div className="flex-grow flex items-center justify-center mt-2">
                                     <DonutChart result={result} />
