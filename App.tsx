@@ -172,6 +172,15 @@ const App: React.FC = () => {
     return `https://flagcdn.com/w40/${map[code]}.png`;
   };
 
+  const getHDFlagUrl = (code: CountryCode) => {
+    const map: Record<string, string> = {
+        [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
+        [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
+        [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd'
+    };
+    return `https://flagcdn.com/w640/${map[code]}.png`;
+  };
+
   const downloadPDF = async () => {
     const element = document.getElementById('pdf-invoice-template');
     if (!element || !window.jspdf || !window.html2canvas) {
@@ -515,30 +524,39 @@ const App: React.FC = () => {
           <div className="lg:col-span-8 space-y-6" id="results-panel">
              {result && (
                  <>
-                    {/* Hero Card (Gross) - Redesigned */}
-                    <div className="bg-gradient-to-br from-[#2c2c2e] to-[#1c1c1e] p-6 md:p-8 rounded-[32px] shadow-2xl text-white relative overflow-hidden group border border-white/10 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                        <div className="absolute -right-6 -bottom-6 text-white/5 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                            <div className="text-[#e6ca29]/20">
-                                <i className="fas fa-coins"></i>
-                            </div>
+                    {/* Hero Card (Gross) - Redesigned with HD Flag Background */}
+                    <div className="relative p-6 md:p-8 rounded-[32px] shadow-2xl text-white overflow-hidden group border border-white/10 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                        {/* Dynamic Flag Background */}
+                        <div className="absolute inset-0 z-0">
+                             <img 
+                                src={getHDFlagUrl(inputs.country)} 
+                                alt="Country Flag" 
+                                className="w-full h-full object-cover opacity-40 group-hover:opacity-50 group-hover:scale-110 group-hover:rotate-1 transition-all duration-700 ease-in-out"
+                             />
+                             {/* Cinematic Overlay for Readability */}
+                             <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/50 to-black/90 mix-blend-hard-light"></div>
+                             {/* Texture Overlay for 3D Feel */}
+                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-700 pointer-events-none"></div>
                         </div>
+
+                        {/* Content (z-10 to sit above bg) */}
                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div>
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10 shadow-inner">
                                         <i className="fas fa-briefcase text-white/90"></i>
                                     </div>
-                                    <p className="text-white/70 text-[13px] font-bold uppercase tracking-wider">
+                                    <p className="text-white/80 text-[13px] font-bold uppercase tracking-wider shadow-black drop-shadow-md">
                                         {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
                                     </p>
                                 </div>
-                                <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80">
+                                <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white drop-shadow-xl">
                                     {formatCurrency(result.grossAnnual)}
                                 </h2>
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                                 <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-2xl backdrop-blur-md border border-white/5 shadow-inner">
-                                     <span className="text-white/60 text-xs font-semibold uppercase">Monthly</span>
+                                 <div className="flex items-center gap-2 bg-black/30 px-4 py-2 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg">
+                                     <span className="text-white/70 text-xs font-semibold uppercase">Monthly</span>
                                      <span className="text-xl font-bold tracking-tight text-white">{formatCurrency(result.grossMonthly)}</span>
                                 </div>
                             </div>
