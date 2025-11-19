@@ -56,15 +56,15 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
             <div className="flex gap-3 mt-6">
                  <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#FF3B30]"></div>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Tax</span>
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Tax</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#007AFF]"></div>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Costs</span>
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Costs</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#34C759]"></div>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Free</span>
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Free</span>
                 </div>
             </div>
         </div>
@@ -173,7 +173,7 @@ const App: React.FC = () => {
   };
 
   const downloadPDF = async () => {
-    const element = document.getElementById('results-panel');
+    const element = document.getElementById('pdf-invoice-template');
     if (!element || !window.jspdf || !window.html2canvas) {
         alert("PDF library loading... please try again in a second.");
         return;
@@ -181,24 +181,27 @@ const App: React.FC = () => {
 
     try {
         document.body.style.cursor = 'wait';
+        // Render hidden invoice template
         const canvas = await window.html2canvas(element, { 
             scale: 2, 
             useCORS: true, 
             logging: false,
-            windowWidth: 1200, 
-            backgroundColor: '#F5F5F7' // Matches the new background
+            backgroundColor: '#ffffff',
         });
 
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
         
+        // A4 size
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgProps = pdf.getImageProperties(imgData);
         const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
         
+        // If image is taller than 1 page, could cut it, but for this invoice style it should fit
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
-        pdf.save(`Salary_Calculation_${inputs.country}.pdf`);
+        pdf.save(`Statement_${inputs.country}_${new Date().toISOString().split('T')[0]}.pdf`);
         document.body.style.cursor = 'default';
     } catch (e) {
         console.error(e);
@@ -263,10 +266,10 @@ const App: React.FC = () => {
       <header className="sticky top-0 z-30 bg-[#F5F5F7]/80 backdrop-blur-xl border-b border-gray-200/60">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center shadow-lg text-yellow-400">
-                    <i className="fas fa-coins text-sm"></i>
+                <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-lg text-yellow-400 overflow-hidden border-2 border-white/20">
+                    <i className="fas fa-coins text-2xl"></i>
                 </div>
-                <h1 className="text-lg font-bold tracking-tight">Global Net Pay</h1>
+                <h1 className="text-xl font-bold tracking-tight">Global Net Pay</h1>
             </div>
             <div className="flex gap-3">
                 <button 
@@ -338,8 +341,14 @@ const App: React.FC = () => {
                     <div>
                         <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
                         <div className="relative">
+                            <img 
+                                src={getFlagUrl(inputs.country)} 
+                                alt="flag" 
+                                className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full object-cover shadow-sm z-10"
+                                crossOrigin="anonymous"
+                            />
                             <select 
-                                className="w-full p-4 pr-10 bg-[#F2F2F7] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-slate-900 cursor-pointer"
+                                className="w-full p-4 pl-14 pr-10 bg-[#F2F2F7] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-slate-900 cursor-pointer"
                                 value={inputs.country}
                                 onChange={(e) => setInputs({...inputs, country: e.target.value as CountryCode, subRegion: undefined })}
                             >
@@ -385,6 +394,7 @@ const App: React.FC = () => {
                             <input 
                                 type="number" 
                                 min="0"
+                                autoComplete="off"
                                 className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-indigo-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
                                 value={mode === 'gross' ? inputs.grossIncome : targetNet}
                                 onChange={(e) => {
@@ -409,6 +419,7 @@ const App: React.FC = () => {
                              <input 
                                 type="number" 
                                 min="15" max="99"
+                                autoComplete="off"
                                 className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-center font-bold"
                                 value={inputs.details.age}
                                 onChange={(e) => setInputs({...inputs, details: { ...inputs.details, age: parseInt(e.target.value) || 30 }})}
@@ -477,6 +488,7 @@ const App: React.FC = () => {
                                     </div>
                                     <input 
                                         type="number"
+                                        autoComplete="off"
                                         className="w-full p-2.5 pl-7 bg-[#F2F2F7] border-none rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-rose-500/20 outline-none transition-all font-bold text-sm"
                                         value={(inputs.costs as any)[field.key] || ''}
                                         placeholder="0"
@@ -550,7 +562,7 @@ const App: React.FC = () => {
                                 </div>
 
                                 <div className="mt-6 mb-4">
-                                    <h3 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-none break-words">
+                                    <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.netMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
                                         {formatCurrency(result.netMonthly)}
                                     </h3>
                                 </div>
@@ -583,7 +595,7 @@ const App: React.FC = () => {
                                 </div>
 
                                 <div className="mt-6 mb-4">
-                                    <h3 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-none break-words">
+                                    <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.disposableMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
                                         {formatCurrency(result.disposableMonthly)}
                                     </h3>
                                 </div>
@@ -645,6 +657,7 @@ const App: React.FC = () => {
                                         src={getFlagUrl(fromCurrency)} 
                                         alt="flag" 
                                         className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full object-cover shadow-sm"
+                                        crossOrigin="anonymous"
                                     />
                                     <select 
                                         value={fromCurrency}
@@ -671,6 +684,7 @@ const App: React.FC = () => {
                                         src={getFlagUrl(toCurrency)} 
                                         alt="flag" 
                                         className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full object-cover shadow-sm"
+                                        crossOrigin="anonymous"
                                     />
                                     <select 
                                         value={toCurrency}
@@ -706,8 +720,8 @@ const App: React.FC = () => {
                                 </div>
                                 <h3 className="font-extrabold text-lg text-white tracking-tight">Breakdown</h3>
                              </div>
-                             <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md">
-                                <i className="fas fa-arrow-down-to-line"></i> Export PDF
+                             <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
+                                <i className="fas fa-arrow-down-to-line"></i> Export Invoice
                             </button>
                         </div>
 
@@ -770,6 +784,119 @@ const App: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Hidden Invoice Template for PDF Export */}
+      {result && (
+          <div id="pdf-invoice-template" className="fixed top-0 left-0 -z-50 bg-white text-slate-900 p-12 w-[800px]" style={{ visibility: 'hidden' }}>
+              <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-start">
+                  <div>
+                      <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 bg-black rounded flex items-center justify-center text-yellow-400">
+                             <i className="fas fa-coins"></i>
+                          </div>
+                          <h1 className="text-2xl font-bold">Global Net Pay Calculator</h1>
+                      </div>
+                      <p className="text-sm text-slate-500">Salary & Tax Estimation Statement</p>
+                  </div>
+                  <div className="text-right">
+                      <p className="text-lg font-bold">INVOICE / STATEMENT</p>
+                      <p className="text-sm text-slate-500">Date: {new Date().toLocaleDateString()}</p>
+                      <p className="text-sm text-slate-500">Ref: {inputs.country}-{new Date().getFullYear()}</p>
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-8 mb-10">
+                  <div>
+                      <h3 className="text-xs font-bold uppercase text-slate-400 mb-2">Employee Details</h3>
+                      <div className="space-y-1 text-sm">
+                          <p><span className="font-semibold w-24 inline-block">Country:</span> {currentRules.name}</p>
+                          <p><span className="font-semibold w-24 inline-block">Age:</span> {inputs.details.age}</p>
+                          <p><span className="font-semibold w-24 inline-block">Status:</span> {inputs.details.maritalStatus}</p>
+                      </div>
+                  </div>
+                  <div className="text-right">
+                      <h3 className="text-xs font-bold uppercase text-slate-400 mb-2">Summary</h3>
+                      <div className="text-3xl font-extrabold text-slate-900 mb-1">
+                          {formatCurrency(result.grossAnnual)}
+                      </div>
+                      <p className="text-sm text-slate-500">Gross Annual Income</p>
+                  </div>
+              </div>
+
+              <div className="mb-8">
+                  <table className="w-full text-sm border-collapse">
+                      <thead>
+                          <tr className="bg-slate-100 border-b border-slate-200">
+                              <th className="py-3 px-4 text-left font-bold text-slate-700">Description</th>
+                              <th className="py-3 px-4 text-right font-bold text-slate-700">Annual</th>
+                              <th className="py-3 px-4 text-right font-bold text-slate-700">Monthly</th>
+                              <th className="py-3 px-4 text-right font-bold text-slate-700">%</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                           <tr className="border-b border-slate-100">
+                               <td className="py-3 px-4 font-bold">Gross Income</td>
+                               <td className="py-3 px-4 text-right">{formatCurrency(result.grossAnnual)}</td>
+                               <td className="py-3 px-4 text-right">{formatCurrency(result.grossMonthly)}</td>
+                               <td className="py-3 px-4 text-right">100%</td>
+                           </tr>
+                           {result.deductionsBreakdown.map((d, i) => (
+                               <tr key={i} className="border-b border-slate-100 text-red-600">
+                                   <td className="py-3 px-4 flex items-center gap-2">
+                                       {d.name} 
+                                       {d.isEmployer && <span className="text-[10px] bg-gray-100 text-gray-500 px-2 rounded">Employer</span>}
+                                   </td>
+                                   <td className="py-3 px-4 text-right">-{formatCurrency(d.amount)}</td>
+                                   <td className="py-3 px-4 text-right">-{formatCurrency(d.amount/12)}</td>
+                                   <td className="py-3 px-4 text-right">{(d.amount/result.grossAnnual * 100).toFixed(1)}%</td>
+                               </tr>
+                           ))}
+                           <tr className="bg-slate-50 font-bold text-slate-900 border-t-2 border-slate-200">
+                               <td className="py-3 px-4">NET INCOME</td>
+                               <td className="py-3 px-4 text-right">{formatCurrency(result.netAnnual)}</td>
+                               <td className="py-3 px-4 text-right">{formatCurrency(result.netMonthly)}</td>
+                               <td className="py-3 px-4 text-right">{(result.netAnnual/result.grossAnnual*100).toFixed(1)}%</td>
+                           </tr>
+                      </tbody>
+                  </table>
+              </div>
+
+              {result.personalCostsTotal > 0 && (
+                  <div className="mb-8">
+                      <h3 className="text-sm font-bold uppercase text-slate-400 mb-4 border-b pb-2">Personal Costs Breakdown</h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                          {Object.entries(inputs.costs).map(([key, val]) => (val as number) > 0 && (
+                              <div key={key} className="flex justify-between border-b border-dotted border-slate-200 pb-1">
+                                  <span className="capitalize text-slate-600">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                  <span className="font-medium">{formatCurrency(val as number)}/mo</span>
+                              </div>
+                          ))}
+                          <div className="col-span-2 flex justify-between font-bold pt-2">
+                              <span>Total Costs (Annual)</span>
+                              <span className="text-red-600">-{formatCurrency(result.personalCostsTotal * 12)}</span>
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              <div className="bg-green-50 border border-green-100 rounded-xl p-6 flex justify-between items-center">
+                   <div>
+                       <p className="text-sm font-bold text-green-800 uppercase mb-1">Disposable Income (Free Cash)</p>
+                       <p className="text-xs text-green-600">After Taxes & Living Costs</p>
+                   </div>
+                   <div className="text-right">
+                       <p className="text-3xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly)}</p>
+                       <p className="text-sm font-semibold text-green-600">per month</p>
+                   </div>
+              </div>
+
+              <div className="mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-400">
+                  <p>Generated by Global Net Pay Calculator. This document is for estimation purposes only and does not constitute official financial advice.</p>
+                  <p className="mt-1">Source Rules: {currentRules.sources.map(s => s.label).join(', ')}</p>
+              </div>
+          </div>
+      )}
+
       <GeminiAssistant country={inputs.country} countryName={currentRules.name} />
     </div>
   );
