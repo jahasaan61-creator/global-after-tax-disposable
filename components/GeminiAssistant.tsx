@@ -35,19 +35,25 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [country]);
 
-  const handleSend = async () => {
-    if (!query.trim()) return;
+  const handleSend = async (textOverride?: string) => {
+    const textToSend = textOverride || query;
+    if (!textToSend.trim()) return;
 
-    const userText = query;
     setQuery('');
-    setMessages(prev => [...prev, { role: 'user', text: userText }]);
+    setMessages(prev => [...prev, { role: 'user', text: textToSend }]);
     setLoading(true);
 
-    const response = await queryGemini(userText, countryName);
+    const response = await queryGemini(textToSend, countryName);
 
     setMessages(prev => [...prev, { role: 'ai', text: response }]);
     setLoading(false);
   };
+
+  const quickPrompts = [
+    "How can I reduce my tax?",
+    "Explain the main deductions",
+    "Are there new 2025 tax credits?",
+  ];
 
   return (
     <>
@@ -62,7 +68,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[500px] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden animate-fade-in-up">
+        <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[550px] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden animate-fade-in-up">
           {/* Header */}
           <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -98,6 +104,20 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
             )}
             <div ref={messagesEndRef} />
           </div>
+          
+          {/* Quick Chips */}
+          <div className="px-3 py-2 bg-slate-50 flex gap-2 overflow-x-auto whitespace-nowrap border-t border-slate-100 scrollbar-hide">
+            {quickPrompts.map((p, i) => (
+                <button 
+                    key={i}
+                    onClick={() => handleSend(p)}
+                    disabled={loading}
+                    className="px-3 py-1 bg-white border border-blue-100 text-blue-600 text-xs rounded-full hover:bg-blue-50 transition shadow-sm"
+                >
+                    {p}
+                </button>
+            ))}
+          </div>
 
           {/* Input */}
           <div className="p-3 bg-white border-t border-slate-100">
@@ -111,7 +131,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                 className="w-full pl-4 pr-10 py-2 rounded-full border border-slate-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
               />
               <button 
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={loading}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-800 disabled:opacity-50 p-1"
               >

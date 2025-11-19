@@ -1,70 +1,118 @@
 import { COUNTRY_RULES } from '../constants';
-import { CalculationResult, Deductible, DeductionResult, UserInputs } from '../types';
+import { CalculationResult, Deductible, DeductionResult, UserInputs, CountryCode, TaxBracket } from '../types';
 
-const calculateTaxAmount = (grossIncome: number, deductible: Deductible): number => {
+const calculateTaxAmount = (
+    grossIncome: number, 
+    deductible: Deductible, 
+    inputs: UserInputs, 
+    accumulatedTax: number
+): number => {
   let basis = grossIncome;
+  const { country, details } = inputs;
+
+  // --- SPECIAL LOGIC: Church Tax (Germany) ---
+  // Church tax is unique: it's a % of the *Income Tax* amount, not the gross income.
+  if (deductible.isChurchTax) {
+    if (!details.churchTax) return 0;
+    return accumulatedTax * (deductible.rate || 0.09);
+  }
+
+  // --- SPECIAL LOGIC: Age Based Rates (Singapore CPF) ---
+  let effectiveRate = deductible.rate;
+  if (deductible.ratesByAge && details.age) {
+      const ageRule = deductible.ratesByAge.find(r => details.age > r.minAge && details.age <= r.maxAge);
+      if (ageRule) {
+          effectiveRate = ageRule.rate;
+      }
+  }
 
   // 1. Apply Income Cap (Wage Base)
-  // E.g. Social Security only applies to the first $168k
   if (deductible.cappedBase && basis > deductible.cappedBase) {
     basis = deductible.cappedBase;
   }
 
   // 2. Apply Standard Deduction / Exempt Amount
-  // E.g. First $14,600 is tax free (USA) or Basic Personal Amount (Canada)
-  // Note: Usually this applies to "Progressive" income tax, but sometimes flat taxes have exemptions.
-  // If specific 'exemptAmount' is defined on the deductible, we use it.
-  if (deductible.exemptAmount) {
-    basis = Math.max(0, basis - deductible.exemptAmount);
+  let exempt = deductible.exemptAmount || 0;
+  
+  // --- SPECIAL LOGIC: USA Married Filing Jointly Standard Deduction ---
+  if (country === CountryCode.USA && details.maritalStatus === 'married' && deductible.name.includes('Federal Income')) {
+      exempt = 29200; // 2024 Married Jointly Standard Deduction
   }
+
+  basis = Math.max(0, basis - exempt);
 
   let computedAmount = 0;
 
-  if (deductible.type === 'percentage' && deductible.rate) {
-    computedAmount = basis * deductible.rate;
+  if (deductible.type === 'percentage' && effectiveRate) {
+    computedAmount = basis * effectiveRate;
   } else if (deductible.type === 'progressive' && deductible.brackets) {
-    // Progressive Calculation
-    // Brackets should be sorted by threshold
-    const sortedBrackets = [...deductible.brackets].sort((a, b) => a.threshold - b.threshold);
     
-    // In our constants, thresholds are usually 0, 11000, 45000 etc.
-    // This implies the rate applies to income > threshold.
-    // We need to calculate the chunk of income in each band.
-    
-    let remainingIncome = basis;
-    let previousThreshold = 0;
+    // --- SPECIAL LOGIC: Germany Income Splitting (Ehegattensplitting) ---
+    // For married couples, we halve the income, calculate tax, then double the tax.
+    // Equivalent to doubling the bracket widths.
+    let processingIncome = basis;
+    let bracketsToUse = [...deductible.brackets];
 
+    if (country === CountryCode.DEU && details.maritalStatus === 'married' && deductible.name.includes('Income Tax')) {
+       processingIncome = basis / 2;
+    }
+
+    // --- SPECIAL LOGIC: USA Married Filing Jointly Brackets ---
+    if (country === CountryCode.USA && details.maritalStatus === 'married' && deductible.name.includes('Federal Income')) {
+        // Approximate 2024 Married Jointly Brackets (Roughly 2x Single width)
+        bracketsToUse = [
+            { threshold: 0, rate: 0.10 },
+            { threshold: 23200, rate: 0.12 },
+            { threshold: 94300, rate: 0.22 },
+            { threshold: 201050, rate: 0.24 },
+            { threshold: 383900, rate: 0.32 },
+            { threshold: 487450, rate: 0.35 },
+            { threshold: 731200, rate: 0.37 },
+        ];
+    }
+
+    // --- SPECIAL LOGIC: Ireland Married Rate Band ---
+    if (country === CountryCode.IRL && details.maritalStatus === 'married' && deductible.name.includes('PAYE')) {
+        // Standard Rate cut-off increases to roughly 51,000 (depending on dual earner status, simplified here to 1 earner max benefit)
+        bracketsToUse = [
+            { threshold: 0, rate: 0.20 },
+            { threshold: 51000, rate: 0.40 },
+        ];
+    }
+
+    // Standard Progressive Logic
+    const sortedBrackets = bracketsToUse.sort((a, b) => a.threshold - b.threshold);
+    
     for (let i = 0; i < sortedBrackets.length; i++) {
       const bracket = sortedBrackets[i];
       const nextBracket = sortedBrackets[i + 1];
-      
-      // The width of this band
-      // If it's the first bracket (threshold 0), it applies from 0 to next threshold.
-      
-      // Actually, standard bracket definitions:
-      // 0     to 10,000 @ 10%
-      // 10,000 to 20,000 @ 20%
-      
-      // Our format: { threshold: 0, rate: 0.10 }, { threshold: 10000, rate: 0.20 }
-      
-      // How much income falls into this bracket?
       const bottom = bracket.threshold;
       const top = nextBracket ? nextBracket.threshold : Infinity;
       
-      if (basis > bottom) {
-          const incomeInBracket = Math.min(basis, top) - bottom;
+      if (processingIncome > bottom) {
+          const incomeInBracket = Math.min(processingIncome, top) - bottom;
           computedAmount += incomeInBracket * bracket.rate;
       }
     }
+
+    // Germany: Finish Splitting calculation (Double the result)
+    if (country === CountryCode.DEU && details.maritalStatus === 'married' && deductible.name.includes('Income Tax')) {
+        computedAmount *= 2;
+    }
   }
 
-  // 3. Apply Tax Credits (Reduction of Tax Bill)
-  // E.g. Ireland Tax Credits
-  if (deductible.fixedCredits) {
-    computedAmount = Math.max(0, computedAmount - deductible.fixedCredits);
+  // 3. Apply Tax Credits
+  // --- SPECIAL LOGIC: Ireland Married Tax Credits ---
+  let credits = deductible.fixedCredits || 0;
+  if (country === CountryCode.IRL && details.maritalStatus === 'married' && deductible.name.includes('PAYE')) {
+      credits = 3750 + 1875; // Simplified: Personal (Married) + Employee credit
   }
 
-  // 4. Apply Final Hard Cap on the Tax Amount
+  if (credits > 0) {
+    computedAmount = Math.max(0, computedAmount - credits);
+  }
+
+  // 4. Apply Final Hard Cap
   if (deductible.cap && computedAmount > deductible.cap) {
     computedAmount = deductible.cap;
   }
@@ -75,21 +123,27 @@ const calculateTaxAmount = (grossIncome: number, deductible: Deductible): number
 export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
   const rules = COUNTRY_RULES[inputs.country];
   let grossAnnual = inputs.frequency === 'monthly' ? inputs.grossIncome * 12 : inputs.grossIncome;
-  
-  // Ensure non-negative
   if (grossAnnual < 0) grossAnnual = 0;
 
   const deductionsBreakdown: DeductionResult[] = [];
+  
+  // We need to track Total Income Tax for Church Tax Calculation (Germany)
+  let totalIncomeTax = 0;
 
   // 1. Federal Deductions
   rules.federalDeductibles.forEach(d => {
-    const amount = calculateTaxAmount(grossAnnual, d);
+    const amount = calculateTaxAmount(grossAnnual, d, inputs, totalIncomeTax);
     
-    // Fix: 'isEmployer' property does not exist on type 'Deductible', used 'employerPaid' instead.
-    if (amount > 0 || d.employerPaid) { // Keep employer items even if 0? usually > 0
+    // Track Income Tax for dependent taxes
+    if (d.name.includes('Income Tax') || d.name.includes('Federal Income') || d.name.includes('PAYE')) {
+        totalIncomeTax += amount;
+    }
+
+    if (amount > 0 || d.employerPaid) { 
       if (amount > 0) {
         deductionsBreakdown.push({
             name: d.name,
+            description: d.description,
             amount: amount,
             isEmployer: !!d.employerPaid
         });
@@ -102,10 +156,11 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
     const regionRule = rules.subNationalRules.find(r => r.id === inputs.subRegion);
     if (regionRule) {
       regionRule.deductibles.forEach(d => {
-        const amount = calculateTaxAmount(grossAnnual, d);
+        const amount = calculateTaxAmount(grossAnnual, d, inputs, totalIncomeTax);
         if (amount > 0) {
           deductionsBreakdown.push({
             name: `${regionRule.name} - ${d.name}`,
+            description: d.description,
             amount: amount,
             isEmployer: !!d.employerPaid
           });
@@ -137,4 +192,42 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
     disposableMonthly: netMonthly - personalCostsMonthly,
     personalCostsTotal: personalCostsMonthly
   };
+};
+
+export const calculateGrossFromNet = (targetNet: number, baseInputs: UserInputs): number => {
+  if (targetNet <= 0) return 0;
+  const isMonthly = baseInputs.frequency === 'monthly';
+  const targetAnnualNet = isMonthly ? targetNet * 12 : targetNet;
+
+  let low = targetAnnualNet;
+  let high = targetAnnualNet * 3;
+  
+  let safety = 0;
+  while (safety < 20) {
+      const res = calculateNetPay({ ...baseInputs, grossIncome: high, frequency: 'annual' }); 
+      if (res.netAnnual >= targetAnnualNet) break;
+      low = high;
+      high *= 2;
+      safety++;
+  }
+
+  let iterations = 0;
+  let bestGross = high;
+  
+  while (low <= high && iterations < 50) {
+      const mid = (low + high) / 2;
+      const res = calculateNetPay({ ...baseInputs, grossIncome: mid, frequency: 'annual' });
+      const diff = res.netAnnual - targetAnnualNet;
+
+      if (Math.abs(diff) < 1) {
+          bestGross = mid;
+          break;
+      }
+      if (diff < 0) low = mid;
+      else high = mid;
+      
+      bestGross = mid;
+      iterations++;
+  }
+  return isMonthly ? bestGross / 12 : bestGross;
 };

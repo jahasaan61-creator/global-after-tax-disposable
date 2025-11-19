@@ -1,6 +1,5 @@
 import { CountryCode, CountryRules } from './types';
 
-// NOTE: In a real production app, this would be a fetch-able JSON file.
 // Updated for 2024/2025 Tax Years where available.
 
 export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
@@ -10,6 +9,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     currency: 'USD',
     currencySymbol: '$',
     subNationalLabel: 'State',
+    hasMaritalStatusOption: true,
     sources: [
       { label: 'IRS 2024 Brackets & Standard Deduction', url: 'https://www.irs.gov/newsroom/irs-provides-tax-inflation-adjustments-for-tax-year-2024', date: '2024-01-01' },
       { label: 'Social Security Wage Base 2024', url: 'https://www.ssa.gov/news/press/factsheets/colafacts2024.pdf', date: '2024-01-01' }
@@ -17,8 +17,9 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     federalDeductibles: [
       {
         name: 'Federal Income Tax',
+        description: 'Progressive tax. Calc adjusts for Filing Status (Single vs Married).',
         type: 'progressive',
-        // 2024 Standard Deduction for Single Filer: $14,600
+        // Single 2024
         exemptAmount: 14600, 
         brackets: [
           { threshold: 0, rate: 0.10 },
@@ -29,19 +30,20 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           { threshold: 243725, rate: 0.35 },
           { threshold: 609350, rate: 0.37 },
         ]
+        // Note: Service handles swapping these for Married brackets
       },
       {
         name: 'Social Security',
+        description: 'Mandatory contribution for retirement (OASDI).',
         type: 'percentage',
         rate: 0.062,
         cappedBase: 168600 // 2024 Wage Base Limit
       },
       {
         name: 'Medicare',
+        description: 'Federal health insurance program.',
         type: 'percentage',
         rate: 0.0145
-        // Note: Additional Medicare Tax of 0.9% applies to wages over $200,000. 
-        // Simplified here, but accuracy enhanced by separate line if needed.
       }
     ],
     subNationalRules: [
@@ -51,8 +53,9 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         deductibles: [
           {
             name: 'CA State Tax',
+            description: 'State income tax.',
             type: 'progressive',
-            exemptAmount: 5363, // Approx Standard Deduction CA Single
+            exemptAmount: 5363, 
             brackets: [
               { threshold: 0, rate: 0.01 },
               { threshold: 10412, rate: 0.02 },
@@ -63,13 +66,13 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
               { threshold: 349137, rate: 0.103 },
             ]
           },
-          { name: 'CA SDI', type: 'percentage', rate: 0.011, cappedBase: 153164 } // 2024 Cap
+          { name: 'CA SDI', description: 'State Disability Insurance.', type: 'percentage', rate: 0.011, cappedBase: 153164 } 
         ]
       },
       {
         id: 'TX',
         name: 'Texas',
-        deductibles: [] // No state income tax
+        deductibles: [] 
       },
       {
         id: 'NY',
@@ -78,13 +81,13 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
            {
             name: 'NY State Tax',
             type: 'progressive',
-            exemptAmount: 8000, // NY Standard Deduction
+            exemptAmount: 8000,
             brackets: [
               { threshold: 0, rate: 0.04 },
               { threshold: 8500, rate: 0.045 },
               { threshold: 11700, rate: 0.0525 },
               { threshold: 13900, rate: 0.0585 },
-              { threshold: 80650, rate: 0.0625 }, // Simplified upper brackets
+              { threshold: 80650, rate: 0.0625 }, 
             ]
            }
         ]
@@ -99,21 +102,21 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     subNationalLabel: 'Canton',
     sources: [{ label: 'ESTV Tax Calc', url: 'https://swisstaxcalculator.estv.admin.ch/', date: '2024-01-01' }],
     federalDeductibles: [
-      { name: 'Federal Tax (Direct)', type: 'progressive', brackets: [{ threshold: 18300, rate: 0.0077 }, { threshold: 31600, rate: 0.0088 }, { threshold: 41400, rate: 0.0264 }, { threshold: 55200, rate: 0.0297 }, { threshold: 72500, rate: 0.0594 }] },
-      { name: 'AHV/IV/EO (OASI)', type: 'percentage', rate: 0.053 },
-      { name: 'ALV (Unemployment)', type: 'percentage', rate: 0.011, cappedBase: 148200 },
-      { name: 'Pension (BVG) - Est.', type: 'percentage', rate: 0.035, exemptAmount: 25725 } // Deduction usually applies to coordinated salary
+      { name: 'Federal Tax (Direct)', description: 'Direct Federal Tax (Bundessteuer).', type: 'progressive', brackets: [{ threshold: 18300, rate: 0.0077 }, { threshold: 31600, rate: 0.0088 }, { threshold: 41400, rate: 0.0264 }, { threshold: 55200, rate: 0.0297 }, { threshold: 72500, rate: 0.0594 }] },
+      { name: 'AHV/IV/EO (OASI)', description: 'Old-Age and Survivors Insurance.', type: 'percentage', rate: 0.053 },
+      { name: 'ALV (Unemployment)', description: 'Unemployment Insurance.', type: 'percentage', rate: 0.011, cappedBase: 148200 },
+      { name: 'Pension (BVG) - Est.', description: 'Occupational Pension (2nd Pillar) approx.', type: 'percentage', rate: 0.035, exemptAmount: 25725 } 
     ],
     subNationalRules: [
       {
         id: 'ZH',
         name: 'Zurich',
-        deductibles: [{ name: 'Cantonal/Communal Tax', type: 'percentage', rate: 0.10 }] 
+        deductibles: [{ name: 'Cantonal/Communal Tax (Est.)', type: 'percentage', rate: 0.10 }] 
       },
       {
         id: 'GE',
         name: 'Geneva',
-        deductibles: [{ name: 'Cantonal/Communal Tax', type: 'percentage', rate: 0.15 }] 
+        deductibles: [{ name: 'Cantonal/Communal Tax (Est.)', type: 'percentage', rate: 0.15 }] 
       }
     ]
   },
@@ -122,13 +125,12 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Singapore',
     currency: 'SGD',
     currencySymbol: 'S$',
-    sources: [{ label: 'IRAS 2024 Rates', url: 'https://www.iras.gov.sg/', date: '2024-01-01' }],
+    sources: [{ label: 'CPF Rates 2024', url: 'https://www.cpf.gov.sg/employer/employer-obligations/creating-a-progressive-workplace/cpf-contribution-rates', date: '2024-01-01' }],
     federalDeductibles: [
       {
         name: 'Income Tax',
+        description: 'Personal Income Tax rates.',
         type: 'progressive',
-        // First 20k is tax free, effectively handled by bracket 0 -> rate 0 if we set threshold 20k as start of tax.
-        // But to match data structure: 0-20k @ 0%.
         brackets: [
           { threshold: 0, rate: 0 },
           { threshold: 20000, rate: 0.02 },
@@ -144,10 +146,18 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         ]
       },
       {
-        name: 'CPF (Citizen/PR <= 55)',
+        name: 'CPF Contribution',
+        description: 'Mandatory savings. Rates vary significantly by age.',
         type: 'percentage',
-        rate: 0.20,
-        cappedBase: 81600 // $6800 monthly wage ceiling (2024) * 12. Note: Raised to $8000/mo in 2025.
+        rate: 0.20, // Default (<= 55)
+        ratesByAge: [
+            { minAge: 0, maxAge: 55, rate: 0.20 },
+            { minAge: 55, maxAge: 60, rate: 0.17 },
+            { minAge: 60, maxAge: 65, rate: 0.115 },
+            { minAge: 65, maxAge: 70, rate: 0.075 },
+            { minAge: 70, maxAge: 100, rate: 0.05 },
+        ],
+        cappedBase: 81600 // $6800 monthly wage ceiling (2024) * 12. 
       }
     ]
   },
@@ -156,23 +166,27 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Germany',
     currency: 'EUR',
     currencySymbol: '€',
+    hasMaritalStatusOption: true, // Enables Income Splitting
+    hasChurchTaxOption: true,
     sources: [{ label: 'BMF 2024', url: 'https://www.bmf-steuerrechner.de/', date: '2024-01-01' }],
     federalDeductibles: [
       {
         name: 'Income Tax (Einkommensteuer)',
+        description: 'Progressive tax. Supports Married Splitting.',
         type: 'progressive',
         exemptAmount: 11604, // Grundfreibetrag 2024
         brackets: [
           { threshold: 0, rate: 0.14 },
-          { threshold: 17005, rate: 0.24 }, // Simplified linear progression approximation
+          { threshold: 17005, rate: 0.24 }, 
           { threshold: 66760, rate: 0.42 },
           { threshold: 277825, rate: 0.45 },
         ]
       },
-      { name: 'Pension Insurance', type: 'percentage', rate: 0.093, cappedBase: 90600 }, // BBG West 2024
-      { name: 'Unemployment Insurance', type: 'percentage', rate: 0.013, cappedBase: 90600 },
-      { name: 'Health Insurance (Employee)', type: 'percentage', rate: 0.081, cappedBase: 62100 }, // BBG Health 2024
-      { name: 'Nursing Care Insurance', type: 'percentage', rate: 0.023, cappedBase: 62100 },
+      { name: 'Church Tax', description: 'Kirchensteuer (approx 9% of Income Tax).', type: 'percentage', rate: 0.09, isChurchTax: true },
+      { name: 'Pension Insurance', description: 'Rentenversicherung.', type: 'percentage', rate: 0.093, cappedBase: 90600 }, 
+      { name: 'Unemployment Insurance', description: 'Arbeitslosenversicherung.', type: 'percentage', rate: 0.013, cappedBase: 90600 },
+      { name: 'Health Insurance (Employee)', description: 'Krankenversicherung.', type: 'percentage', rate: 0.081, cappedBase: 62100 }, 
+      { name: 'Nursing Care Insurance', description: 'Pflegeversicherung.', type: 'percentage', rate: 0.023, cappedBase: 62100 },
     ]
   },
   [CountryCode.IRL]: {
@@ -180,12 +194,14 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Ireland',
     currency: 'EUR',
     currencySymbol: '€',
+    hasMaritalStatusOption: true, // Affects Rate Band
     sources: [{ label: 'Revenue.ie Budget 2024', url: 'https://www.revenue.ie/', date: '2024-01-01' }],
     federalDeductibles: [
       {
         name: 'PAYE (Income Tax)',
+        description: 'Income Tax. Married couples get wider bands.',
         type: 'progressive',
-        fixedCredits: 3750, // Personal Tax Credit (€1875) + Employee Tax Credit (€1875)
+        fixedCredits: 3750, 
         brackets: [
           { threshold: 0, rate: 0.20 },
           { threshold: 42000, rate: 0.40 },
@@ -193,6 +209,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       },
       {
         name: 'USC',
+        description: 'Universal Social Charge.',
         type: 'progressive',
         brackets: [
            { threshold: 0, rate: 0.005 },
@@ -201,7 +218,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
            { threshold: 70044, rate: 0.08 },
         ]
       },
-      { name: 'PRSI (Class A)', type: 'percentage', rate: 0.04 }
+      { name: 'PRSI (Class A)', description: 'Pay Related Social Insurance.', type: 'percentage', rate: 0.04 }
     ]
   },
   [CountryCode.NZL]: {
@@ -213,6 +230,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     federalDeductibles: [
       {
         name: 'PAYE Tax',
+        description: 'Pay As You Earn income tax.',
         type: 'progressive',
         brackets: [
           { threshold: 0, rate: 0.105 },
@@ -222,7 +240,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           { threshold: 180000, rate: 0.39 },
         ]
       },
-      { name: 'ACC Earner Levy', type: 'percentage', rate: 0.016, cappedBase: 139384 } // 2024/25 Cap
+      { name: 'ACC Earner Levy', description: 'Accident Compensation Corporation levy.', type: 'percentage', rate: 0.016, cappedBase: 139384 } 
     ]
   },
   [CountryCode.CAN]: {
@@ -235,8 +253,9 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     federalDeductibles: [
       {
         name: 'Federal Tax',
+        description: 'Federal income tax.',
         type: 'progressive',
-        exemptAmount: 15705, // 2024 Basic Personal Amount
+        exemptAmount: 15705, 
         brackets: [
           { threshold: 0, rate: 0.15 },
           { threshold: 55867, rate: 0.205 },
@@ -245,18 +264,18 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           { threshold: 246752, rate: 0.33 },
         ]
       },
-      { name: 'CPP', type: 'percentage', rate: 0.0595, exemptAmount: 3500, cappedBase: 68500 }, // 2024 YMPE
-      { name: 'EI', type: 'percentage', rate: 0.0166, cappedBase: 63200 }
+      { name: 'CPP', description: 'Canada Pension Plan.', type: 'percentage', rate: 0.0595, exemptAmount: 3500, cappedBase: 68500 }, 
+      { name: 'EI', description: 'Employment Insurance.', type: 'percentage', rate: 0.0166, cappedBase: 63200 }
     ],
     subNationalRules: [
       {
         id: 'ON', name: 'Ontario', deductibles: [
-           { name: 'ON Tax', type: 'progressive', exemptAmount: 12399, brackets: [{ threshold: 0, rate: 0.0505 }, { threshold: 51446, rate: 0.0915 }, { threshold: 102894, rate: 0.1116 }] }
+           { name: 'ON Tax', description: 'Ontario Provincial Tax.', type: 'progressive', exemptAmount: 12399, brackets: [{ threshold: 0, rate: 0.0505 }, { threshold: 51446, rate: 0.0915 }, { threshold: 102894, rate: 0.1116 }] }
         ]
       },
       {
         id: 'BC', name: 'British Columbia', deductibles: [
-           { name: 'BC Tax', type: 'progressive', exemptAmount: 12580, brackets: [{ threshold: 0, rate: 0.0506 }, { threshold: 47937, rate: 0.077 }] }
+           { name: 'BC Tax', description: 'BC Provincial Tax.', type: 'progressive', exemptAmount: 12580, brackets: [{ threshold: 0, rate: 0.0506 }, { threshold: 47937, rate: 0.077 }] }
         ]
       }
     ]
@@ -270,13 +289,14 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     federalDeductibles: [
       { 
         name: 'Income Tax (Alminnelig inntekt)', 
+        description: 'General income tax on net income.',
         type: 'percentage', 
         rate: 0.22,
-        exemptAmount: 88250 // Personfradrag 2024
-        // Note: Minstefradrag also exists but is variable. 
+        exemptAmount: 88250 
       },
       {
         name: 'Bracket Tax (Trinnskatt)',
+        description: 'Progressive tax on gross personal income.',
         type: 'progressive',
         brackets: [
           { threshold: 208050, rate: 0.017 },
@@ -286,7 +306,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           { threshold: 1350000, rate: 0.176 },
         ]
       },
-      { name: 'National Insurance (Trygdeavgift)', type: 'percentage', rate: 0.078 }
+      { name: 'National Insurance (Trygdeavgift)', description: 'Contribution to the NI Scheme.', type: 'percentage', rate: 0.078 }
     ]
   }
 };

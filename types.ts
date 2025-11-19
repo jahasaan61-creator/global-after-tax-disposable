@@ -12,23 +12,30 @@ export enum CountryCode {
 export interface TaxBracket {
   threshold: number;
   rate: number;
-  flatAmount?: number; // Some systems add a flat amount plus rate on excess
+  flatAmount?: number; 
 }
 
 export interface Deductible {
   name: string;
+  description?: string;
   type: 'percentage' | 'fixed' | 'progressive';
-  rate?: number; // For flat percentage
-  amount?: number; // For fixed amount
-  brackets?: TaxBracket[]; // For progressive
+  rate?: number; 
+  amount?: number; 
+  brackets?: TaxBracket[]; 
   
   // Advanced Tax Logic
-  cap?: number; // Max amount deductible (Final value cap)
-  cappedBase?: number; // Max income to apply rate to (Income cap, e.g. Social Security Wage Base)
-  exemptAmount?: number; // Standard deduction / Tax free allowance deducted from income BEFORE rate
-  fixedCredits?: number; // Fixed amount subtracted from the calculated tax (e.g. Ireland Tax Credits)
+  cap?: number; 
+  cappedBase?: number; 
+  exemptAmount?: number; 
+  fixedCredits?: number; 
   
-  employerPaid?: boolean; // Informational only
+  // Specific Flags
+  employerPaid?: boolean; 
+  isChurchTax?: boolean; // Applied on the tax amount, not income
+  
+  // Dynamic Rates
+  ratesByAge?: { minAge: number; maxAge: number; rate: number }[];
+  
   sourceUrl?: string;
 }
 
@@ -44,13 +51,18 @@ export interface CountryRules {
   currency: string;
   currencySymbol: string;
   federalDeductibles: Deductible[];
-  subNationalLabel?: string; // e.g., "State", "Canton", "Province"
+  subNationalLabel?: string; 
   subNationalRules?: SubNationalRule[];
   sources: { label: string; url: string; date: string }[];
+  
+  // Context Flags
+  hasMaritalStatusOption?: boolean;
+  hasChurchTaxOption?: boolean;
 }
 
 export interface DeductionResult {
   name: string;
+  description?: string;
   amount: number;
   isEmployer: boolean;
 }
@@ -66,20 +78,26 @@ export interface CalculationResult {
   personalCostsTotal: number;
 }
 
+export interface UserDetails {
+  age: number;
+  maritalStatus: 'single' | 'married';
+  churchTax: boolean;
+}
+
 export interface UserInputs {
   grossIncome: number;
   frequency: 'monthly' | 'annual';
   country: CountryCode;
-  subRegion?: string; // ID of state/canton
+  subRegion?: string; 
   costs: {
     rent: number;
     groceries: number;
     utilities: number;
     transport: number;
   };
+  details: UserDetails;
 }
 
-// Chat Types
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
