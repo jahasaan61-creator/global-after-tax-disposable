@@ -238,7 +238,7 @@ const App: React.FC = () => {
     { key: 'insurance', label: 'Insurance' },
     { key: 'debt', label: 'Debt / Loans' },
     { key: 'emergencyFund', label: 'Emergency Fund' },
-    { key: 'freedomFund', label: 'Freedom Fund' }
+    { key: 'freedomFund', label: 'Freedom/Runway Fund' }
   ];
 
   // Reusable iOS-style Segmented Control
@@ -481,7 +481,7 @@ const App: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                         {costFields.map((field) => (
                             <div key={field.key} className="relative">
-                                <label className="block text-[10px] uppercase font-extrabold text-slate-400 mb-1.5 ml-1">{field.label}</label>
+                                <label className="block text-[10px] uppercase font-extrabold text-slate-400 mb-1.5 ml-1 whitespace-nowrap">{field.label}</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <span className="text-slate-400 text-xs font-bold">{currentRules.currencySymbol}</span>
@@ -787,7 +787,7 @@ const App: React.FC = () => {
 
       {/* Hidden Invoice Template for PDF Export */}
       {result && (
-          <div id="pdf-invoice-template" className="fixed top-0 left-0 -z-50 bg-white text-slate-900 p-12 w-[800px]" style={{ visibility: 'hidden' }}>
+          <div id="pdf-invoice-template" className="fixed top-0 left-[-10000px] bg-white text-slate-900 p-12 w-[800px]">
               <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-start">
                   <div>
                       <div className="flex items-center gap-2 mb-2">
@@ -884,9 +884,15 @@ const App: React.FC = () => {
                        <p className="text-sm font-bold text-green-800 uppercase mb-1">Disposable Income (Free Cash)</p>
                        <p className="text-xs text-green-600">After Taxes & Living Costs</p>
                    </div>
-                   <div className="text-right">
-                       <p className="text-3xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly)}</p>
-                       <p className="text-sm font-semibold text-green-600">per month</p>
+                   <div className="flex gap-8 text-right">
+                       <div>
+                           <p className="text-2xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly * 12)}</p>
+                           <p className="text-xs font-semibold text-green-600 uppercase">Annual</p>
+                       </div>
+                       <div className="border-l border-green-200 pl-8">
+                           <p className="text-2xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly)}</p>
+                           <p className="text-xs font-semibold text-green-600 uppercase">Monthly</p>
+                       </div>
                    </div>
               </div>
 
