@@ -16,38 +16,37 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
     const gross = result.grossAnnual;
     const tax = result.totalDeductionsMonthly * 12;
     const costs = result.personalCostsTotal * 12;
-    const net = Math.max(0, result.netAnnual - costs);
+    const disposable = Math.max(0, result.netAnnual - costs);
     
     const taxPct = (tax / gross) * 100;
     const costsPct = (costs / gross) * 100;
-    const netPct = (net / gross) * 100;
+    const dispPct = (disposable / gross) * 100;
     
     const r = 15.9155;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const taxOffset = 25; 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const netOffset = 100 - taxPct + 25;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const costsOffset = 100 - taxPct - netPct + 25;
 
     return (
         <div className="flex flex-col items-center justify-center w-full h-full">
             <div className="relative w-32 h-32 md:w-40 md:h-40">
                 <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90 origin-center">
-                    {/* Track - Light Gray for Light Theme */}
+                    {/* Track */}
                     <circle cx="21" cy="21" r={r} fill="transparent" stroke="#F1F5F9" strokeWidth="6" />
                     
+                    {/* Tax (Red) - Starts at 0 */}
                     {taxPct > 0 && (
                     <circle cx="21" cy="21" r={r} fill="transparent" stroke="#FF3B30" strokeWidth="6" 
                         strokeDasharray={`${taxPct} ${100 - taxPct}`} strokeDashoffset={0} strokeLinecap="round" />
                     )}
-                    {netPct > 0 && (
-                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#34C759" strokeWidth="6"
-                        strokeDasharray={`${netPct} ${100 - netPct}`} strokeDashoffset={-taxPct} strokeLinecap="round" />
-                    )}
+                    
+                    {/* Costs (Blue) - Starts after Tax */}
                     {costsPct > 0 && (
                     <circle cx="21" cy="21" r={r} fill="transparent" stroke="#007AFF" strokeWidth="6"
-                        strokeDasharray={`${costsPct} ${100 - costsPct}`} strokeDashoffset={-(taxPct + netPct)} strokeLinecap="round" />
+                        strokeDasharray={`${costsPct} ${100 - costsPct}`} strokeDashoffset={-taxPct} strokeLinecap="round" />
+                    )}
+
+                    {/* Disposable (Green) - Starts after Tax + Costs */}
+                    {dispPct > 0 && (
+                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#34C759" strokeWidth="6"
+                        strokeDasharray={`${dispPct} ${100 - dispPct}`} strokeDashoffset={-(taxPct + costsPct)} strokeLinecap="round" />
                     )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-900">
@@ -66,7 +65,7 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#34C759]"></div>
-                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Net</span>
+                    <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Free</span>
                 </div>
             </div>
         </div>
@@ -525,7 +524,7 @@ const App: React.FC = () => {
                                 </div>
 
                                 <div className="mt-6 mb-4">
-                                    <h3 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-none">
+                                    <h3 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-none break-words">
                                         {formatCurrency(result.netMonthly)}
                                     </h3>
                                 </div>
@@ -558,7 +557,7 @@ const App: React.FC = () => {
                                 </div>
 
                                 <div className="mt-6 mb-4">
-                                    <h3 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-none">
+                                    <h3 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-none break-words">
                                         {formatCurrency(result.disposableMonthly)}
                                     </h3>
                                 </div>
