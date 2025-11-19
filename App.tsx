@@ -140,26 +140,55 @@ const App: React.FC = () => {
     }
 
     try {
-        const canvas = await window.html2canvas(element, { scale: 2 });
+        // Visual feedback
+        document.body.style.cursor = 'wait';
+
+        // Capture with optimized settings
+        // windowWidth: 1200 forces the layout to be rendered as if on a desktop screen (side-by-side columns)
+        // backgroundColor: '#ffffff' ensures transparent gaps between cards are white
+        const canvas = await window.html2canvas(element, { 
+            scale: 2, 
+            useCORS: true, 
+            logging: false,
+            windowWidth: 1200, 
+            backgroundColor: '#ffffff'
+        });
+
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
+        
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
         pdf.save(`Salary_Calculation_${inputs.country}.pdf`);
+        
+        document.body.style.cursor = 'default';
     } catch (e) {
         console.error(e);
         alert("Failed to generate PDF");
+        document.body.style.cursor = 'default';
     }
   };
 
   const shareLink = () => {
-      const url = new URL(window.location.href);
+      // Use origin + pathname to ensure a clean URL base (stripping old params/hash)
+      const baseUrl = window.location.origin + window.location.pathname;
+      const url = new URL(baseUrl);
+      
       url.searchParams.set('country', inputs.country);
-      url.searchParams.set('gross', mode === 'gross' ? inputs.grossIncome.toString() : result?.grossAnnual.toString() || '0');
-      url.searchParams.set('frequency', 'annual');
+      
+      // Always share the Annualized Gross to ensure consistency
+      const grossToShare = result ? result.grossAnnual : 0;
+
+      url.searchParams.set('gross', grossToShare.toString());
+      url.searchParams.set('frequency', 'annual'); 
       url.searchParams.set('rent', inputs.costs.rent.toString());
+      
       navigator.clipboard.writeText(url.toString()).then(() => {
           setCopyFeedback(true);
           setTimeout(() => setCopyFeedback(false), 2000);
