@@ -29,7 +29,7 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
             <div className="relative w-32 h-32 md:w-40 md:h-40">
                 <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90 origin-center">
                     {/* Track */}
-                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#F1F5F9" strokeWidth="6" />
+                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#E5E7EB" strokeWidth="6" />
                     
                     {/* Tax (Red) - Starts at 0 */}
                     {taxPct > 0 && (
@@ -50,7 +50,6 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
                     )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-900">
-                    <span className="text-[10px] text-slate-400 uppercase font-extrabold tracking-wide">Net</span>
                     <span className="text-xl font-extrabold tracking-tight">{((result.netAnnual / gross) * 100).toFixed(0)}%</span>
                 </div>
             </div>
@@ -88,6 +87,12 @@ const App: React.FC = () => {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [showSources, setShowSources] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
+
+  // Currency Converter State
+  const [convertAmount, setConvertAmount] = useState<number>(1000);
+  const [fromCurrency, setFromCurrency] = useState<CountryCode>(CountryCode.USA);
+  const [toCurrency, setToCurrency] = useState<CountryCode>(CountryCode.DEU);
+  const [convertedResult, setConvertedResult] = useState<number>(0);
 
   const currentRules = COUNTRY_RULES[inputs.country];
 
@@ -130,6 +135,18 @@ const App: React.FC = () => {
     setResult(res);
   }, [inputs, mode, targetNet]);
 
+  // Converter Logic
+  useEffect(() => {
+      const fromRate = COUNTRY_RULES[fromCurrency].exchangeRatePerUSD;
+      const toRate = COUNTRY_RULES[toCurrency].exchangeRatePerUSD;
+      if (fromRate && toRate) {
+          // Convert to USD first, then to Target
+          const amountInUSD = convertAmount / fromRate;
+          const finalAmount = amountInUSD * toRate;
+          setConvertedResult(finalAmount);
+      }
+  }, [convertAmount, fromCurrency, toCurrency]);
+
   const handleCostChange = (key: keyof UserInputs['costs'], val: string) => {
     const num = parseFloat(val) || 0;
     setInputs(prev => ({
@@ -144,6 +161,15 @@ const App: React.FC = () => {
       currency: currentRules.currency,
       maximumFractionDigits: 0 
     }).format(amount);
+  };
+
+  const getFlagUrl = (code: CountryCode) => {
+    const map: Record<string, string> = {
+        [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
+        [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
+        [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd'
+    };
+    return `https://flagcdn.com/w40/${map[code]}.png`;
   };
 
   const downloadPDF = async () => {
@@ -263,7 +289,7 @@ const App: React.FC = () => {
 
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
         {showSources && (
-             <div className="mb-8 bg-white border border-orange-100 p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-top-2">
+             <div className="mb-8 bg-white border border-orange-100 p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-top-2 transition-all duration-300 hover:shadow-2xl">
                 <div className="flex items-center gap-2 mb-3 text-orange-600">
                     <i className="fas fa-exclamation-triangle"></i>
                     <h3 className="font-bold text-sm">Data Sources & Disclaimers</h3>
@@ -288,7 +314,7 @@ const App: React.FC = () => {
             {/* Income Section */}
             <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 {/* Gradient Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-cyan-500 p-6 md:p-8 pb-10 relative text-white">
+                <div className="bg-gradient-to-r from-[#0034b8] to-[#0c58fa] p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
                      <div className="relative z-10 flex justify-between items-center">
                         <div className="flex items-center gap-3">
@@ -477,7 +503,7 @@ const App: React.FC = () => {
                     {/* Hero Card (Gross) - Redesigned */}
                     <div className="bg-gradient-to-br from-[#2c2c2e] to-[#1c1c1e] p-6 md:p-8 rounded-[32px] shadow-2xl text-white relative overflow-hidden group border border-white/10 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                         <div className="absolute -right-6 -bottom-6 text-white/5 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                            <div className="text-yellow-500/20">
+                            <div className="text-[#e6ca29]/20">
                                 <i className="fas fa-coins"></i>
                             </div>
                         </div>
@@ -524,7 +550,7 @@ const App: React.FC = () => {
                                 </div>
 
                                 <div className="mt-6 mb-4">
-                                    <h3 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-none break-words">
+                                    <h3 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-none break-words">
                                         {formatCurrency(result.netMonthly)}
                                     </h3>
                                 </div>
@@ -557,7 +583,7 @@ const App: React.FC = () => {
                                 </div>
 
                                 <div className="mt-6 mb-4">
-                                    <h3 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-none break-words">
+                                    <h3 className="text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-none break-words">
                                         {formatCurrency(result.disposableMonthly)}
                                     </h3>
                                 </div>
@@ -589,6 +615,84 @@ const App: React.FC = () => {
                                 </div>
                              </div>
                         </div>
+                    </div>
+
+                    {/* New Currency Converter Horizontal Card - Redesigned */}
+                    <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                         <div className="bg-gradient-to-r from-[#2FB050] to-[#A0E870] p-5 relative flex items-center justify-between text-white">
+                             <div className="flex items-center gap-3 relative z-10">
+                                 <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                    <i className="fas fa-exchange-alt text-white"></i>
+                                </div>
+                                <h3 className="font-extrabold text-lg tracking-tight text-white">Quick Convert</h3>
+                             </div>
+                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                         </div>
+                         <div className="p-6 flex flex-col md:flex-row items-center gap-4">
+                             <div className="flex-1 w-full">
+                                 <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Amount</label>
+                                 <input 
+                                    type="number"
+                                    value={convertAmount}
+                                    onChange={(e) => setConvertAmount(parseFloat(e.target.value) || 0)}
+                                    className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg"
+                                 />
+                             </div>
+                             <div className="flex-1 w-full">
+                                 <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">From</label>
+                                 <div className="relative">
+                                    <img 
+                                        src={getFlagUrl(fromCurrency)} 
+                                        alt="flag" 
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full object-cover shadow-sm"
+                                    />
+                                    <select 
+                                        value={fromCurrency}
+                                        onChange={(e) => setFromCurrency(e.target.value as CountryCode)}
+                                        className="w-full p-3 pl-12 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
+                                    >
+                                        {Object.values(COUNTRY_RULES).map(c => (
+                                            <option key={c.code} value={c.code}>{c.currency}</option>
+                                        ))}
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                                        <i className="fas fa-chevron-down text-xs"></i>
+                                    </div>
+                                 </div>
+                             </div>
+                             <div className="flex items-center justify-center pt-6 text-[#e6ca29]">
+                                 <i className="fas fa-arrow-right text-xl hidden md:block"></i>
+                                 <i className="fas fa-arrow-down text-xl md:hidden"></i>
+                             </div>
+                             <div className="flex-1 w-full">
+                                 <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">To</label>
+                                 <div className="relative">
+                                    <img 
+                                        src={getFlagUrl(toCurrency)} 
+                                        alt="flag" 
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full object-cover shadow-sm"
+                                    />
+                                    <select 
+                                        value={toCurrency}
+                                        onChange={(e) => setToCurrency(e.target.value as CountryCode)}
+                                        className="w-full p-3 pl-12 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
+                                    >
+                                        {Object.values(COUNTRY_RULES).map(c => (
+                                            <option key={c.code} value={c.code}>{c.currency}</option>
+                                        ))}
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                                        <i className="fas fa-chevron-down text-xs"></i>
+                                    </div>
+                                 </div>
+                             </div>
+                             <div className="flex-1 w-full bg-[#A0E870]/10 rounded-2xl p-3 border border-[#A0E870]/20 text-right">
+                                 <label className="block text-[10px] font-bold text-[#7ac74f] uppercase tracking-wider mb-1">Result</label>
+                                 <div className="text-xl font-extrabold text-[#5a8c3e] truncate">
+                                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: COUNTRY_RULES[toCurrency].currency }).format(convertedResult)}
+                                 </div>
+                             </div>
+                         </div>
                     </div>
 
                     {/* Detailed Breakdown Table */}

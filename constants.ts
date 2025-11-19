@@ -8,6 +8,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'United States',
     currency: 'USD',
     currencySymbol: '$',
+    exchangeRatePerUSD: 1.0,
     subNationalLabel: 'State',
     hasMaritalStatusOption: true,
     sources: [
@@ -125,6 +126,13 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
             cappedBase: 89344
            }
         ]
+      },
+      {
+        id: 'WA',
+        name: 'Washington',
+        deductibles: [
+          { name: 'WA Cares Fund', description: 'Long-term care tax.', type: 'percentage', rate: 0.0058 }
+        ]
       }
     ]
   },
@@ -133,6 +141,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Singapore',
     currency: 'SGD',
     currencySymbol: 'S$',
+    exchangeRatePerUSD: 1.34,
     sources: [{ label: 'CPF Rates & Ceilings 2025', url: 'https://www.cpf.gov.sg/', date: '2024-11-01' }],
     federalDeductibles: [
       {
@@ -176,6 +185,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Germany',
     currency: 'EUR',
     currencySymbol: '€',
+    exchangeRatePerUSD: 0.93,
     hasMaritalStatusOption: true, 
     hasChurchTaxOption: true,
     sources: [{ label: 'BMF 2025 Proposed', url: 'https://www.bundesfinanzministerium.de/', date: '2024-11-01' }],
@@ -218,6 +228,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Ireland',
     currency: 'EUR',
     currencySymbol: '€',
+    exchangeRatePerUSD: 0.93,
     hasMaritalStatusOption: true, 
     sources: [{ label: 'Budget 2025', url: 'https://www.revenue.ie/', date: '2024-10-01' }],
     federalDeductibles: [
@@ -256,6 +267,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Canada',
     currency: 'CAD',
     currencySymbol: '$',
+    exchangeRatePerUSD: 1.38,
     subNationalLabel: 'Province',
     sources: [{ label: 'CRA 2024 Rates', url: 'https://www.canada.ca/', date: '2024-01-01' }],
     federalDeductibles: [
@@ -310,6 +322,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'New Zealand',
     currency: 'NZD',
     currencySymbol: '$',
+    exchangeRatePerUSD: 1.68,
     sources: [{ label: 'IRD 2024/25', url: 'https://www.ird.govt.nz/', date: '2024-04-01' }],
     federalDeductibles: [
       {
@@ -332,12 +345,14 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Switzerland',
     currency: 'CHF',
     currencySymbol: 'CHF',
+    exchangeRatePerUSD: 0.89,
     subNationalLabel: 'Canton',
     sources: [{ label: 'ESTV 2024', url: 'https://swisstaxcalculator.estv.admin.ch/', date: '2024-01-01' }],
     federalDeductibles: [
       { name: 'Federal Tax (Direct)', description: 'Direct Federal Tax.', type: 'progressive', brackets: [{ threshold: 18300, rate: 0.0077 }, { threshold: 31600, rate: 0.0088 }, { threshold: 41400, rate: 0.0264 }, { threshold: 55200, rate: 0.0297 }, { threshold: 72500, rate: 0.0594 }] },
       { name: 'AHV/IV/EO (OASI)', description: 'Old-Age/Survivors (5.3%).', type: 'percentage', rate: 0.053 },
       { name: 'ALV (Unemployment)', description: 'Unemployment (1.1%).', type: 'percentage', rate: 0.011, cappedBase: 148200 },
+      { name: 'NBU', description: 'Non-occupational Accident Ins.', type: 'percentage', rate: 0.012 },
       { name: 'Pension (BVG) - Est.', description: 'Occupational Pension.', type: 'percentage', rate: 0.035, exemptAmount: 25725 } 
     ],
     subNationalRules: [
@@ -350,6 +365,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Norway',
     currency: 'NOK',
     currencySymbol: 'kr',
+    exchangeRatePerUSD: 11.0,
     sources: [{ label: 'Skatteetaten 2024', url: 'https://www.skatteetaten.no/', date: '2024-01-01' }],
     federalDeductibles: [
       { 
@@ -357,7 +373,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         description: 'General income tax (22%).',
         type: 'percentage', 
         rate: 0.22,
-        exemptAmount: 88250 // Personfradrag 2024
+        exemptAmount: 108550 // Personfradrag 2025 Budget
       },
       {
         name: 'Bracket Tax (Gross)',
@@ -379,6 +395,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     name: 'Bangladesh',
     currency: 'BDT',
     currencySymbol: '৳',
+    exchangeRatePerUSD: 120.0,
     sources: [{ label: 'Finance Act 2024 (NBR)', url: 'https://nbr.gov.bd/', date: '2024-07-01' }],
     federalDeductibles: [
       {

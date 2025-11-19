@@ -57,6 +57,7 @@ export interface CountryRules {
   name: string;
   currency: string;
   currencySymbol: string;
+  exchangeRatePerUSD: number; // New field for converter
   federalDeductibles: Deductible[];
   subNationalLabel?: string; 
   subNationalRules?: SubNationalRule[];
