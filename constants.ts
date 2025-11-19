@@ -366,5 +366,27 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       },
       { name: 'National Insurance', description: 'Trygdeavgift (7.8%).', type: 'percentage', rate: 0.078 }
     ]
+  },
+  [CountryCode.BGD]: {
+    code: CountryCode.BGD,
+    name: 'Bangladesh',
+    currency: 'BDT',
+    currencySymbol: '৳',
+    sources: [{ label: 'Finance Act 2024 (NBR)', url: 'https://nbr.gov.bd/', date: '2024-07-01' }],
+    federalDeductibles: [
+      {
+        name: 'Income Tax',
+        description: 'Progressive Tax (General Category).',
+        type: 'progressive',
+        exemptAmount: 350000, // First 3.5 Lakh Nil
+        brackets: [
+          { threshold: 0, rate: 0.05 },       // Next 100,000
+          { threshold: 100000, rate: 0.10 },  // Next 400,000
+          { threshold: 500000, rate: 0.15 },  // Next 500,000
+          { threshold: 1000000, rate: 0.20 }, // Next 500,000
+          { threshold: 1500000, rate: 0.25 }, // Balance
+        ]
+      }
+    ]
   }
 };

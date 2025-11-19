@@ -7,6 +7,7 @@ export enum CountryCode {
   NZL = 'NZL', // New Zealand
   NOR = 'NOR', // Norway
   SGP = 'SGP', // Singapore
+  BGD = 'BGD', // Bangladesh
 }
 
 export interface TaxBracket {
