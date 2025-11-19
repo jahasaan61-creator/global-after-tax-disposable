@@ -543,8 +543,8 @@ const App: React.FC = () => {
                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div>
                                 <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10 shadow-inner">
-                                        <i className="fas fa-briefcase text-white/90"></i>
+                                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-xl border border-white/30 shadow-lg transition-all duration-300 hover:bg-white/30 hover:scale-105">
+                                        <i className="fas fa-briefcase text-white drop-shadow-md"></i>
                                     </div>
                                     <p className="text-white/80 text-[13px] font-bold uppercase tracking-wider shadow-black drop-shadow-md">
                                         {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
@@ -555,9 +555,9 @@ const App: React.FC = () => {
                                 </h2>
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                                 <div className="flex items-center gap-2 bg-black/30 px-4 py-2 rounded-2xl backdrop-blur-md border border-white/10 shadow-lg">
-                                     <span className="text-white/70 text-xs font-semibold uppercase">Monthly</span>
-                                     <span className="text-xl font-bold tracking-tight text-white">{formatCurrency(result.grossMonthly)}</span>
+                                 <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-2xl backdrop-blur-xl border border-white/30 shadow-xl transition-all duration-300 hover:bg-white/30 hover:scale-105">
+                                     <span className="text-white/90 text-xs font-bold uppercase tracking-wide drop-shadow-sm">Monthly</span>
+                                     <span className="text-xl font-bold tracking-tight text-white drop-shadow-md">{formatCurrency(result.grossMonthly)}</span>
                                 </div>
                             </div>
                         </div>
