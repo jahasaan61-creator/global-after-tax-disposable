@@ -199,9 +199,12 @@ const App: React.FC = () => {
         const imgProps = pdf.getImageProperties(imgData);
         const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
         
-        // If image is taller than 1 page, could cut it, but for this invoice style it should fit
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
-        pdf.save(`Statement_${inputs.country}_${new Date().toISOString().split('T')[0]}.pdf`);
+        
+        const dateStr = new Date().toISOString().split('T')[0];
+        const fileName = `NetPay_Statement_${inputs.country}_${dateStr}.pdf`;
+        
+        pdf.save(fileName);
         document.body.style.cursor = 'default';
     } catch (e) {
         console.error(e);
@@ -266,7 +269,7 @@ const App: React.FC = () => {
       <header className="sticky top-0 z-30 bg-[#F5F5F7]/80 backdrop-blur-xl border-b border-gray-200/60">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
             <div className="flex items-center gap-3">
-                <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-lg text-yellow-400 overflow-hidden border-2 border-white/20">
+                 <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-lg text-yellow-400 overflow-hidden border-2 border-white/20">
                     <i className="fas fa-coins text-2xl"></i>
                 </div>
                 <h1 className="text-xl font-bold tracking-tight">Global Net Pay</h1>
@@ -388,14 +391,14 @@ const App: React.FC = () => {
                             {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
                         </label>
                         <div className="relative group">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold z-10 transition-colors group-focus-within:text-indigo-500">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold z-10 transition-colors group-focus-within:text-blue-500">
                                 {currentRules.currencySymbol}
                             </span>
                             <input 
                                 type="number" 
                                 min="0"
                                 autoComplete="off"
-                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-indigo-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
+                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
                                 value={mode === 'gross' ? inputs.grossIncome : targetNet}
                                 onChange={(e) => {
                                     const val = parseFloat(e.target.value) || 0;
@@ -420,7 +423,7 @@ const App: React.FC = () => {
                                 type="number" 
                                 min="15" max="99"
                                 autoComplete="off"
-                                className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-center font-bold"
+                                className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold"
                                 value={inputs.details.age}
                                 onChange={(e) => setInputs({...inputs, details: { ...inputs.details, age: parseInt(e.target.value) || 30 }})}
                             />
@@ -430,7 +433,7 @@ const App: React.FC = () => {
                                 <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Status</label>
                                 <div className="relative">
                                     <select 
-                                        className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl appearance-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-center font-bold text-sm"
+                                        className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl appearance-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-sm"
                                         value={inputs.details.maritalStatus}
                                         onChange={(e) => setInputs({...inputs, details: { ...inputs.details, maritalStatus: e.target.value as 'single'|'married' }})}
                                     >
@@ -453,7 +456,7 @@ const App: React.FC = () => {
                                     checked={inputs.details.churchTax}
                                     onChange={(e) => setInputs({...inputs, details: { ...inputs.details, churchTax: e.target.checked }})}
                                 />
-                                <div className="w-full h-full bg-gray-300 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
+                                <div className="w-full h-full bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-colors"></div>
                                 <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-6"></div>
                             </div>
                          </div>
@@ -489,7 +492,7 @@ const App: React.FC = () => {
                                     <input 
                                         type="number"
                                         autoComplete="off"
-                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] border-none rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-rose-500/20 outline-none transition-all font-bold text-sm"
+                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] border-none rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
                                         value={(inputs.costs as any)[field.key] || ''}
                                         placeholder="0"
                                         onChange={(e) => handleCostChange(field.key as any, e.target.value)}
@@ -643,12 +646,17 @@ const App: React.FC = () => {
                          <div className="p-6 flex flex-col md:flex-row items-center gap-4">
                              <div className="flex-1 w-full">
                                  <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Amount</label>
-                                 <input 
-                                    type="number"
-                                    value={convertAmount}
-                                    onChange={(e) => setConvertAmount(parseFloat(e.target.value) || 0)}
-                                    className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg"
-                                 />
+                                 <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="text-slate-400 text-xs font-bold">{COUNTRY_RULES[fromCurrency].currencySymbol}</span>
+                                    </div>
+                                    <input 
+                                        type="number"
+                                        value={convertAmount}
+                                        onChange={(e) => setConvertAmount(parseFloat(e.target.value) || 0)}
+                                        className="w-full p-3 pl-8 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg"
+                                    />
+                                 </div>
                              </div>
                              <div className="flex-1 w-full">
                                  <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">From</label>
@@ -721,7 +729,7 @@ const App: React.FC = () => {
                                 <h3 className="font-extrabold text-lg text-white tracking-tight">Breakdown</h3>
                              </div>
                              <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
-                                <i className="fas fa-arrow-down-to-line"></i> Export Invoice
+                                <i className="fas fa-arrow-down-to-line"></i> Get PDF
                             </button>
                         </div>
 
@@ -794,12 +802,12 @@ const App: React.FC = () => {
                           <div className="w-8 h-8 bg-black rounded flex items-center justify-center text-yellow-400">
                              <i className="fas fa-coins"></i>
                           </div>
-                          <h1 className="text-2xl font-bold">Global Net Pay Calculator</h1>
+                          <h1 className="text-3xl font-bold">Global Net Pay Calculator</h1>
                       </div>
-                      <p className="text-sm text-slate-500">Salary & Tax Estimation Statement</p>
+                      <p className="text-base text-slate-500">Salary & Tax Estimation Statement</p>
                   </div>
                   <div className="text-right">
-                      <p className="text-lg font-bold">INVOICE / STATEMENT</p>
+                      <p className="text-xl font-bold">INVOICE / STATEMENT</p>
                       <p className="text-sm text-slate-500">Date: {new Date().toLocaleDateString()}</p>
                       <p className="text-sm text-slate-500">Ref: {inputs.country}-{new Date().getFullYear()}</p>
                   </div>
@@ -807,55 +815,55 @@ const App: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-8 mb-10">
                   <div>
-                      <h3 className="text-xs font-bold uppercase text-slate-400 mb-2">Employee Details</h3>
-                      <div className="space-y-1 text-sm">
+                      <h3 className="text-sm font-bold uppercase text-slate-400 mb-2">Employee Details</h3>
+                      <div className="space-y-1 text-base">
                           <p><span className="font-semibold w-24 inline-block">Country:</span> {currentRules.name}</p>
                           <p><span className="font-semibold w-24 inline-block">Age:</span> {inputs.details.age}</p>
                           <p><span className="font-semibold w-24 inline-block">Status:</span> {inputs.details.maritalStatus}</p>
                       </div>
                   </div>
                   <div className="text-right">
-                      <h3 className="text-xs font-bold uppercase text-slate-400 mb-2">Summary</h3>
-                      <div className="text-3xl font-extrabold text-slate-900 mb-1">
+                      <h3 className="text-sm font-bold uppercase text-slate-400 mb-2">Summary</h3>
+                      <div className="text-5xl font-extrabold text-slate-900 mb-1">
                           {formatCurrency(result.grossAnnual)}
                       </div>
-                      <p className="text-sm text-slate-500">Gross Annual Income</p>
+                      <p className="text-base text-slate-500">Gross Annual Income</p>
                   </div>
               </div>
 
               <div className="mb-8">
-                  <table className="w-full text-sm border-collapse">
+                  <table className="w-full text-base border-collapse">
                       <thead>
                           <tr className="bg-slate-100 border-b border-slate-200">
-                              <th className="py-3 px-4 text-left font-bold text-slate-700">Description</th>
-                              <th className="py-3 px-4 text-right font-bold text-slate-700">Annual</th>
-                              <th className="py-3 px-4 text-right font-bold text-slate-700">Monthly</th>
-                              <th className="py-3 px-4 text-right font-bold text-slate-700">%</th>
+                              <th className="py-4 px-4 text-left font-bold text-slate-700">Description</th>
+                              <th className="py-4 px-4 text-right font-bold text-slate-700">Annual</th>
+                              <th className="py-4 px-4 text-right font-bold text-slate-700">Monthly</th>
+                              <th className="py-4 px-4 text-right font-bold text-slate-700">%</th>
                           </tr>
                       </thead>
                       <tbody>
-                           <tr className="border-b border-slate-100">
-                               <td className="py-3 px-4 font-bold">Gross Income</td>
-                               <td className="py-3 px-4 text-right">{formatCurrency(result.grossAnnual)}</td>
-                               <td className="py-3 px-4 text-right">{formatCurrency(result.grossMonthly)}</td>
-                               <td className="py-3 px-4 text-right">100%</td>
+                           <tr className="border-b border-slate-100 even:bg-slate-50">
+                               <td className="py-4 px-4 font-bold">Gross Income</td>
+                               <td className="py-4 px-4 text-right">{formatCurrency(result.grossAnnual)}</td>
+                               <td className="py-4 px-4 text-right">{formatCurrency(result.grossMonthly)}</td>
+                               <td className="py-4 px-4 text-right">100%</td>
                            </tr>
                            {result.deductionsBreakdown.map((d, i) => (
-                               <tr key={i} className="border-b border-slate-100 text-red-600">
-                                   <td className="py-3 px-4 flex items-center gap-2">
+                               <tr key={i} className="border-b border-slate-100 text-red-600 even:bg-slate-50">
+                                   <td className="py-4 px-4 flex items-center gap-2">
                                        {d.name} 
                                        {d.isEmployer && <span className="text-[10px] bg-gray-100 text-gray-500 px-2 rounded">Employer</span>}
                                    </td>
-                                   <td className="py-3 px-4 text-right">-{formatCurrency(d.amount)}</td>
-                                   <td className="py-3 px-4 text-right">-{formatCurrency(d.amount/12)}</td>
-                                   <td className="py-3 px-4 text-right">{(d.amount/result.grossAnnual * 100).toFixed(1)}%</td>
+                                   <td className="py-4 px-4 text-right">-{formatCurrency(d.amount)}</td>
+                                   <td className="py-4 px-4 text-right">-{formatCurrency(d.amount/12)}</td>
+                                   <td className="py-4 px-4 text-right">{(d.amount/result.grossAnnual * 100).toFixed(1)}%</td>
                                </tr>
                            ))}
-                           <tr className="bg-slate-50 font-bold text-slate-900 border-t-2 border-slate-200">
-                               <td className="py-3 px-4">NET INCOME</td>
-                               <td className="py-3 px-4 text-right">{formatCurrency(result.netAnnual)}</td>
-                               <td className="py-3 px-4 text-right">{formatCurrency(result.netMonthly)}</td>
-                               <td className="py-3 px-4 text-right">{(result.netAnnual/result.grossAnnual*100).toFixed(1)}%</td>
+                           <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                               <td className="py-4 px-4">NET INCOME</td>
+                               <td className="py-4 px-4 text-right">{formatCurrency(result.netAnnual)}</td>
+                               <td className="py-4 px-4 text-right">{formatCurrency(result.netMonthly)}</td>
+                               <td className="py-4 px-4 text-right">{(result.netAnnual/result.grossAnnual*100).toFixed(1)}%</td>
                            </tr>
                       </tbody>
                   </table>
@@ -864,10 +872,10 @@ const App: React.FC = () => {
               {result.personalCostsTotal > 0 && (
                   <div className="mb-8">
                       <h3 className="text-sm font-bold uppercase text-slate-400 mb-4 border-b pb-2">Personal Costs Breakdown</h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-base">
                           {Object.entries(inputs.costs).map(([key, val]) => (val as number) > 0 && (
                               <div key={key} className="flex justify-between border-b border-dotted border-slate-200 pb-1">
-                                  <span className="capitalize text-slate-600">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                  <span className="capitalize text-slate-600 whitespace-nowrap">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                                   <span className="font-medium">{formatCurrency(val as number)}/mo</span>
                               </div>
                           ))}
@@ -879,24 +887,24 @@ const App: React.FC = () => {
                   </div>
               )}
 
-              <div className="bg-green-50 border border-green-100 rounded-xl p-6 flex justify-between items-center">
+              <div className="bg-green-50 border border-green-100 rounded-xl p-8 flex justify-between items-center">
                    <div>
-                       <p className="text-sm font-bold text-green-800 uppercase mb-1">Disposable Income (Free Cash)</p>
-                       <p className="text-xs text-green-600">After Taxes & Living Costs</p>
+                       <p className="text-lg font-bold text-green-800 uppercase mb-1">Disposable Income (Free Cash)</p>
+                       <p className="text-sm text-green-600">After Taxes & Living Costs</p>
                    </div>
                    <div className="flex gap-8 text-right">
                        <div>
-                           <p className="text-2xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly * 12)}</p>
-                           <p className="text-xs font-semibold text-green-600 uppercase">Annual</p>
+                           <p className="text-4xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly * 12)}</p>
+                           <p className="text-sm font-semibold text-green-600 uppercase">Annual</p>
                        </div>
                        <div className="border-l border-green-200 pl-8">
-                           <p className="text-2xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly)}</p>
-                           <p className="text-xs font-semibold text-green-600 uppercase">Monthly</p>
+                           <p className="text-4xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly)}</p>
+                           <p className="text-sm font-semibold text-green-600 uppercase">Monthly</p>
                        </div>
                    </div>
               </div>
 
-              <div className="mt-12 pt-6 border-t border-slate-200 text-center text-xs text-slate-400">
+              <div className="mt-12 pt-6 border-t border-slate-200 text-center text-sm text-slate-400">
                   <p>Generated by Global Net Pay Calculator. This document is for estimation purposes only and does not constitute official financial advice.</p>
                   <p className="mt-1">Source Rules: {currentRules.sources.map(s => s.label).join(', ')}</p>
               </div>
