@@ -29,9 +29,15 @@ export interface Deductible {
   exemptAmount?: number; 
   fixedCredits?: number; 
   
+  // Married / Conditional Logic
+  exemptAmountMarried?: number;
+  bracketsMarried?: TaxBracket[];
+  fixedCreditsMarried?: number;
+
   // Specific Flags
   employerPaid?: boolean; 
-  isChurchTax?: boolean; // Applied on the tax amount, not income
+  isTaxSurcharge?: boolean; // Applies to the calculated Tax amount (e.g. Soli, Church) OR operates as a surtax
+  surchargeThreshold?: number; // Only apply if base amount > this
   
   // Dynamic Rates
   ratesByAge?: { minAge: number; maxAge: number; rate: number }[];

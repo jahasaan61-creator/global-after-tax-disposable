@@ -9,15 +9,26 @@ const calculateTaxAmount = (
 ): number => {
   let basis = grossIncome;
   const { country, details } = inputs;
+  const isMarried = details.maritalStatus === 'married';
 
-  // --- SPECIAL LOGIC: Church Tax (Germany) ---
-  // Church tax is unique: it's a % of the *Income Tax* amount, not the gross income.
-  if (deductible.isChurchTax) {
-    if (!details.churchTax) return 0;
-    return accumulatedTax * (deductible.rate || 0.09);
+  // --- SURCHARGE LOGIC (Church Tax, Soli, etc) ---
+  if (deductible.isTaxSurcharge) {
+      // 1. Check boolean flag if it exists (e.g. Church Tax toggle)
+      if (deductible.name.includes('Church') && !details.churchTax) {
+          return 0;
+      }
+      
+      // 2. Check threshold (e.g. Soli Freigrenze)
+      if (deductible.surchargeThreshold && accumulatedTax < deductible.surchargeThreshold) {
+          return 0;
+      }
+
+      return accumulatedTax * (deductible.rate || 0);
   }
 
-  // --- SPECIAL LOGIC: Age Based Rates (Singapore CPF) ---
+  // --- STANDARD LOGIC ---
+
+  // 1. Apply Age-Based Rate adjustments
   let effectiveRate = deductible.rate;
   if (deductible.ratesByAge && details.age) {
       const ageRule = deductible.ratesByAge.find(r => details.age > r.minAge && details.age <= r.maxAge);
@@ -26,17 +37,18 @@ const calculateTaxAmount = (
       }
   }
 
-  // 1. Apply Income Cap (Wage Base)
+  // 2. Apply Income Cap (Wage Base)
+  // Note: If cappedBase is present, tax is calculated on min(income, cap)
   if (deductible.cappedBase && basis > deductible.cappedBase) {
     basis = deductible.cappedBase;
   }
 
-  // 2. Apply Standard Deduction / Exempt Amount
+  // 3. Apply Standard Deduction / Exempt Amount
   let exempt = deductible.exemptAmount || 0;
   
-  // --- SPECIAL LOGIC: USA Married Filing Jointly Standard Deduction ---
-  if (country === CountryCode.USA && details.maritalStatus === 'married' && deductible.name.includes('Federal Income')) {
-      exempt = 29200; // 2024 Married Jointly Standard Deduction
+  // Use Married exemption if available and applicable
+  if (isMarried && deductible.exemptAmountMarried) {
+      exempt = deductible.exemptAmountMarried;
   }
 
   basis = Math.max(0, basis - exempt);
@@ -45,43 +57,27 @@ const calculateTaxAmount = (
 
   if (deductible.type === 'percentage' && effectiveRate) {
     computedAmount = basis * effectiveRate;
-  } else if (deductible.type === 'progressive' && deductible.brackets) {
+  } else if (deductible.type === 'progressive' && (deductible.brackets || deductible.bracketsMarried)) {
     
-    // --- SPECIAL LOGIC: Germany Income Splitting (Ehegattensplitting) ---
-    // For married couples, we halve the income, calculate tax, then double the tax.
-    // Equivalent to doubling the bracket widths.
+    // --- SPECIAL LOGIC: Germany Income Splitting ---
+    // Germany doesn't use separate brackets, it uses the "Splitting Procedure".
+    // Tax = 2 * TaxFunction(Income / 2)
     let processingIncome = basis;
-    let bracketsToUse = [...deductible.brackets];
+    let multiplier = 1;
 
-    if (country === CountryCode.DEU && details.maritalStatus === 'married' && deductible.name.includes('Income Tax')) {
+    if (country === CountryCode.DEU && isMarried && deductible.name.includes('Income Tax')) {
        processingIncome = basis / 2;
+       multiplier = 2;
     }
 
-    // --- SPECIAL LOGIC: USA Married Filing Jointly Brackets ---
-    if (country === CountryCode.USA && details.maritalStatus === 'married' && deductible.name.includes('Federal Income')) {
-        // Approximate 2024 Married Jointly Brackets (Roughly 2x Single width)
-        bracketsToUse = [
-            { threshold: 0, rate: 0.10 },
-            { threshold: 23200, rate: 0.12 },
-            { threshold: 94300, rate: 0.22 },
-            { threshold: 201050, rate: 0.24 },
-            { threshold: 383900, rate: 0.32 },
-            { threshold: 487450, rate: 0.35 },
-            { threshold: 731200, rate: 0.37 },
-        ];
+    // Select Brackets (Married vs Single)
+    let bracketsToUse = deductible.brackets || [];
+    if (isMarried && deductible.bracketsMarried) {
+        bracketsToUse = deductible.bracketsMarried;
     }
 
-    // --- SPECIAL LOGIC: Ireland Married Rate Band ---
-    if (country === CountryCode.IRL && details.maritalStatus === 'married' && deductible.name.includes('PAYE')) {
-        // Standard Rate cut-off increases to roughly 51,000 (depending on dual earner status, simplified here to 1 earner max benefit)
-        bracketsToUse = [
-            { threshold: 0, rate: 0.20 },
-            { threshold: 51000, rate: 0.40 },
-        ];
-    }
-
-    // Standard Progressive Logic
-    const sortedBrackets = bracketsToUse.sort((a, b) => a.threshold - b.threshold);
+    // Standard Progressive Calculation
+    const sortedBrackets = [...bracketsToUse].sort((a, b) => a.threshold - b.threshold);
     
     for (let i = 0; i < sortedBrackets.length; i++) {
       const bracket = sortedBrackets[i];
@@ -95,24 +91,21 @@ const calculateTaxAmount = (
       }
     }
 
-    // Germany: Finish Splitting calculation (Double the result)
-    if (country === CountryCode.DEU && details.maritalStatus === 'married' && deductible.name.includes('Income Tax')) {
-        computedAmount *= 2;
-    }
+    // Apply Germany Splitting Multiplier
+    computedAmount *= multiplier;
   }
 
-  // 3. Apply Tax Credits
-  // --- SPECIAL LOGIC: Ireland Married Tax Credits ---
+  // 4. Apply Tax Credits
   let credits = deductible.fixedCredits || 0;
-  if (country === CountryCode.IRL && details.maritalStatus === 'married' && deductible.name.includes('PAYE')) {
-      credits = 3750 + 1875; // Simplified: Personal (Married) + Employee credit
+  if (isMarried && deductible.fixedCreditsMarried) {
+      credits = deductible.fixedCreditsMarried;
   }
 
   if (credits > 0) {
     computedAmount = Math.max(0, computedAmount - credits);
   }
 
-  // 4. Apply Final Hard Cap
+  // 5. Apply Final Hard Cap (rare, mainly for fixed fees)
   if (deductible.cap && computedAmount > deductible.cap) {
     computedAmount = deductible.cap;
   }
@@ -127,15 +120,15 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
 
   const deductionsBreakdown: DeductionResult[] = [];
   
-  // We need to track Total Income Tax for Church Tax Calculation (Germany)
+  // Track Total Income Tax for Surcharges (Soli, Church Tax)
   let totalIncomeTax = 0;
 
   // 1. Federal Deductions
   rules.federalDeductibles.forEach(d => {
     const amount = calculateTaxAmount(grossAnnual, d, inputs, totalIncomeTax);
     
-    // Track Income Tax for dependent taxes
-    if (d.name.includes('Income Tax') || d.name.includes('Federal Income') || d.name.includes('PAYE')) {
+    // Accumulate Income Tax base for dependent taxes
+    if (!d.isTaxSurcharge && (d.name.includes('Income Tax') || d.name.includes('Federal Income') || d.name.includes('PAYE'))) {
         totalIncomeTax += amount;
     }
 
@@ -156,6 +149,8 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
     const regionRule = rules.subNationalRules.find(r => r.id === inputs.subRegion);
     if (regionRule) {
       regionRule.deductibles.forEach(d => {
+        // State taxes often use Federal AGI, but here we assume Gross basis for simplicity unless complex linkage needed
+        // In CA/NY, state tax is independent calc on Gross-like figure.
         const amount = calculateTaxAmount(grossAnnual, d, inputs, totalIncomeTax);
         if (amount > 0) {
           deductionsBreakdown.push({
@@ -204,6 +199,7 @@ export const calculateGrossFromNet = (targetNet: number, baseInputs: UserInputs)
   let low = targetAnnualNet;
   let high = targetAnnualNet * 3;
   
+  // Heuristic safety expansion
   let safety = 0;
   while (safety < 20) {
       const res = calculateNetPay({ ...baseInputs, grossIncome: high, frequency: 'annual' }); 
@@ -216,6 +212,7 @@ export const calculateGrossFromNet = (targetNet: number, baseInputs: UserInputs)
   let iterations = 0;
   let bestGross = high;
   
+  // Binary Search
   while (low <= high && iterations < 50) {
       const mid = (low + high) / 2;
       const res = calculateNetPay({ ...baseInputs, grossIncome: mid, frequency: 'annual' });
