@@ -1,3 +1,4 @@
+
 import { COUNTRY_RULES } from '../constants';
 import { CalculationResult, Deductible, DeductionResult, UserInputs, CountryCode, TaxBracket } from '../types';
 
@@ -116,6 +117,12 @@ const calculateTaxAmount = (
 export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
   const rules = COUNTRY_RULES[inputs.country];
   let grossAnnual = inputs.frequency === 'monthly' ? inputs.grossIncome * 12 : inputs.grossIncome;
+  
+  // Incorporate annual bonus if present
+  if (inputs.annualBonus) {
+    grossAnnual += inputs.annualBonus;
+  }
+
   if (grossAnnual < 0) grossAnnual = 0;
 
   const deductionsBreakdown: DeductionResult[] = [];

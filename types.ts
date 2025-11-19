@@ -1,3 +1,4 @@
+
 export enum CountryCode {
   USA = 'USA',
   CHE = 'CHE', // Switzerland
@@ -108,6 +109,7 @@ export interface UserInputs {
     freedomFund: number;
   };
   details: UserDetails;
+  annualBonus: number;
 }
 
 export interface ChatMessage {
