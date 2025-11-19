@@ -180,7 +180,9 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
     (inputs.costs.rent || 0) + 
     (inputs.costs.groceries || 0) + 
     (inputs.costs.utilities || 0) + 
-    (inputs.costs.transport || 0);
+    (inputs.costs.transport || 0) +
+    (inputs.costs.insurance || 0) + 
+    (inputs.costs.emergencyFund || 0);
 
   return {
     grossMonthly: grossAnnual / 12,

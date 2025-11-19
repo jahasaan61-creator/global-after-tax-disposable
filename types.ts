@@ -94,6 +94,8 @@ export interface UserInputs {
     groceries: number;
     utilities: number;
     transport: number;
+    insurance: number;
+    emergencyFund: number;
   };
   details: UserDetails;
 }

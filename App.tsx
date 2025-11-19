@@ -75,7 +75,7 @@ const App: React.FC = () => {
     grossIncome: 50000,
     frequency: 'annual',
     country: CountryCode.USA,
-    costs: { rent: 0, groceries: 0, utilities: 0, transport: 0 },
+    costs: { rent: 0, groceries: 0, utilities: 0, transport: 0, insurance: 0, emergencyFund: 0 },
     details: { age: 30, maritalStatus: 'single', churchTax: false }
   });
 
@@ -93,14 +93,22 @@ const App: React.FC = () => {
         const c = params.get('country') as CountryCode;
         const g = parseFloat(params.get('gross') || '0');
         const f = params.get('frequency') as 'monthly' | 'annual';
-        const r = parseFloat(params.get('rent') || '0');
+        
+        // Load all costs
+        const rent = parseFloat(params.get('rent') || '0');
+        const groceries = parseFloat(params.get('groceries') || '0');
+        const utilities = parseFloat(params.get('utilities') || '0');
+        const transport = parseFloat(params.get('transport') || '0');
+        const insurance = parseFloat(params.get('insurance') || '0');
+        const emergencyFund = parseFloat(params.get('emergencyFund') || '0');
+
         if (c && COUNTRY_RULES[c]) {
             setInputs(prev => ({
                 ...prev,
                 country: c,
                 grossIncome: g,
                 frequency: f || 'annual',
-                costs: { ...prev.costs, rent: r }
+                costs: { ...prev.costs, rent, groceries, utilities, transport, insurance, emergencyFund }
             }));
         }
     }
@@ -187,13 +195,29 @@ const App: React.FC = () => {
 
       url.searchParams.set('gross', grossToShare.toString());
       url.searchParams.set('frequency', 'annual'); 
+      
+      // Share all costs
       url.searchParams.set('rent', inputs.costs.rent.toString());
+      url.searchParams.set('groceries', inputs.costs.groceries.toString());
+      url.searchParams.set('utilities', inputs.costs.utilities.toString());
+      url.searchParams.set('transport', inputs.costs.transport.toString());
+      url.searchParams.set('insurance', inputs.costs.insurance.toString());
+      url.searchParams.set('emergencyFund', inputs.costs.emergencyFund.toString());
       
       navigator.clipboard.writeText(url.toString()).then(() => {
           setCopyFeedback(true);
           setTimeout(() => setCopyFeedback(false), 2000);
       });
   };
+
+  const costFields = [
+    { key: 'rent', label: 'Rent' },
+    { key: 'groceries', label: 'Groceries' },
+    { key: 'utilities', label: 'Utilities' },
+    { key: 'transport', label: 'Transport' },
+    { key: 'insurance', label: 'Insurance' },
+    { key: 'emergencyFund', label: 'Emergency Fund' }
+  ];
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-800">
@@ -356,7 +380,7 @@ const App: React.FC = () => {
                         <input 
                             type="number" 
                             min="0"
-                            className="w-full p-3 bg-slate-50 border border-slate-300 rounded-r-lg text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all font-semibold text-lg"
+                            className="w-full p-4 bg-white border border-slate-300 rounded-r-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all font-bold text-xl tracking-tight"
                             value={mode === 'gross' ? inputs.grossIncome : targetNet}
                             onChange={(e) => {
                                 const val = parseFloat(e.target.value) || 0;
@@ -394,19 +418,19 @@ const App: React.FC = () => {
                     2. Monthly Living Costs
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {Object.keys(inputs.costs).map((key) => (
-                        <div key={key}>
-                            <label className="block text-xs uppercase tracking-wider font-bold text-slate-500 mb-2 ml-1">{key}</label>
+                    {costFields.map((field) => (
+                        <div key={field.key}>
+                            <label className="block text-xs uppercase tracking-wider font-bold text-slate-500 mb-2 ml-1">{field.label}</label>
                             <div className="relative rounded-lg shadow-sm">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <span className="text-slate-400 font-bold text-sm">{currentRules.currencySymbol}</span>
                                 </div>
                                 <input 
                                     type="number"
-                                    className="w-full p-3 pl-8 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all font-medium text-sm"
-                                    value={(inputs.costs as any)[key] || ''}
+                                    className="w-full p-3 pl-8 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all font-semibold text-base"
+                                    value={(inputs.costs as any)[field.key] || ''}
                                     placeholder="0"
-                                    onChange={(e) => handleCostChange(key as any, e.target.value)}
+                                    onChange={(e) => handleCostChange(field.key as any, e.target.value)}
                                 />
                             </div>
                         </div>
