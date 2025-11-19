@@ -238,8 +238,8 @@ const App: React.FC = () => {
       <header className="sticky top-0 z-30 bg-[#F5F5F7]/80 backdrop-blur-xl border-b border-gray-200/60">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
             <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-blue-500/30 shadow-lg text-white">
-                    <i className="fas fa-wallet text-sm"></i>
+                <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center shadow-lg text-yellow-400">
+                    <i className="fas fa-coins text-sm"></i>
                 </div>
                 <h1 className="text-lg font-bold tracking-tight">Global Net Pay</h1>
             </div>
