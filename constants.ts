@@ -116,6 +116,13 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
               { threshold: 80650, rate: 0.0625 }, 
               { threshold: 215400, rate: 0.0685 },
             ]
+           },
+           {
+            name: 'NY PFL',
+            description: 'Paid Family Leave (0.373% capped).',
+            type: 'percentage',
+            rate: 0.00373,
+            cappedBase: 89344
            }
         ]
       }
@@ -237,7 +244,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         brackets: [
            { threshold: 0, rate: 0.005 },
            { threshold: 12012, rate: 0.02 },
-           { threshold: 27382, rate: 0.031 }, // Band widened in 2025
+           { threshold: 27382, rate: 0.03 }, // Reduced to 3% in Budget 2025
            { threshold: 70044, rate: 0.08 },
         ]
       },
