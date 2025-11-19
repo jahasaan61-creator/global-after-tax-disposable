@@ -75,7 +75,7 @@ const App: React.FC = () => {
     grossIncome: 50000,
     frequency: 'annual',
     country: CountryCode.USA,
-    costs: { rent: 0, groceries: 0, utilities: 0, transport: 0, insurance: 0, emergencyFund: 0 },
+    costs: { rent: 0, groceries: 0, utilities: 0, transport: 0, insurance: 0, emergencyFund: 0, debt: 0, freedomFund: 0 },
     details: { age: 30, maritalStatus: 'single', churchTax: false }
   });
 
@@ -101,6 +101,8 @@ const App: React.FC = () => {
         const transport = parseFloat(params.get('transport') || '0');
         const insurance = parseFloat(params.get('insurance') || '0');
         const emergencyFund = parseFloat(params.get('emergencyFund') || '0');
+        const debt = parseFloat(params.get('debt') || '0');
+        const freedomFund = parseFloat(params.get('freedomFund') || '0');
 
         if (c && COUNTRY_RULES[c]) {
             setInputs(prev => ({
@@ -108,7 +110,7 @@ const App: React.FC = () => {
                 country: c,
                 grossIncome: g,
                 frequency: f || 'annual',
-                costs: { ...prev.costs, rent, groceries, utilities, transport, insurance, emergencyFund }
+                costs: { ...prev.costs, rent, groceries, utilities, transport, insurance, emergencyFund, debt, freedomFund }
             }));
         }
     }
@@ -203,6 +205,8 @@ const App: React.FC = () => {
       url.searchParams.set('transport', inputs.costs.transport.toString());
       url.searchParams.set('insurance', inputs.costs.insurance.toString());
       url.searchParams.set('emergencyFund', inputs.costs.emergencyFund.toString());
+      url.searchParams.set('debt', inputs.costs.debt.toString());
+      url.searchParams.set('freedomFund', inputs.costs.freedomFund.toString());
       
       navigator.clipboard.writeText(url.toString()).then(() => {
           setCopyFeedback(true);
@@ -216,7 +220,9 @@ const App: React.FC = () => {
     { key: 'utilities', label: 'Utilities' },
     { key: 'transport', label: 'Transport' },
     { key: 'insurance', label: 'Insurance' },
-    { key: 'emergencyFund', label: 'Emergency Fund' }
+    { key: 'debt', label: 'Debt Payments' },
+    { key: 'emergencyFund', label: 'Emergency Fund' },
+    { key: 'freedomFund', label: 'Freedom/Runway Fund' }
   ];
 
   return (

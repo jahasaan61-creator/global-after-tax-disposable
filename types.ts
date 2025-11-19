@@ -102,6 +102,8 @@ export interface UserInputs {
     transport: number;
     insurance: number;
     emergencyFund: number;
+    debt: number;
+    freedomFund: number;
   };
   details: UserDetails;
 }
