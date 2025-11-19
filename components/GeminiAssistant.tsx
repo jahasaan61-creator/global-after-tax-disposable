@@ -73,9 +73,9 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
           <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
                <i className="fas fa-robot text-blue-400"></i>
-               <h3 className="font-semibold">Tax Assistant</h3>
+               <h3 className="font-bold">Tax Assistant</h3>
             </div>
-            <span className="text-xs bg-blue-900 px-2 py-1 rounded border border-blue-700">Gemini 2.5</span>
+            <span className="text-xs bg-blue-900 px-2 py-1 rounded border border-blue-700 font-semibold">Gemini 2.5</span>
           </div>
 
           {/* Messages */}
@@ -87,7 +87,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                     ? 'bg-blue-600 text-white rounded-br-none' 
                     : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm prose prose-sm'
                 }`}>
-                  <div className="whitespace-pre-wrap font-sans">{msg.text}</div>
+                  <div className="whitespace-pre-wrap font-medium">{msg.text}</div>
                 </div>
               </div>
             ))}
@@ -112,7 +112,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                     key={i}
                     onClick={() => handleSend(p)}
                     disabled={loading}
-                    className="px-3 py-1 bg-white border border-blue-100 text-blue-600 text-xs rounded-full hover:bg-blue-50 transition shadow-sm"
+                    className="px-3 py-1 bg-white border border-blue-100 text-blue-600 text-xs rounded-full hover:bg-blue-50 transition shadow-sm font-bold"
                 >
                     {p}
                 </button>
@@ -128,7 +128,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Ask about deductibles..."
-                className="w-full pl-4 pr-10 py-2 rounded-full border border-slate-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                className="w-full pl-4 pr-10 py-2 rounded-full border border-slate-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-medium"
               />
               <button 
                 onClick={() => handleSend()}
@@ -138,7 +138,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                 <i className="fas fa-paper-plane"></i>
               </button>
             </div>
-            <div className="text-[10px] text-center text-slate-400 mt-2">
+            <div className="text-[10px] text-center text-slate-400 mt-2 font-semibold">
               AI can make mistakes. Double check with sources.
             </div>
           </div>

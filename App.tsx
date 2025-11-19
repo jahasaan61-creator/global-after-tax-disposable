@@ -23,45 +23,48 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
     const netPct = (net / gross) * 100;
     
     const r = 15.9155;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const taxOffset = 25; 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const netOffset = 100 - taxPct + 25;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const costsOffset = 100 - taxPct - netPct + 25;
 
     return (
-        <div className="flex flex-col items-center justify-center">
-            <div className="relative w-48 h-48">
-                <svg viewBox="0 0 42 42" className="w-full h-full">
-                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#e2e8f0" strokeWidth="5" />
+        <div className="flex flex-col items-center justify-center w-full h-full">
+            <div className="relative w-32 h-32 md:w-40 md:h-40">
+                <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90 origin-center">
+                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
                     {taxPct > 0 && (
-                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#ef4444" strokeWidth="5" 
-                        strokeDasharray={`${taxPct} ${100 - taxPct}`} strokeDashoffset={taxOffset} />
+                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#FF3B30" strokeWidth="6" 
+                        strokeDasharray={`${taxPct} ${100 - taxPct}`} strokeDashoffset={0} strokeLinecap="round" />
                     )}
                     {netPct > 0 && (
-                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#10b981" strokeWidth="5"
-                        strokeDasharray={`${netPct} ${100 - netPct}`} strokeDashoffset={netOffset} />
+                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#34C759" strokeWidth="6"
+                        strokeDasharray={`${netPct} ${100 - netPct}`} strokeDashoffset={-taxPct} strokeLinecap="round" />
                     )}
                     {costsPct > 0 && (
-                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#3b82f6" strokeWidth="5"
-                        strokeDasharray={`${costsPct} ${100 - costsPct}`} strokeDashoffset={costsOffset} />
+                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#007AFF" strokeWidth="6"
+                        strokeDasharray={`${costsPct} ${100 - costsPct}`} strokeDashoffset={-(taxPct + netPct)} strokeLinecap="round" />
                     )}
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-700">
-                    <span className="text-xs text-slate-400 font-medium">Take Home</span>
-                    <span className="text-xl font-bold">{((result.netAnnual / gross) * 100).toFixed(0)}%</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                    <span className="text-[10px] text-white/50 uppercase font-extrabold tracking-wide">Net</span>
+                    <span className="text-xl font-extrabold tracking-tight">{((result.netAnnual / gross) * 100).toFixed(0)}%</span>
                 </div>
             </div>
-            <div className="flex gap-4 mt-4 text-xs">
-                 <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                    <span>Tax</span>
+            <div className="flex gap-3 mt-6">
+                 <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-[#FF3B30] shadow-[0_0_8px_rgba(255,59,48,0.6)]"></div>
+                    <span className="text-[11px] text-white/70 font-bold uppercase tracking-wide">Tax</span>
                 </div>
-                <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                    <span>Costs</span>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-[#007AFF] shadow-[0_0_8px_rgba(0,122,255,0.6)]"></div>
+                    <span className="text-[11px] text-white/70 font-bold uppercase tracking-wide">Costs</span>
                 </div>
-                <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                    <span>Disposable</span>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-[#34C759] shadow-[0_0_8px_rgba(52,199,89,0.6)]"></div>
+                    <span className="text-[11px] text-white/70 font-bold uppercase tracking-wide">Net</span>
                 </div>
             </div>
         </div>
@@ -150,18 +153,13 @@ const App: React.FC = () => {
     }
 
     try {
-        // Visual feedback
         document.body.style.cursor = 'wait';
-
-        // Capture with optimized settings
-        // windowWidth: 1200 forces the layout to be rendered as if on a desktop screen (side-by-side columns)
-        // backgroundColor: '#ffffff' ensures transparent gaps between cards are white
         const canvas = await window.html2canvas(element, { 
             scale: 2, 
             useCORS: true, 
             logging: false,
             windowWidth: 1200, 
-            backgroundColor: '#ffffff'
+            backgroundColor: '#F5F5F7' // Matches the new background
         });
 
         const imgData = canvas.toDataURL('image/png');
@@ -169,14 +167,11 @@ const App: React.FC = () => {
         
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        
         const imgProps = pdf.getImageProperties(imgData);
         const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
         
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
         pdf.save(`Salary_Calculation_${inputs.country}.pdf`);
-        
         document.body.style.cursor = 'default';
     } catch (e) {
         console.error(e);
@@ -186,27 +181,18 @@ const App: React.FC = () => {
   };
 
   const shareLink = () => {
-      // Use origin + pathname to ensure a clean URL base (stripping old params/hash)
       const baseUrl = window.location.origin + window.location.pathname;
       const url = new URL(baseUrl);
       
       url.searchParams.set('country', inputs.country);
-      
-      // Always share the Annualized Gross to ensure consistency
       const grossToShare = result ? result.grossAnnual : 0;
-
       url.searchParams.set('gross', grossToShare.toString());
       url.searchParams.set('frequency', 'annual'); 
       
-      // Share all costs
-      url.searchParams.set('rent', inputs.costs.rent.toString());
-      url.searchParams.set('groceries', inputs.costs.groceries.toString());
-      url.searchParams.set('utilities', inputs.costs.utilities.toString());
-      url.searchParams.set('transport', inputs.costs.transport.toString());
-      url.searchParams.set('insurance', inputs.costs.insurance.toString());
-      url.searchParams.set('emergencyFund', inputs.costs.emergencyFund.toString());
-      url.searchParams.set('debt', inputs.costs.debt.toString());
-      url.searchParams.set('freedomFund', inputs.costs.freedomFund.toString());
+      Object.keys(inputs.costs).forEach(key => {
+          const val = (inputs.costs as any)[key];
+          url.searchParams.set(key, val.toString());
+      });
       
       navigator.clipboard.writeText(url.toString()).then(() => {
           setCopyFeedback(true);
@@ -220,35 +206,55 @@ const App: React.FC = () => {
     { key: 'utilities', label: 'Utilities' },
     { key: 'transport', label: 'Transport' },
     { key: 'insurance', label: 'Insurance' },
-    { key: 'debt', label: 'Debt Payments' },
+    { key: 'debt', label: 'Debt / Loans' },
     { key: 'emergencyFund', label: 'Emergency Fund' },
-    { key: 'freedomFund', label: 'Freedom/Runway Fund' }
+    { key: 'freedomFund', label: 'Freedom Fund' }
   ];
 
+  // Reusable iOS-style Segmented Control
+  const SegmentedControl = ({ options, value, onChange, dark }: { options: {label: string, value: string}[], value: string, onChange: (v: any) => void, dark?: boolean }) => (
+    <div className={`${dark ? 'bg-black/20' : 'bg-slate-200/80'} p-1 rounded-[14px] flex relative select-none cursor-pointer shadow-inner`}>
+        {options.map((opt) => (
+            <button 
+                key={opt.value}
+                onClick={() => onChange(opt.value)}
+                className={`flex-1 py-2 px-3 text-sm font-extrabold rounded-[10px] transition-all duration-200 active:scale-95 ${
+                    value === opt.value 
+                        ? (dark ? 'bg-white/90 text-slate-900' : 'bg-white text-black') + ' shadow-[0_2px_8px_rgba(0,0,0,0.12)] transform scale-[1.02]' 
+                        : (dark ? 'text-white/60 hover:text-white' : 'text-slate-500 hover:text-slate-900')
+                }`}
+            >
+                {opt.label}
+            </button>
+        ))}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen flex flex-col font-sans text-slate-800">
-      <header className="bg-slate-900 text-white py-6 px-4 md:px-8 shadow-md">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-                    <i className="fas fa-wallet text-green-400"></i>
-                    Global Net Pay
-                </h1>
-                <p className="text-slate-400 text-sm mt-1">Accurate Take-Home Calculator & Tax Estimator</p>
+    <div className="min-h-screen flex flex-col font-sans text-[#1d1d1f] bg-[#F5F5F7]">
+      {/* Glassmorphic Header */}
+      <header className="sticky top-0 z-30 bg-[#F5F5F7]/80 backdrop-blur-xl border-b border-gray-200/60">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-blue-500/30 shadow-lg text-white">
+                    <i className="fas fa-wallet text-sm"></i>
+                </div>
+                <h1 className="text-lg font-bold tracking-tight">Global Net Pay</h1>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
                 <button 
                     onClick={shareLink}
-                    className="text-xs md:text-sm bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded border border-blue-500 transition flex items-center gap-2"
+                    className="h-8 px-4 rounded-full bg-white border border-gray-200/60 text-[13px] font-semibold text-slate-700 hover:bg-gray-50 transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
                 >
-                    {copyFeedback ? <i className="fas fa-check"></i> : <i className="fas fa-link"></i>}
-                    {copyFeedback ? 'Copied!' : 'Share'}
+                    {copyFeedback ? <i className="fas fa-check text-green-500"></i> : <i className="fas fa-share-square text-blue-500"></i>}
+                    {copyFeedback ? 'Copied' : 'Share'}
                 </button>
                 <button 
                     onClick={() => setShowSources(!showSources)}
-                    className="text-xs md:text-sm bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded border border-slate-700 transition"
+                    className="h-8 w-8 rounded-full bg-white border border-gray-200/60 flex items-center justify-center hover:bg-gray-50 transition shadow-sm active:scale-95 duration-150"
+                    title="Sources"
                 >
-                    <i className="fas fa-book mr-2"></i> Sources
+                    <i className="fas fa-info text-slate-500 text-xs"></i>
                 </button>
             </div>
         </div>
@@ -256,315 +262,391 @@ const App: React.FC = () => {
 
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
         {showSources && (
-             <div className="mb-8 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm animate-fade-in">
-                <h3 className="font-bold text-yellow-800 mb-2">Data Sources & Disclaimers</h3>
-                <p className="text-sm text-yellow-800 mb-3">
+             <div className="mb-8 bg-white border border-orange-100 p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-2 mb-3 text-orange-600">
+                    <i className="fas fa-exclamation-triangle"></i>
+                    <h3 className="font-bold text-sm">Data Sources & Disclaimers</h3>
+                </div>
+                <p className="text-sm text-gray-500 mb-4 font-medium">
                     This tool provides estimates based on 2024/2025 statutory rules. It is not legal or financial advice.
                 </p>
-                <ul className="text-sm space-y-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                     {currentRules.sources.map((s, i) => (
-                        <li key={i}>
-                            <a href={s.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
-                                <i className="fas fa-external-link-alt text-xs mr-1"></i> {s.label} ({s.date})
-                            </a>
-                        </li>
+                        <a key={i} href={s.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-500 hover:underline bg-blue-50/50 p-2 rounded-lg font-medium">
+                            <i className="fas fa-external-link-alt text-xs"></i> {s.label} <span className="text-gray-400 text-xs ml-auto">{s.date}</span>
+                        </a>
                     ))}
-                </ul>
+                </div>
              </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
           
           {/* Left Column: Inputs */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-lg font-bold mb-4 text-slate-700 border-b pb-2">1. Income Details</h2>
-                
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-slate-600 mb-1">Country</label>
-                    <div className="relative">
-                        <select 
-                            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            value={inputs.country}
-                            onChange={(e) => setInputs({...inputs, country: e.target.value as CountryCode, subRegion: undefined })}
-                        >
-                            {Object.values(COUNTRY_RULES).map(c => (
-                                <option key={c.code} value={c.code}>{c.name} ({c.currency})</option>
-                            ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
-                            <i className="fas fa-chevron-down text-xs"></i>
+            {/* Income Section */}
+            <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+                {/* Gradient Header */}
+                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 md:p-8 pb-10 relative text-white">
+                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                     <div className="relative z-10 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                <i className="fas fa-sack-dollar text-white"></i>
+                            </div>
+                            <h2 className="text-xl font-extrabold tracking-tight">Income</h2>
                         </div>
-                    </div>
-                </div>
-
-                {/* Dynamic Inputs for Accuracy (Marital Status, Age, etc.) */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                         <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Age</label>
-                         <input 
-                            type="number" 
-                            min="15" max="99"
-                            className="w-full p-2 bg-slate-50 border border-slate-200 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                            value={inputs.details.age}
-                            onChange={(e) => setInputs({...inputs, details: { ...inputs.details, age: parseInt(e.target.value) || 30 }})}
-                        />
-                    </div>
-                    {currentRules.hasMaritalStatusOption && (
-                         <div>
-                            <label className="block text-xs font-bold text-slate-500 mb-1 uppercase">Status</label>
-                            <select 
-                                className="w-full p-2 bg-slate-50 border border-slate-200 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                value={inputs.details.maritalStatus}
-                                onChange={(e) => setInputs({...inputs, details: { ...inputs.details, maritalStatus: e.target.value as 'single'|'married' }})}
-                            >
-                                <option value="single">Single</option>
-                                <option value="married">Married</option>
-                            </select>
+                        <div className="w-40">
+                             <SegmentedControl 
+                                options={[{label: 'Gross', value: 'gross'}, {label: 'Net', value: 'net'}]}
+                                value={mode}
+                                onChange={setMode}
+                                dark={true}
+                            />
                         </div>
-                    )}
-                </div>
-
-                {currentRules.hasChurchTaxOption && (
-                     <div className="mb-4 flex items-center gap-3 bg-slate-50 p-3 rounded border border-slate-100">
-                        <input 
-                            type="checkbox" 
-                            id="churchTax"
-                            checked={inputs.details.churchTax}
-                            onChange={(e) => setInputs({...inputs, details: { ...inputs.details, churchTax: e.target.checked }})}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor="churchTax" className="text-sm text-slate-700 select-none">Pay Church Tax? (Kirchensteuer)</label>
                      </div>
-                )}
+                </div>
 
-                {currentRules.subNationalRules && (
-                     <div className="mb-4">
-                        <label className="block text-sm font-medium text-slate-600 mb-1">{currentRules.subNationalLabel}</label>
+                <div className="p-6 md:p-8 -mt-4 bg-white rounded-t-[32px] relative z-20 space-y-5">
+                    <div>
+                        <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
                         <div className="relative">
                             <select 
-                                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                value={inputs.subRegion || ''}
-                                onChange={(e) => setInputs({...inputs, subRegion: e.target.value })}
+                                className="w-full p-4 pr-10 bg-[#F2F2F7] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-slate-900 cursor-pointer"
+                                value={inputs.country}
+                                onChange={(e) => setInputs({...inputs, country: e.target.value as CountryCode, subRegion: undefined })}
                             >
-                                <option value="">Select {currentRules.subNationalLabel}...</option>
-                                {currentRules.subNationalRules.map(r => (
-                                    <option key={r.id} value={r.id}>{r.name}</option>
+                                {Object.values(COUNTRY_RULES).map(c => (
+                                    <option key={c.code} value={c.code}>{c.name} ({c.currency})</option>
                                 ))}
                             </select>
-                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                            <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
                                 <i className="fas fa-chevron-down text-xs"></i>
                             </div>
                         </div>
                     </div>
-                )}
 
-                <div className="mb-4 p-1 bg-slate-100 rounded-lg flex relative">
-                    <button 
-                        onClick={() => setMode('gross')}
-                        className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide rounded-md transition-all z-10 ${mode === 'gross' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}
-                    >
-                        From Gross
-                    </button>
-                    <button 
-                        onClick={() => setMode('net')}
-                        className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide rounded-md transition-all z-10 ${mode === 'net' ? 'bg-white shadow text-emerald-600' : 'text-slate-500'}`}
-                    >
-                        From Net
-                    </button>
-                </div>
-
-                <div className="mb-6">
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
-                        {mode === 'net' && <span className="ml-2 text-xs font-normal text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Reverse Active</span>}
-                    </label>
-                    <div className={`flex shadow-sm rounded-lg ${mode === 'net' ? 'ring-2 ring-emerald-100' : ''}`}>
-                        <span className="inline-flex items-center px-4 rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 text-slate-600 font-bold text-sm">
-                            {currentRules.currencySymbol}
-                        </span>
-                        <input 
-                            type="number" 
-                            min="0"
-                            className="w-full p-4 bg-white border border-slate-300 rounded-r-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all font-bold text-xl tracking-tight"
-                            value={mode === 'gross' ? inputs.grossIncome : targetNet}
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value) || 0;
-                                if (mode === 'gross') {
-                                    setInputs({...inputs, grossIncome: val});
-                                } else {
-                                    setTargetNet(val);
-                                }
-                            }}
-                        />
-                    </div>
-                </div>
-
-                 <div className="mb-4">
-                     <div className="flex bg-slate-100 p-1 rounded-lg">
-                        <button 
-                            onClick={() => setInputs({...inputs, frequency: 'annual'})}
-                            className={`flex-1 py-2 text-sm font-medium rounded-md transition ${inputs.frequency === 'annual' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}
-                        >
-                            Annual
-                        </button>
-                        <button 
-                             onClick={() => setInputs({...inputs, frequency: 'monthly'})}
-                             className={`flex-1 py-2 text-sm font-medium rounded-md transition ${inputs.frequency === 'monthly' ? 'bg-white shadow text-blue-600' : 'text-slate-500'}`}
-                        >
-                            Monthly
-                        </button>
-                     </div>
-                 </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <h2 className="text-lg font-bold mb-6 text-slate-700 border-b pb-2 flex items-center gap-2">
-                    <i className="fas fa-shopping-cart text-slate-400"></i>
-                    2. Monthly Living Costs
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    {costFields.map((field) => (
-                        <div key={field.key}>
-                            <label className="block text-xs uppercase tracking-wider font-bold text-slate-500 mb-2 ml-1">{field.label}</label>
-                            <div className="relative rounded-lg shadow-sm">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <span className="text-slate-400 font-bold text-sm">{currentRules.currencySymbol}</span>
+                    {currentRules.subNationalRules && (
+                        <div>
+                             <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">{currentRules.subNationalLabel}</label>
+                             <div className="relative">
+                                <select 
+                                    className="w-full p-4 pr-10 bg-[#F2F2F7] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-slate-900 cursor-pointer"
+                                    value={inputs.subRegion || ''}
+                                    onChange={(e) => setInputs({...inputs, subRegion: e.target.value })}
+                                >
+                                    <option value="">Select {currentRules.subNationalLabel}...</option>
+                                    {currentRules.subNationalRules.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
+                                    <i className="fas fa-chevron-down text-xs"></i>
                                 </div>
-                                <input 
-                                    type="number"
-                                    className="w-full p-3 pl-8 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all font-semibold text-base"
-                                    value={(inputs.costs as any)[field.key] || ''}
-                                    placeholder="0"
-                                    onChange={(e) => handleCostChange(field.key as any, e.target.value)}
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">
+                            {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
+                        </label>
+                        <div className="relative group">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold z-10 transition-colors group-focus-within:text-indigo-500">
+                                {currentRules.currencySymbol}
+                            </span>
+                            <input 
+                                type="number" 
+                                min="0"
+                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-indigo-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
+                                value={mode === 'gross' ? inputs.grossIncome : targetNet}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value) || 0;
+                                    mode === 'gross' ? setInputs({...inputs, grossIncome: val}) : setTargetNet(val);
+                                }}
+                            />
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 scale-100 origin-right">
+                                <SegmentedControl 
+                                    options={[{label: 'Yr', value: 'annual'}, {label: 'Mo', value: 'monthly'}]}
+                                    value={inputs.frequency}
+                                    onChange={(v) => setInputs({...inputs, frequency: v})}
                                 />
                             </div>
                         </div>
-                    ))}
+                    </div>
+
+                    {/* Detailed Inputs Group */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                             <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Age</label>
+                             <input 
+                                type="number" 
+                                min="15" max="99"
+                                className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-center font-bold"
+                                value={inputs.details.age}
+                                onChange={(e) => setInputs({...inputs, details: { ...inputs.details, age: parseInt(e.target.value) || 30 }})}
+                            />
+                        </div>
+                        {currentRules.hasMaritalStatusOption && (
+                             <div>
+                                <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Status</label>
+                                <div className="relative">
+                                    <select 
+                                        className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl appearance-none focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all text-center font-bold text-sm"
+                                        value={inputs.details.maritalStatus}
+                                        onChange={(e) => setInputs({...inputs, details: { ...inputs.details, maritalStatus: e.target.value as 'single'|'married' }})}
+                                    >
+                                        <option value="single">Single</option>
+                                        <option value="married">Married</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {currentRules.hasChurchTaxOption && (
+                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
+                            <label htmlFor="churchTax" className="text-sm font-bold text-slate-700">Church Tax</label>
+                            <div className="relative inline-block w-12 h-6 transition duration-200 ease-in-out rounded-full cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    id="churchTax"
+                                    className="peer sr-only"
+                                    checked={inputs.details.churchTax}
+                                    onChange={(e) => setInputs({...inputs, details: { ...inputs.details, churchTax: e.target.checked }})}
+                                />
+                                <div className="w-full h-full bg-gray-300 rounded-full peer-checked:bg-indigo-500 transition-colors"></div>
+                                <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-6"></div>
+                            </div>
+                         </div>
+                    )}
                 </div>
-                <div className="mt-6 pt-4 border-t flex justify-between items-center text-slate-600">
-                    <span className="text-sm font-medium">Total Costs:</span>
-                    <span className="font-bold text-red-500">-{formatCurrency(result ? result.personalCostsTotal : 0)}</span>
+            </div>
+
+            {/* Costs Section */}
+            <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+                {/* Gradient Header */}
+                <div className="bg-gradient-to-r from-rose-500 to-orange-500 p-6 md:p-8 pb-10 relative text-white">
+                     <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
+                     <div className="relative z-10 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                <i className="fas fa-receipt text-white"></i>
+                            </div>
+                            <h2 className="text-xl font-extrabold tracking-tight">Monthly Costs</h2>
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-white/20 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">Optional</span>
+                     </div>
+                </div>
+
+                <div className="p-6 md:p-8 -mt-4 bg-white rounded-t-[32px] relative z-20">
+                    <div className="grid grid-cols-2 gap-4">
+                        {costFields.map((field) => (
+                            <div key={field.key} className="relative">
+                                <label className="block text-[10px] uppercase font-extrabold text-slate-400 mb-1.5 ml-1">{field.label}</label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span className="text-slate-400 text-xs font-bold">{currentRules.currencySymbol}</span>
+                                    </div>
+                                    <input 
+                                        type="number"
+                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] border-none rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-rose-500/20 outline-none transition-all font-bold text-sm"
+                                        value={(inputs.costs as any)[field.key] || ''}
+                                        placeholder="0"
+                                        onChange={(e) => handleCostChange(field.key as any, e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {result && result.personalCostsTotal > 0 && (
+                        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
+                            <span className="text-[13px] font-bold text-slate-500">Total Monthly Costs</span>
+                            <span className="text-[15px] font-extrabold text-[#FF3B30]">-{formatCurrency(result.personalCostsTotal)}</span>
+                        </div>
+                    )}
                 </div>
             </div>
           </div>
 
           {/* Right Column: Results */}
-          <div className="lg:col-span-8" id="results-panel">
+          <div className="lg:col-span-8 space-y-6" id="results-panel">
              {result && (
-                 <div className="space-y-6">
-                    
-                    <div className="bg-slate-800 text-white p-4 md:p-6 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-center">
-                        <div className="flex items-center gap-4 mb-2 md:mb-0">
-                             <div className="bg-slate-700 p-3 rounded-full">
-                                 <i className="fas fa-coins text-yellow-400 text-xl"></i>
-                             </div>
-                             <div>
-                                 <p className="text-slate-400 text-xs uppercase tracking-wider font-bold">
-                                    {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
-                                 </p>
-                                 <h2 className="text-2xl md:text-3xl font-bold text-white">{formatCurrency(result.grossAnnual)}</h2>
-                             </div>
+                 <>
+                    {/* Hero Card (Gross) - Redesigned */}
+                    <div className="bg-gradient-to-br from-[#2c2c2e] to-[#1c1c1e] p-6 md:p-8 rounded-[32px] shadow-2xl text-white relative overflow-hidden group border border-white/10">
+                        <div className="absolute -right-6 -bottom-6 text-white/5 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                            <i className="fas fa-coins"></i>
                         </div>
-                         <div className="text-right border-t md:border-t-0 md:border-l border-slate-700 pt-2 md:pt-0 md:pl-6 w-full md:w-auto flex md:block justify-between">
-                             <p className="text-slate-400 text-sm">Monthly Gross</p>
-                             <p className="text-lg font-semibold text-slate-200">{formatCurrency(result.grossMonthly)}</p>
+                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                        <i className="fas fa-briefcase text-white/90"></i>
+                                    </div>
+                                    <p className="text-white/70 text-[13px] font-bold uppercase tracking-wider">
+                                        {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
+                                    </p>
+                                </div>
+                                <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/80">
+                                    {formatCurrency(result.grossAnnual)}
+                                </h2>
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                                 <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-2xl backdrop-blur-md border border-white/5 shadow-inner">
+                                     <span className="text-white/60 text-xs font-semibold uppercase">Monthly</span>
+                                     <span className="text-xl font-bold tracking-tight text-white">{formatCurrency(result.grossMonthly)}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-4">
-                         <div className="flex-1 grid grid-cols-1 gap-4">
-                            <div className="bg-blue-600 text-white p-6 rounded-xl shadow-lg flex flex-col justify-between relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-20">
-                                    <i className="fas fa-money-bill-wave text-6xl"></i>
-                                </div>
-                                <div>
-                                    <p className="text-blue-100 text-sm font-medium mb-1">Net Monthly Pay</p>
-                                    <h3 className="text-3xl md:text-4xl font-bold">{formatCurrency(result.netMonthly)}</h3>
-                                </div>
-                                <p className="text-blue-200 text-xs mt-2">Annual: {formatCurrency(result.netAnnual)}</p>
+                    {/* Key Metrics Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Net Pay Card - Gradient Redesign */}
+                        <div className="bg-gradient-to-br from-[#007AFF] to-[#0055ff] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col justify-between">
+                            <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                <i className="fas fa-money-bill-wave"></i>
                             </div>
-
-                            <div className="bg-emerald-500 text-white p-6 rounded-xl shadow-lg flex flex-col justify-between relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-20">
-                                    <i className="fas fa-piggy-bank text-6xl"></i>
+                            <div className="relative z-10 mb-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                        <i className="fas fa-wallet text-lg text-white"></i>
+                                    </div>
+                                    <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-1 rounded-full uppercase tracking-wide border border-white/10">
+                                        Net
+                                    </span>
                                 </div>
-                                <div>
-                                    <p className="text-emerald-100 text-sm font-medium mb-1">Disposable Income</p>
-                                    <h3 className="text-3xl font-bold">{formatCurrency(result.disposableMonthly)}</h3>
-                                </div>
-                                <p className="text-emerald-100 text-xs mt-2">
-                                    Annual: {formatCurrency(result.disposableMonthly * 12)}
-                                </p>
+                                <p className="text-white/80 text-[11px] uppercase font-extrabold tracking-wide mb-1">Net Monthly Pay</p>
+                                <h3 className="text-3xl font-extrabold text-white tracking-tight">{formatCurrency(result.netMonthly)}</h3>
                             </div>
-                         </div>
+                            <div className="relative z-10 mt-auto pt-4 border-t border-white/20 flex justify-between items-end">
+                                <div>
+                                    <p className="text-white/60 text-[10px] uppercase font-bold mb-0.5">Annual Net</p>
+                                    <p className="text-white font-bold text-sm">{formatCurrency(result.netAnnual)}</p>
+                                </div>
+                                <i className="fas fa-arrow-right text-white/50 text-xs group-hover:text-white group-hover:translate-x-1 transition-all"></i>
+                            </div>
+                        </div>
 
-                         <div className="md:w-72 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center justify-center">
-                            <DonutChart result={result} />
-                         </div>
+                        {/* Disposable Card - Gradient Redesign */}
+                        <div className="bg-gradient-to-br from-[#34C759] to-[#2a9d48] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col justify-between">
+                            <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                <i className="fas fa-star"></i>
+                            </div>
+                            <div className="relative z-10 mb-4">
+                                 <div className="flex items-center justify-between mb-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                        <i className="fas fa-smile-beam text-lg text-white"></i>
+                                    </div>
+                                     <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-1 rounded-full uppercase tracking-wide border border-white/10">
+                                        Free
+                                    </span>
+                                </div>
+                                <p className="text-white/80 text-[11px] uppercase font-extrabold tracking-wide mb-1">Disposable Monthly</p>
+                                <h3 className="text-3xl font-extrabold text-white tracking-tight">{formatCurrency(result.disposableMonthly)}</h3>
+                            </div>
+                            <div className="relative z-10 mt-auto pt-4 border-t border-white/20 flex justify-between items-end">
+                                <div>
+                                    <p className="text-white/60 text-[10px] uppercase font-bold mb-0.5">Annual Disposable</p>
+                                    <p className="text-white font-bold text-sm">{formatCurrency(result.disposableMonthly * 12)}</p>
+                                </div>
+                                <i className="fas fa-arrow-right text-white/50 text-xs group-hover:text-white group-hover:translate-x-1 transition-all"></i>
+                            </div>
+                        </div>
+                        
+                        {/* Chart Card - Redesigned Dark Theme */}
+                        <div className="bg-gradient-to-br from-[#2c2c2e] to-[#000000] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col justify-between h-full">
+                             <div className="absolute -right-8 -bottom-8 text-white/5 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                <i className="fas fa-chart-pie"></i>
+                             </div>
+                             <div className="relative z-10 w-full h-full flex flex-col">
+                                <div className="flex items-center justify-between mb-2">
+                                     <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                        <i className="fas fa-chart-pie text-lg text-white"></i>
+                                     </div>
+                                     <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-extrabold px-2 py-1 rounded-full uppercase tracking-wide border border-white/10">
+                                        Ratio
+                                    </span>
+                                </div>
+                                <div className="flex-grow flex items-center justify-center mt-2">
+                                    <DonutChart result={result} />
+                                </div>
+                             </div>
+                        </div>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <h3 className="font-bold text-slate-700">Detailed Breakdown</h3>
-                            <button onClick={downloadPDF} className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-2">
-                                <i className="fas fa-file-pdf"></i> Download PDF
+                    {/* Detailed Breakdown Table */}
+                    <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
+                         {/* Gradient Header */}
+                        <div className="bg-gradient-to-r from-slate-700 to-slate-800 p-6 flex justify-between items-center relative">
+                             <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                             <div className="relative z-10 flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                    <i className="fas fa-list-alt text-white"></i>
+                                </div>
+                                <h3 className="font-extrabold text-lg text-white tracking-tight">Breakdown</h3>
+                             </div>
+                             <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md">
+                                <i className="fas fa-arrow-down-to-line"></i> Export PDF
                             </button>
                         </div>
-                        <div className="p-6">
+
+                        <div className="p-0">
                             <table className="w-full text-sm text-left">
-                                <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b">
+                                <thead className="text-xs text-[#86868b] uppercase font-bold bg-[#F5F5F7] border-b border-gray-100">
                                     <tr>
-                                        <th className="px-4 py-3">Item</th>
-                                        <th className="px-4 py-3 text-right">Annual</th>
-                                        <th className="px-4 py-3 text-right">Monthly</th>
-                                        <th className="px-4 py-3 text-right text-slate-400 hidden sm:table-cell">% Gross</th>
+                                        <th className="px-6 py-4 pl-8">Item</th>
+                                        <th className="px-6 py-4 text-right">Annual</th>
+                                        <th className="px-6 py-4 text-right">Monthly</th>
+                                        <th className="px-6 py-4 text-right hidden sm:table-cell">%</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    <tr className="font-semibold text-slate-900 bg-slate-50/50">
-                                        <td className="px-4 py-3">Gross Income</td>
-                                        <td className="px-4 py-3 text-right">{formatCurrency(result.grossAnnual)}</td>
-                                        <td className="px-4 py-3 text-right">{formatCurrency(result.grossMonthly)}</td>
-                                        <td className="px-4 py-3 text-right hidden sm:table-cell">100%</td>
+                                <tbody className="divide-y divide-gray-50">
+                                    <tr className="text-slate-900">
+                                        <td className="px-6 py-4 pl-8 font-bold">Gross Income</td>
+                                        <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossAnnual)}</td>
+                                        <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossMonthly)}</td>
+                                        <td className="px-6 py-4 text-right text-slate-400 font-semibold hidden sm:table-cell">100%</td>
                                     </tr>
                                     {result.deductionsBreakdown.map((d, idx) => (
-                                        <tr key={idx} className={d.isEmployer ? 'text-slate-400 italic' : 'text-red-600'}>
-                                            <td className="px-4 py-3 flex items-center group">
-                                                {d.name} 
-                                                {d.isEmployer && <span className="ml-2 text-xs bg-slate-200 px-1.5 py-0.5 rounded not-italic">Employer Paid</span>}
+                                        <tr key={idx} className={`hover:bg-gray-50 transition-colors ${d.isEmployer ? 'text-slate-400' : 'text-[#FF3B30]'}`}>
+                                            <td className="px-6 py-4 pl-8 flex items-center group font-bold">
+                                                <span className={d.isEmployer ? 'italic font-medium' : ''}>{d.name}</span>
+                                                {d.isEmployer && <span className="ml-2 text-[10px] uppercase tracking-wider font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Employer</span>}
                                                 {d.description && (
                                                     <div className="relative ml-2">
-                                                        <i className="fas fa-info-circle text-slate-300 hover:text-blue-400 cursor-help"></i>
-                                                        <div className="absolute left-0 bottom-6 w-48 bg-slate-800 text-white text-xs p-2 rounded shadow-lg hidden group-hover:block z-10">
+                                                        <i className="fas fa-info-circle text-gray-300 hover:text-blue-400 cursor-help transition-colors"></i>
+                                                        <div className="absolute left-0 bottom-6 w-64 bg-[#1d1d1f] text-white text-xs p-3 rounded-xl shadow-xl hidden group-hover:block z-20 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-medium">
                                                             {d.description}
                                                         </div>
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-right">-{formatCurrency(d.amount)}</td>
-                                            <td className="px-4 py-3 text-right">-{formatCurrency(d.amount / 12)}</td>
-                                            <td className="px-4 py-3 text-right text-slate-400 hidden sm:table-cell">
+                                            <td className="px-6 py-4 text-right font-bold">-{formatCurrency(d.amount)}</td>
+                                            <td className="px-6 py-4 text-right font-bold">-{formatCurrency(d.amount / 12)}</td>
+                                            <td className="px-6 py-4 text-right text-slate-400 font-semibold hidden sm:table-cell">
                                                 {(d.amount / result.grossAnnual * 100).toFixed(1)}%
                                             </td>
                                         </tr>
                                     ))}
-                                    <tr className="font-bold text-slate-900 bg-blue-50/50 border-t-2 border-slate-200">
-                                        <td className="px-4 py-3">Net Income</td>
-                                        <td className="px-4 py-3 text-right">{formatCurrency(result.netAnnual)}</td>
-                                        <td className="px-4 py-3 text-right">{formatCurrency(result.netMonthly)}</td>
-                                        <td className="px-4 py-3 text-right hidden sm:table-cell">{(result.netAnnual / result.grossAnnual * 100).toFixed(1)}%</td>
+                                    <tr className="bg-[#F2F2F7] text-slate-900">
+                                        <td className="px-6 py-4 pl-8 font-extrabold">Net Income</td>
+                                        <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netAnnual)}</td>
+                                        <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netMonthly)}</td>
+                                        <td className="px-6 py-4 text-right text-slate-500 font-bold hidden sm:table-cell">
+                                            {(result.netAnnual / result.grossAnnual * 100).toFixed(1)}%
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
-                    <div className="text-center text-xs text-slate-400 pb-8">
-                        Calculated based on {currentRules.name} tax rules. <br/>
-                        See "Sources" for details. Values are estimates.
+                    
+                    <div className="text-center pt-4 pb-8">
+                         <p className="text-xs text-slate-400 font-bold">Calculations are estimates based on {currentRules.name} tax laws.</p>
                     </div>
-                 </div>
+                 </>
              )}
           </div>
         </div>
