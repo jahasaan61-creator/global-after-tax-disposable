@@ -114,6 +114,7 @@ const App: React.FC = () => {
         const emergencyFund = parseFloat(params.get('emergencyFund') || '0');
         const debt = parseFloat(params.get('debt') || '0');
         const freedomFund = parseFloat(params.get('freedomFund') || '0');
+        const bonus = parseFloat(params.get('bonus') || '0');
 
         if (c && COUNTRY_RULES[c]) {
             setInputs(prev => ({
@@ -121,13 +122,25 @@ const App: React.FC = () => {
                 country: c,
                 grossIncome: g,
                 frequency: f || 'annual',
+                annualBonus: bonus,
                 costs: { ...prev.costs, rent, groceries, utilities, transport, insurance, emergencyFund, debt, freedomFund }
             }));
+        }
+    } else {
+        // Load from localStorage if no URL params
+        const saved = localStorage.getItem('gnp_inputs');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setInputs(prev => ({ ...prev, ...parsed }));
+            } catch (e) {}
         }
     }
   }, []);
 
   useEffect(() => {
+    localStorage.setItem('gnp_inputs', JSON.stringify(inputs));
+    
     let incomeToUse = inputs.grossIncome;
     if (mode === 'net') {
         incomeToUse = calculateGrossFromNet(targetNet, { ...inputs, grossIncome: 0 });
@@ -232,7 +245,8 @@ const App: React.FC = () => {
       const grossToShare = result ? result.grossAnnual : 0;
       url.searchParams.set('gross', grossToShare.toString());
       url.searchParams.set('frequency', 'annual'); 
-      
+      url.searchParams.set('bonus', inputs.annualBonus.toString());
+
       Object.keys(inputs.costs).forEach(key => {
           const val = (inputs.costs as any)[key];
           url.searchParams.set(key, val.toString());
@@ -283,7 +297,7 @@ const App: React.FC = () => {
                  <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-lg text-yellow-400 overflow-hidden border-2 border-white/20">
                     <i className="fas fa-coins text-2xl"></i>
                 </div>
-                <h1 className="text-xl font-bold tracking-tight">Global Net Pay</h1>
+                <h1 className="text-xl font-bold tracking-tight hidden sm:block">Global Net Pay</h1>
             </div>
             <div className="flex gap-3">
                 <button 
@@ -562,49 +576,56 @@ const App: React.FC = () => {
           <div className="lg:col-span-8 space-y-6" id="results-panel">
              {result && (
                  <>
-                    {/* Hero Card (Gross) - Redesigned with HD Flag Background */}
-                    <div className="relative p-6 md:p-8 rounded-[32px] shadow-2xl text-white overflow-hidden group border border-white/10 transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-                        {/* Dynamic Flag Background */}
-                        <div className="absolute inset-0 z-0">
+                    {/* Hero Card (Gross) - Enhanced Interactive 3D Version */}
+                    <div 
+                        className="relative rounded-[32px] shadow-2xl overflow-hidden group border border-white/10 transition-all duration-500 hover:shadow-[0_25px_60px_rgba(0,0,0,0.5)] h-auto min-h-[200px] perspective-1000"
+                        style={{ perspective: '1000px' }}
+                    >
+                        <div className="absolute inset-0 z-0 transform-style-3d transition-transform duration-700 group-hover:rotate-x-2 group-hover:rotate-y-2 group-hover:scale-105 origin-center">
+                             {/* Dynamic HD Flag */}
                              <img 
                                 src={getHDFlagUrl(inputs.country)} 
                                 alt="Country Flag" 
-                                className="w-full h-full object-cover opacity-40 group-hover:opacity-50 group-hover:scale-110 group-hover:rotate-1 transition-all duration-700 ease-in-out contrast-125 saturate-150 brightness-110"
+                                className="w-full h-full object-cover contrast-125 saturate-150 brightness-90"
                              />
-                             {/* Cinematic Overlay for Readability */}
-                             <div className="absolute inset-0 bg-gradient-to-br from-black/90 via-black/50 to-black/90 mix-blend-hard-light"></div>
-                             {/* Texture Overlay for 3D Feel */}
-                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-700 pointer-events-none"></div>
+                             {/* Cinematic Overlay */}
+                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/80 mix-blend-multiply"></div>
+                             <div className="absolute inset-0 bg-black/30"></div>
+                             
+                             {/* Moving Sheen/Shimmer */}
+                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
                         </div>
 
-                        {/* Content (z-10 to sit above bg) */}
-                        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                            <div>
-                                <div className="flex items-center gap-3 mb-2">
-                                    <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-xl border border-white/30 shadow-lg transition-all duration-300 hover:bg-white/30 hover:scale-105">
-                                        <i className="fas fa-briefcase text-white drop-shadow-md"></i>
+                        {/* Content Layer - RESIZED and REALIGNED */}
+                        <div className="relative z-10 p-6 md:p-8 flex flex-col md:flex-row justify-between items-end gap-6">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg transition-transform duration-300 group-hover:scale-110">
+                                        <i className="fas fa-briefcase text-xl text-white drop-shadow-md"></i>
                                     </div>
-                                    <p className="text-white/90 text-[13px] font-bold uppercase tracking-wider shadow-black drop-shadow-md">
+                                    <p className="text-white/90 text-base md:text-lg font-bold uppercase tracking-wider shadow-black drop-shadow-md">
                                         {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
                                     </p>
                                 </div>
-                                <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white drop-shadow-xl">
+                                <h2 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl mt-2 leading-none">
                                     {formatCurrency(result.grossAnnual)}
                                 </h2>
                             </div>
-                            <div className="flex flex-col items-end gap-1">
-                                 <div className="flex items-center gap-2 bg-white/20 px-4 py-2 rounded-2xl backdrop-blur-xl border border-white/30 shadow-xl transition-all duration-300 hover:bg-white/30 hover:scale-105">
-                                     <span className="text-white/90 text-xs font-bold uppercase tracking-wide drop-shadow-sm">Monthly</span>
-                                     <span className="text-xl font-bold tracking-tight text-white/90 drop-shadow-md">{formatCurrency(result.grossMonthly)}</span>
+                            
+                            {/* Enlarged Monthly Button */}
+                            <div className="flex flex-col items-end gap-2 pb-1">
+                                 <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 hover:bg-white/20 group-hover:translate-x-[-5px]">
+                                     <span className="text-white/90 text-xs font-extrabold uppercase tracking-wide drop-shadow-sm">Monthly</span>
+                                     <span className="text-2xl font-extrabold tracking-tight text-white drop-shadow-md">{formatCurrency(result.grossMonthly)}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Key Metrics Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Net Pay Card - Gradient Redesign */}
-                        <div className="bg-gradient-to-br from-[#007AFF] to-[#0055ff] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col h-full transition-all duration-300 hover:shadow-2xl">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[240px]">
+                        {/* Net Pay Card */}
+                        <div className="bg-gradient-to-br from-[#007AFF] to-[#0055ff] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl">
                             <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-money-bill-wave"></i>
                             </div>
@@ -636,8 +657,8 @@ const App: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Disposable Card - Gradient Redesign */}
-                        <div className="bg-gradient-to-br from-[#34C759] to-[#2a9d48] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col h-full transition-all duration-300 hover:shadow-2xl">
+                        {/* Disposable Card */}
+                        <div className="bg-gradient-to-br from-[#34C759] to-[#2a9d48] p-6 rounded-[32px] shadow-lg text-white relative overflow-hidden group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl">
                              <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-star"></i>
                             </div>
@@ -669,7 +690,7 @@ const App: React.FC = () => {
                             </div>
                         </div>
                         
-                        {/* Chart Card - Light Theme Redesign */}
+                        {/* Chart Card */}
                         <div className="bg-white p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white text-slate-900 relative overflow-hidden group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl">
                              <div className="absolute -right-8 -bottom-8 text-slate-50 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-chart-pie"></i>
@@ -688,7 +709,7 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* New Currency Converter Horizontal Card - Redesigned */}
+                    {/* Quick Convert Horizontal Card */}
                     <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
                          <div className="bg-gradient-to-r from-[#2FB050] to-[#A0E870] p-5 relative flex items-center justify-between text-white">
                              <div className="flex items-center gap-3 relative z-10">
