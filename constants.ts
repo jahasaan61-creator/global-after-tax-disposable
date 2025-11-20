@@ -1,3 +1,4 @@
+
 import { CountryCode, CountryRules } from './types';
 
 // Updated for 2024/2025 Tax Years.
@@ -97,7 +98,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
               { threshold: 1396542, rate: 0.123 },
             ]
           },
-          { name: 'CA SDI', description: 'State Disability Insurance (Uncapped in 2024+).', type: 'percentage', rate: 0.011 } 
+          { name: 'CA SDI', description: 'State Disability Insurance (2025 Est).', type: 'percentage', rate: 0.012 } 
         ]
       },
       { id: 'TX', name: 'Texas', deductibles: [] },
@@ -177,6 +178,12 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
             { minAge: 70, maxAge: 100, rate: 0.05 },
         ],
         cappedBase: 88800 // $7,400 monthly ceiling from Jan 2025
+      },
+      {
+        name: 'SHG (Self-Help Group)',
+        description: 'CDAC/SINDA/MBMF (Estimated Average).',
+        type: 'fixed',
+        amount: 36 // $3.00/mo * 12
       }
     ]
   },
@@ -219,7 +226,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       },
       { name: 'Pension Insurance', description: 'Rentenversicherung (9.3%).', type: 'percentage', rate: 0.093, cappedBase: 96600 }, // 2025 est BBG
       { name: 'Unemployment Insurance', description: 'Arbeitslosenversicherung (1.3%).', type: 'percentage', rate: 0.013, cappedBase: 96600 },
-      { name: 'Health Insurance', description: 'KV (7.3% + 1.25% Add-on est.).', type: 'percentage', rate: 0.0855, cappedBase: 66150 }, // 2025 est BBG
+      { name: 'Health Insurance', description: 'KV 7.3% + 1.25% (2025 Avg Add-on).', type: 'percentage', rate: 0.0855, cappedBase: 66150 }, // 2025 est BBG
       { name: 'Nursing Care', description: 'PV (2.3% approx).', type: 'percentage', rate: 0.023, cappedBase: 66150 },
     ]
   },
@@ -269,7 +276,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     currencySymbol: '$',
     exchangeRatePerUSD: 1.38,
     subNationalLabel: 'Province',
-    sources: [{ label: 'CRA 2024 Rates', url: 'https://www.canada.ca/', date: '2024-01-01' }],
+    sources: [{ label: 'CRA 2025 Limits', url: 'https://www.canada.ca/', date: '2024-11-15' }],
     federalDeductibles: [
       {
         name: 'Federal Tax',
@@ -290,24 +297,32 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           type: 'percentage', 
           rate: 0.0595, 
           exemptAmount: 3500, 
-          cappedBase: 68500 
+          cappedBase: 71300 // 2025 YMPE
       },
       {
           name: 'CPP (Enhancement)',
-          description: 'Tier 2 (4% on 68.5k - 73.2k).',
+          description: 'Tier 2 (4% on 71.3k - 81.1k).',
           type: 'progressive',
           brackets: [
               { threshold: 0, rate: 0 },
-              { threshold: 68500, rate: 0.04 }
+              { threshold: 71300, rate: 0.04 }
           ],
-          cappedBase: 73200
+          cappedBase: 81100 // 2025 Tier 2 Ceiling
       },
-      { name: 'EI', description: 'Employment Insurance.', type: 'percentage', rate: 0.0166, cappedBase: 63200 }
+      { name: 'EI', description: 'Employment Insurance.', type: 'percentage', rate: 0.0164, cappedBase: 65700 } // 2025 Projected
     ],
     subNationalRules: [
       {
         id: 'ON', name: 'Ontario', deductibles: [
-           { name: 'ON Tax', description: 'Ontario Tax.', type: 'progressive', exemptAmount: 12399, brackets: [{ threshold: 0, rate: 0.0505 }, { threshold: 51446, rate: 0.0915 }, { threshold: 102894, rate: 0.1116 }, { threshold: 150000, rate: 0.1216 }, { threshold: 220000, rate: 0.1316 }] }
+           { name: 'ON Tax', description: 'Ontario Tax.', type: 'progressive', exemptAmount: 12399, brackets: [{ threshold: 0, rate: 0.0505 }, { threshold: 51446, rate: 0.0915 }, { threshold: 102894, rate: 0.1116 }, { threshold: 150000, rate: 0.1216 }, { threshold: 220000, rate: 0.1316 }] },
+           { name: 'ON Health Premium', description: 'Mandatory Health Premium.', type: 'progressive', brackets: [
+               { threshold: 0, rate: 0 },
+               { threshold: 20000, rate: 0.06 }, 
+               { threshold: 36000, rate: 0.06 }, // Simplified approximation of the tiered fixed amounts
+               { threshold: 48000, rate: 0.25 },
+               { threshold: 72000, rate: 0.25 },
+               { threshold: 200000, rate: 0.25 },
+           ], cap: 900 }
         ]
       },
       {
@@ -337,7 +352,8 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           { threshold: 180000, rate: 0.39 },
         ]
       },
-      { name: 'ACC Earner Levy', description: 'Accident Cover (1.6%).', type: 'percentage', rate: 0.016, cappedBase: 142283 } 
+      { name: 'ACC Earner Levy', description: 'Accident Cover (1.6%).', type: 'percentage', rate: 0.016, cappedBase: 142283 },
+      { name: 'KiwiSaver', description: 'Retirement Savings (Default 3%).', type: 'percentage', rate: 0.03 }
     ]
   },
   [CountryCode.CHE]: {
@@ -353,6 +369,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       { name: 'AHV/IV/EO (OASI)', description: 'Old-Age/Survivors (5.3%).', type: 'percentage', rate: 0.053 },
       { name: 'ALV (Unemployment)', description: 'Unemployment (1.1%).', type: 'percentage', rate: 0.011, cappedBase: 148200 },
       { name: 'NBU', description: 'Non-occupational Accident Ins.', type: 'percentage', rate: 0.012 },
+      { name: 'KTG (Sick Pay Ins.)', description: 'Daily Sickness Allowance (Est).', type: 'percentage', rate: 0.005 },
       { name: 'Pension (BVG) - Est.', description: 'Occupational Pension.', type: 'percentage', rate: 0.035, exemptAmount: 25725 } 
     ],
     subNationalRules: [
@@ -410,6 +427,184 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           { threshold: 1000000, rate: 0.20 }, // Next 500,000
           { threshold: 1500000, rate: 0.25 }, // Balance
         ]
+      }
+    ]
+  },
+  [CountryCode.ESP]: {
+    code: CountryCode.ESP,
+    name: 'Spain',
+    currency: 'EUR',
+    currencySymbol: '€',
+    exchangeRatePerUSD: 0.93,
+    sources: [
+        { label: 'Agencia Tributaria 2024', url: 'https://sede.agenciatributaria.gob.es/', date: '2024-01-01' },
+        { label: 'Seguridad Social Rates', url: 'https://www.seg-social.es/', date: '2024-01-01' }
+    ],
+    federalDeductibles: [
+      {
+        name: 'Social Security',
+        description: 'Contingencias Comunes (4.7%).',
+        type: 'percentage',
+        rate: 0.047,
+        cappedBase: 56646 // 2024 Max Base ~4720.50/mo
+      },
+      {
+        name: 'Unemployment / Training / MEI',
+        description: 'Desempleo (1.55%), FP (0.1%), MEI (0.13% 2025).',
+        type: 'percentage',
+        rate: 0.0178,
+        cappedBase: 56646
+      },
+      {
+        name: 'IRPF (Income Tax)',
+        description: 'Progressive (State + Autonomic avg).',
+        type: 'progressive',
+        // Spain subtracts tax on allowance from total tax, rather than exempting income from base.
+        // Tax on 5550 (1st bracket 19%) = 1054.50
+        fixedCredits: 1054.50, 
+        brackets: [
+          { threshold: 0, rate: 0.19 },
+          { threshold: 12450, rate: 0.24 },
+          { threshold: 20200, rate: 0.30 },
+          { threshold: 35200, rate: 0.37 },
+          { threshold: 60000, rate: 0.45 },
+          { threshold: 300000, rate: 0.47 }
+        ]
+      }
+    ]
+  },
+  [CountryCode.GBR]: {
+    code: CountryCode.GBR,
+    name: 'United Kingdom',
+    currency: 'GBP',
+    currencySymbol: '£',
+    exchangeRatePerUSD: 0.79,
+    sources: [{ label: 'GOV.UK Rates 2024/25', url: 'https://www.gov.uk/income-tax-rates', date: '2024-04-06' }],
+    federalDeductibles: [
+        {
+            name: 'Income Tax',
+            description: 'Progressive. Personal Allowance £12,570.',
+            type: 'progressive',
+            exemptAmount: 12570,
+            brackets: [
+                { threshold: 0, rate: 0.20 },     // Basic rate
+                { threshold: 37700, rate: 0.40 }, // Higher rate (starts at £50,270 total income)
+                { threshold: 112570, rate: 0.45 } // Additional rate (starts at £125,140 total)
+            ]
+        },
+        {
+            name: 'National Insurance',
+            description: 'Class 1 Employee Contributions.',
+            type: 'progressive',
+            exemptAmount: 12570, // Primary Threshold
+            brackets: [
+                { threshold: 0, rate: 0.08 },     // 8% on earnings between £12,570 and £50,270
+                { threshold: 37700, rate: 0.02 }  // 2% on earnings above £50,270
+            ]
+        }
+    ]
+  },
+  [CountryCode.IND]: {
+    code: CountryCode.IND,
+    name: 'India',
+    currency: 'INR',
+    currencySymbol: '₹',
+    exchangeRatePerUSD: 84.0,
+    sources: [
+        { label: 'Income Tax Dept (FY 24-25)', url: 'https://incometaxindia.gov.in/', date: '2024-07-23' },
+        { label: 'EPFO Rates', url: 'https://www.epfindia.gov.in/', date: '2024-04-01' }
+    ],
+    federalDeductibles: [
+      {
+        name: 'EPF (Provident Fund)',
+        description: 'Employee Contribution (12% of Basic, capped at ₹15k/mo).',
+        type: 'percentage',
+        rate: 0.12,
+        cappedBase: 180000 // 15,000 * 12
+      },
+      {
+        name: 'Income Tax (New Regime)',
+        description: 'Progressive Slabs (FY 2024-25). Std Ded ₹75k.',
+        type: 'progressive',
+        exemptAmount: 75000, // Increased Standard Deduction
+        brackets: [
+          { threshold: 0, rate: 0 },
+          { threshold: 300000, rate: 0.05 },
+          { threshold: 700000, rate: 0.10 },
+          { threshold: 1000000, rate: 0.15 },
+          { threshold: 1200000, rate: 0.20 },
+          { threshold: 1500000, rate: 0.30 }
+        ]
+      },
+      {
+          name: 'Health & Education Cess',
+          description: '4% on Income Tax.',
+          type: 'percentage',
+          rate: 0.04,
+          isTaxSurcharge: true
+      }
+    ]
+  },
+  [CountryCode.JPN]: {
+    code: CountryCode.JPN,
+    name: 'Japan',
+    currency: 'JPY',
+    currencySymbol: '¥',
+    exchangeRatePerUSD: 155.0,
+    sources: [
+        { label: 'NTA Income Tax 2024', url: 'https://www.nta.go.jp/english/', date: '2024-04-01' },
+        { label: 'MHLW Social Insurance 2024', url: 'https://www.mhlw.go.jp/english/', date: '2024-04-01' }
+    ],
+    federalDeductibles: [
+      {
+        name: 'Social: Pension (Kosei Nenkin)',
+        description: 'Employee Pension (9.15%).',
+        type: 'percentage',
+        rate: 0.0915,
+        cappedBase: 8160000 // 680,000 * 12 (Standard Monthly Remuneration Cap)
+      },
+      {
+        name: 'Social: Health (Shakai Hoken)',
+        description: 'Health Insurance (Tokyo ~5%).', // Approx 9.98% split
+        type: 'percentage',
+        rate: 0.0499,
+        cappedBase: 16680000 // 1,390,000 * 12
+      },
+      {
+        name: 'Social: Nursing Care (Kaigo)',
+        description: 'Age 40-64 only (0.9%).',
+        type: 'percentage',
+        rate: 0, // Default 0
+        ratesByAge: [{ minAge: 39, maxAge: 64, rate: 0.009 }],
+        cappedBase: 16680000
+      },
+      {
+        name: 'Social: Employment Ins.',
+        description: 'Koyou Hoken (0.6%).',
+        type: 'percentage',
+        rate: 0.006
+      },
+      {
+        name: 'Income Tax',
+        description: 'National Progressive Tax.',
+        type: 'progressive',
+        exemptAmount: 1030000, // Basic (480k) + Min Emp Ded (550k) approximation
+        brackets: [
+          { threshold: 0, rate: 0.05 },
+          { threshold: 1950000, rate: 0.10 },
+          { threshold: 3300000, rate: 0.20 },
+          { threshold: 6950000, rate: 0.23 },
+          { threshold: 9000000, rate: 0.33 },
+          { threshold: 18000000, rate: 0.40 },
+          { threshold: 40000000, rate: 0.45 },
+        ]
+      },
+      {
+        name: 'Resident Tax',
+        description: 'Municipal + Prefectural (10%).',
+        type: 'percentage',
+        rate: 0.10,
+        exemptAmount: 1000000 // Basic (430k) + Min Emp (550k) approx
       }
     ]
   }

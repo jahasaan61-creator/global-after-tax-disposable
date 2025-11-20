@@ -9,6 +9,10 @@ export enum CountryCode {
   NOR = 'NOR', // Norway
   SGP = 'SGP', // Singapore
   BGD = 'BGD', // Bangladesh
+  ESP = 'ESP', // Spain
+  GBR = 'GBR', // United Kingdom
+  IND = 'IND', // India
+  JPN = 'JPN', // Japan
 }
 
 export interface TaxBracket {

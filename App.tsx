@@ -4,6 +4,7 @@ import { CountryCode, UserInputs, CalculationResult } from './types';
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
 import { GeminiAssistant } from './components/GeminiAssistant';
+import { ImageEditor } from './components/ImageEditor';
 
 // Declare jsPDF and html2canvas on Window interface
 declare global {
@@ -190,7 +191,9 @@ const App: React.FC = () => {
     const map: Record<string, string> = {
         [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
         [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
-        [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd'
+        [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
+        [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
+        [CountryCode.JPN]: 'jp'
     };
     return `https://flagcdn.com/w40/${map[code]}.png`;
   };
@@ -199,7 +202,9 @@ const App: React.FC = () => {
     const map: Record<string, string> = {
         [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
         [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
-        [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd'
+        [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
+        [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
+        [CountryCode.JPN]: 'jp'
     };
     return `https://flagcdn.com/w640/${map[code]}.png`;
   };
@@ -307,7 +312,8 @@ const App: React.FC = () => {
                 </div>
                 <h1 className="text-xl font-bold tracking-tight hidden sm:block">Global Net Pay</h1>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center">
+                <ImageEditor />
                 <button 
                     onClick={shareLink}
                     className="h-9 px-5 rounded-full bg-white border border-gray-200/60 text-[13px] font-bold text-slate-700 hover:bg-gray-50 transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
@@ -749,10 +755,17 @@ const App: React.FC = () => {
                                     </div>
                                  </div>
                              </div>
-                             <div className="flex items-center justify-center pt-6 text-[#e6ca29]">
+                             <button 
+                                 onClick={() => {
+                                     setFromCurrency(toCurrency);
+                                     setToCurrency(fromCurrency);
+                                 }}
+                                 className="flex items-center justify-center pt-6 text-[#e6ca29] hover:text-[#c5ad24] hover:scale-110 transition-all active:scale-95 cursor-pointer"
+                                 title="Swap Currencies"
+                             >
                                  <i className="fas fa-arrow-right text-xl hidden md:block"></i>
                                  <i className="fas fa-arrow-down text-xl md:hidden"></i>
-                             </div>
+                             </button>
                              <div className="flex-1 w-full">
                                  <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">To</label>
                                  <div className="relative">
@@ -932,14 +945,14 @@ const App: React.FC = () => {
                                    </td>
                                    <td className="py-4 px-4 text-right font-medium">-{formatCurrency(d.amount)}</td>
                                    <td className="py-4 px-4 text-right font-medium">-{formatCurrency(d.amount/12)}</td>
-                                   <td className="py-4 px-4 text-right font-medium">{(d.amount/(result.grossAnnual || 1) * 100).toFixed(1)}%</td>
+                                   <td className="py-4 px-4 text-right font-medium">{(result.grossAnnual > 0 ? (d.amount/result.grossAnnual * 100).toFixed(1) : '0.0')}%</td>
                                </tr>
                            ))}
                            <tr className="bg-slate-100 font-extrabold text-slate-900 border-t-2 border-slate-300">
                                <td className="py-4 px-4 text-lg">NET INCOME</td>
                                <td className="py-4 px-4 text-right text-lg">{formatCurrency(result.netAnnual)}</td>
                                <td className="py-4 px-4 text-right text-lg">{formatCurrency(result.netMonthly)}</td>
-                               <td className="py-4 px-4 text-right text-lg">{(result.netAnnual/(result.grossAnnual || 1)*100).toFixed(1)}%</td>
+                               <td className="py-4 px-4 text-right text-lg">{(result.grossAnnual > 0 ? (result.netAnnual/result.grossAnnual*100).toFixed(1) : '0.0')}%</td>
                            </tr>
                       </tbody>
                   </table>
@@ -949,7 +962,7 @@ const App: React.FC = () => {
                   <div className="mb-8">
                       <h3 className="text-sm font-bold uppercase text-slate-400 mb-4 border-b pb-2 tracking-wider">Personal Costs Breakdown</h3>
                       <div className="grid grid-cols-2 gap-4 text-base">
-                          {Object.entries(inputs.costs).map(([key, val]) => (val as number) > 0 && (
+                          {Object.entries(inputs.costs || {}).map(([key, val]) => (val as number) > 0 && (
                               <div key={key} className="flex justify-between border-b border-dotted border-slate-200 pb-1">
                                   <span className="capitalize text-slate-600 whitespace-nowrap font-medium">{key.replace(/([A-Z])/g, ' $1').replace('freedom Fund', 'Freedom/Runway Fund').trim()}</span>
                                   <span className="font-bold">{formatCurrency(val as number)}/mo</span>
