@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { CountryCode } from '../types';
 import { queryGemini } from '../services/geminiService';
@@ -55,6 +56,30 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
     "Are there new 2025 tax credits?",
   ];
 
+  // Simple function to render text with markdown-style links
+  const renderMessageWithLinks = (text: string) => {
+    // Regex to capture [Title](url)
+    const parts = text.split(/(\[[^\]]+\]\([^)]+\))/g);
+    
+    return parts.map((part, index) => {
+      const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+      if (match) {
+        return (
+          <a 
+            key={index} 
+            href={match[2]} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 break-all"
+          >
+            {match[1]} <i className="fas fa-external-link-alt text-[10px] ml-0.5"></i>
+          </a>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
   return (
     <>
       {/* Floating Button */}
@@ -87,7 +112,9 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                     ? 'bg-blue-600 text-white rounded-br-none' 
                     : 'bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-[#333] text-slate-800 dark:text-slate-200 rounded-bl-none shadow-sm prose prose-sm dark:prose-invert'
                 }`}>
-                  <div className="whitespace-pre-wrap font-medium">{msg.text}</div>
+                  <div className="whitespace-pre-wrap font-medium leading-relaxed">
+                      {renderMessageWithLinks(msg.text)}
+                  </div>
                 </div>
               </div>
             ))}
@@ -139,7 +166,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
               </button>
             </div>
             <div className="text-[10px] text-center text-slate-400 dark:text-slate-500 mt-2 font-semibold">
-              AI can make mistakes. Double check with sources.
+              AI uses Google Search for verification. Double check sources.
             </div>
           </div>
         </div>

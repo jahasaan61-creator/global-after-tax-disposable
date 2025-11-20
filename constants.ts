@@ -137,6 +137,131 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       }
     ]
   },
+  [CountryCode.AUS]: {
+    code: CountryCode.AUS,
+    name: 'Australia',
+    currency: 'AUD',
+    currencySymbol: '$',
+    exchangeRatePerUSD: 1.52,
+    sources: [
+        { label: 'ATO Tax Rates 2024-25', url: 'https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents', date: '2024-07-01' }
+    ],
+    federalDeductibles: [
+        {
+            name: 'Income Tax',
+            description: 'Progressive. Includes Stage 3 Tax Cuts.',
+            type: 'progressive',
+            brackets: [
+                { threshold: 0, rate: 0 },
+                { threshold: 18200, rate: 0.16 },
+                { threshold: 45000, rate: 0.30 },
+                { threshold: 135000, rate: 0.37 },
+                { threshold: 190000, rate: 0.45 }
+            ]
+        },
+        {
+            name: 'Medicare Levy',
+            description: '2% of taxable income (Standard).',
+            type: 'percentage',
+            rate: 0.02,
+            // Note: Low income reduction thresholds exist but simplifying to standard 2% for general calculator
+        }
+    ]
+  },
+  [CountryCode.GBR]: {
+    code: CountryCode.GBR,
+    name: 'United Kingdom',
+    currency: 'GBP',
+    currencySymbol: '£',
+    exchangeRatePerUSD: 0.79,
+    sources: [{ label: 'GOV.UK Rates 2024/25', url: 'https://www.gov.uk/income-tax-rates', date: '2024-04-06' }],
+    federalDeductibles: [
+        {
+            name: 'Income Tax',
+            description: 'Progressive. Personal Allowance £12,570.',
+            type: 'progressive',
+            exemptAmount: 12570,
+            brackets: [
+                { threshold: 0, rate: 0.20 },     // Basic rate
+                { threshold: 37700, rate: 0.40 }, // Higher rate (starts at £50,270 total income)
+                { threshold: 112570, rate: 0.45 } // Additional rate (starts at £125,140 total)
+            ]
+        },
+        {
+            name: 'National Insurance',
+            description: 'Class 1 Employee (8% / 2%).',
+            type: 'progressive',
+            exemptAmount: 12570, // Primary Threshold
+            brackets: [
+                { threshold: 0, rate: 0.08 },     // 8% on earnings between £12,570 and £50,270
+                { threshold: 37700, rate: 0.02 }  // 2% on earnings above £50,270
+            ]
+        }
+    ]
+  },
+  [CountryCode.CAN]: {
+    code: CountryCode.CAN,
+    name: 'Canada',
+    currency: 'CAD',
+    currencySymbol: '$',
+    exchangeRatePerUSD: 1.38,
+    subNationalLabel: 'Province',
+    sources: [{ label: 'CRA 2025 Limits', url: 'https://www.canada.ca/', date: '2024-11-15' }],
+    federalDeductibles: [
+      {
+        name: 'Federal Tax',
+        description: 'Federal income tax (2024).',
+        type: 'progressive',
+        exemptAmount: 15705, 
+        brackets: [
+          { threshold: 0, rate: 0.15 },
+          { threshold: 55867, rate: 0.205 },
+          { threshold: 111733, rate: 0.26 },
+          { threshold: 173205, rate: 0.29 },
+          { threshold: 246752, rate: 0.33 },
+        ]
+      },
+      { 
+          name: 'CPP (Base)', 
+          description: 'Pension Plan (Tier 1).', 
+          type: 'percentage', 
+          rate: 0.0595, 
+          exemptAmount: 3500, 
+          cappedBase: 71300 // 2025 YMPE
+      },
+      {
+          name: 'CPP (Enhancement)',
+          description: 'Tier 2 (4% on 71.3k - 81.1k).',
+          type: 'progressive',
+          brackets: [
+              { threshold: 0, rate: 0 },
+              { threshold: 71300, rate: 0.04 }
+          ],
+          cappedBase: 81100 // 2025 Tier 2 Ceiling
+      },
+      { name: 'EI', description: 'Employment Insurance.', type: 'percentage', rate: 0.0164, cappedBase: 65700 } // 2025 Projected
+    ],
+    subNationalRules: [
+      {
+        id: 'ON', name: 'Ontario', deductibles: [
+           { name: 'ON Tax', description: 'Ontario Tax.', type: 'progressive', exemptAmount: 12399, brackets: [{ threshold: 0, rate: 0.0505 }, { threshold: 51446, rate: 0.0915 }, { threshold: 102894, rate: 0.1116 }, { threshold: 150000, rate: 0.1216 }, { threshold: 220000, rate: 0.1316 }] },
+           { name: 'ON Health Premium', description: 'Mandatory Health Premium.', type: 'progressive', brackets: [
+               { threshold: 0, rate: 0 },
+               { threshold: 20000, rate: 0.06 }, 
+               { threshold: 36000, rate: 0.06 }, // Simplified approximation of the tiered fixed amounts
+               { threshold: 48000, rate: 0.25 },
+               { threshold: 72000, rate: 0.25 },
+               { threshold: 200000, rate: 0.25 },
+           ], cap: 900 }
+        ]
+      },
+      {
+        id: 'BC', name: 'British Columbia', deductibles: [
+           { name: 'BC Tax', description: 'BC Tax.', type: 'progressive', exemptAmount: 12580, brackets: [{ threshold: 0, rate: 0.0506 }, { threshold: 47937, rate: 0.077 }, { threshold: 95875, rate: 0.105 }, { threshold: 110076, rate: 0.1229 }, { threshold: 133664, rate: 0.147 }, { threshold: 181232, rate: 0.168 }] }
+        ]
+      }
+    ]
+  },
   [CountryCode.SGP]: {
     code: CountryCode.SGP,
     name: 'Singapore',
@@ -267,69 +392,6 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         ]
       },
       { name: 'PRSI (Class A)', description: 'Social Insurance.', type: 'percentage', rate: 0.04 }
-    ]
-  },
-  [CountryCode.CAN]: {
-    code: CountryCode.CAN,
-    name: 'Canada',
-    currency: 'CAD',
-    currencySymbol: '$',
-    exchangeRatePerUSD: 1.38,
-    subNationalLabel: 'Province',
-    sources: [{ label: 'CRA 2025 Limits', url: 'https://www.canada.ca/', date: '2024-11-15' }],
-    federalDeductibles: [
-      {
-        name: 'Federal Tax',
-        description: 'Federal income tax (2024).',
-        type: 'progressive',
-        exemptAmount: 15705, 
-        brackets: [
-          { threshold: 0, rate: 0.15 },
-          { threshold: 55867, rate: 0.205 },
-          { threshold: 111733, rate: 0.26 },
-          { threshold: 173205, rate: 0.29 },
-          { threshold: 246752, rate: 0.33 },
-        ]
-      },
-      { 
-          name: 'CPP (Base)', 
-          description: 'Pension Plan (Tier 1).', 
-          type: 'percentage', 
-          rate: 0.0595, 
-          exemptAmount: 3500, 
-          cappedBase: 71300 // 2025 YMPE
-      },
-      {
-          name: 'CPP (Enhancement)',
-          description: 'Tier 2 (4% on 71.3k - 81.1k).',
-          type: 'progressive',
-          brackets: [
-              { threshold: 0, rate: 0 },
-              { threshold: 71300, rate: 0.04 }
-          ],
-          cappedBase: 81100 // 2025 Tier 2 Ceiling
-      },
-      { name: 'EI', description: 'Employment Insurance.', type: 'percentage', rate: 0.0164, cappedBase: 65700 } // 2025 Projected
-    ],
-    subNationalRules: [
-      {
-        id: 'ON', name: 'Ontario', deductibles: [
-           { name: 'ON Tax', description: 'Ontario Tax.', type: 'progressive', exemptAmount: 12399, brackets: [{ threshold: 0, rate: 0.0505 }, { threshold: 51446, rate: 0.0915 }, { threshold: 102894, rate: 0.1116 }, { threshold: 150000, rate: 0.1216 }, { threshold: 220000, rate: 0.1316 }] },
-           { name: 'ON Health Premium', description: 'Mandatory Health Premium.', type: 'progressive', brackets: [
-               { threshold: 0, rate: 0 },
-               { threshold: 20000, rate: 0.06 }, 
-               { threshold: 36000, rate: 0.06 }, // Simplified approximation of the tiered fixed amounts
-               { threshold: 48000, rate: 0.25 },
-               { threshold: 72000, rate: 0.25 },
-               { threshold: 200000, rate: 0.25 },
-           ], cap: 900 }
-        ]
-      },
-      {
-        id: 'BC', name: 'British Columbia', deductibles: [
-           { name: 'BC Tax', description: 'BC Tax.', type: 'progressive', exemptAmount: 12580, brackets: [{ threshold: 0, rate: 0.0506 }, { threshold: 47937, rate: 0.077 }, { threshold: 95875, rate: 0.105 }, { threshold: 110076, rate: 0.1229 }, { threshold: 133664, rate: 0.147 }, { threshold: 181232, rate: 0.168 }] }
-        ]
-      }
     ]
   },
   [CountryCode.NZL]: {
@@ -471,37 +533,6 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           { threshold: 300000, rate: 0.47 }
         ]
       }
-    ]
-  },
-  [CountryCode.GBR]: {
-    code: CountryCode.GBR,
-    name: 'United Kingdom',
-    currency: 'GBP',
-    currencySymbol: '£',
-    exchangeRatePerUSD: 0.79,
-    sources: [{ label: 'GOV.UK Rates 2024/25', url: 'https://www.gov.uk/income-tax-rates', date: '2024-04-06' }],
-    federalDeductibles: [
-        {
-            name: 'Income Tax',
-            description: 'Progressive. Personal Allowance £12,570.',
-            type: 'progressive',
-            exemptAmount: 12570,
-            brackets: [
-                { threshold: 0, rate: 0.20 },     // Basic rate
-                { threshold: 37700, rate: 0.40 }, // Higher rate (starts at £50,270 total income)
-                { threshold: 112570, rate: 0.45 } // Additional rate (starts at £125,140 total)
-            ]
-        },
-        {
-            name: 'National Insurance',
-            description: 'Class 1 Employee Contributions.',
-            type: 'progressive',
-            exemptAmount: 12570, // Primary Threshold
-            brackets: [
-                { threshold: 0, rate: 0.08 },     // 8% on earnings between £12,570 and £50,270
-                { threshold: 37700, rate: 0.02 }  // 2% on earnings above £50,270
-            ]
-        }
     ]
   },
   [CountryCode.IND]: {

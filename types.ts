@@ -13,6 +13,7 @@ export enum CountryCode {
   GBR = 'GBR', // United Kingdom
   IND = 'IND', // India
   JPN = 'JPN', // Japan
+  AUS = 'AUS', // Australia
 }
 
 export interface TaxBracket {

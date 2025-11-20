@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CountryCode, UserInputs, CalculationResult } from './types';
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
@@ -11,6 +11,139 @@ declare global {
     jspdf: any;
     html2canvas: any;
   }
+}
+
+// --- HELPER FUNCTIONS ---
+
+const getFlagUrl = (code: CountryCode) => {
+  const map: Record<string, string> = {
+      [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
+      [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
+      [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
+      [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
+      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au'
+  };
+  return `https://flagcdn.com/w40/${map[code]}.png`;
+};
+
+const getHDFlagUrl = (code: CountryCode) => {
+  const map: Record<string, string> = {
+      [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
+      [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
+      [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
+      [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
+      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au'
+  };
+  return `https://flagcdn.com/w640/${map[code]}.png`;
+};
+
+// --- COMPONENTS ---
+
+// Enhanced Searchable Dropdown
+const CurrencyDropdown = ({ value, onChange }: { value: CountryCode, onChange: (v: CountryCode) => void }) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+          if (ref.current && !ref.current.contains(event.target as Node)) {
+              setOpen(false);
+              setSearch(''); 
+          }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Focus search input when opening
+  useEffect(() => {
+    if (open && inputRef.current) {
+        inputRef.current.focus();
+    }
+  }, [open]);
+
+  const rule = COUNTRY_RULES[value];
+  const filtered = useMemo(() => Object.values(COUNTRY_RULES).filter(c => 
+      c.name.toLowerCase().includes(search.toLowerCase()) || 
+      c.currency.toLowerCase().includes(search.toLowerCase()) ||
+      c.code.toLowerCase().includes(search.toLowerCase())
+  ), [search]);
+
+  return (
+      <div className="relative w-[45%] sm:w-[42%]" ref={ref}>
+          <button 
+              onClick={() => setOpen(!open)}
+              className="w-full h-14 pl-3 pr-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl flex items-center gap-3 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 hover:bg-white/50 dark:hover:bg-[#333] transition-all shadow-sm group"
+          >
+              <div className="w-9 h-9 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-sm shrink-0 group-hover:scale-110 transition-transform bg-white">
+                  <img src={getFlagUrl(value)} alt={rule.name} className="w-full h-full object-cover" />
+              </div>
+              <div className="flex flex-col items-start overflow-hidden">
+                  <span className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">{rule.currency}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate w-full text-left">{rule.code}</span>
+              </div>
+              <i className="fas fa-chevron-down text-[10px] text-slate-400 ml-auto group-hover:text-blue-500 transition-colors"></i>
+          </button>
+
+          {open && (
+              <div className="absolute top-full left-0 mt-2 w-[280px] max-h-[320px] flex flex-col bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#333] z-[60] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                  <div className="p-3 border-b border-gray-50 dark:border-[#333] bg-white dark:bg-[#1c1c1e] sticky top-0 z-10">
+                      <div className="relative">
+                          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                          <input 
+                            ref={inputRef}
+                            type="text" 
+                            placeholder="Search country..." 
+                            className="w-full pl-8 pr-3 py-2.5 bg-slate-50 dark:bg-[#2c2c2e] rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                          />
+                      </div>
+                  </div>
+                  <div className="overflow-y-auto flex-1 p-1 scrollbar-thin">
+                    {filtered.map((c) => (
+                        <button 
+                            key={c.code}
+                            onClick={() => { onChange(c.code); setOpen(false); setSearch(''); }}
+                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-[#2c2c2e] transition-colors text-left group border-b border-transparent last:border-0 ${c.code === value ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                        >
+                            <img src={getFlagUrl(c.code)} alt={c.name} className="w-7 h-7 rounded-full object-cover shadow-sm shrink-0 border border-black/5 dark:border-white/10" />
+                            <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white">{c.currency}</span>
+                                    <span className="text-[10px] text-slate-500 truncate">- {c.name}</span>
+                                </div>
+                            </div>
+                            {c.code === value && <i className="fas fa-check text-blue-500 text-xs ml-auto"></i>}
+                        </button>
+                    ))}
+                    {filtered.length === 0 && (
+                        <div className="p-6 text-center">
+                            <i className="fas fa-search-minus text-slate-300 text-xl mb-2"></i>
+                            <p className="text-xs text-slate-400 font-medium">No countries found</p>
+                        </div>
+                    )}
+                  </div>
+              </div>
+          )}
+      </div>
+  );
+};
+
+// Custom Hook for Debouncing
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
 }
 
 const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
@@ -29,44 +162,44 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
 
     return (
         <div className="flex flex-col items-center justify-center w-full h-full">
-            <div className="relative w-32 h-32 md:w-40 md:h-40">
+            <div className="relative w-32 h-32 md:w-40 md:h-40 transition-all duration-500 ease-out hover:scale-105">
                 <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90 origin-center">
                     {/* Track */}
-                    <circle cx="21" cy="21" r={r} fill="transparent" className="stroke-gray-200 dark:stroke-[#222] transition-colors duration-300" strokeWidth="6" />
+                    <circle cx="21" cy="21" r={r} fill="transparent" className="stroke-gray-100 dark:stroke-[#222] transition-colors duration-300" strokeWidth="6" />
                     
                     {/* Tax (Red) - Starts at 0 */}
                     {taxPct > 0 && (
                     <circle cx="21" cy="21" r={r} fill="transparent" stroke="#FF3B30" strokeWidth="6" 
-                        strokeDasharray={`${taxPct} ${100 - taxPct}`} strokeDashoffset={0} strokeLinecap="round" />
+                        strokeDasharray={`${taxPct} ${100 - taxPct}`} strokeDashoffset={0} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
                     )}
                     
                     {/* Costs (Blue) - Starts after Tax */}
                     {costsPct > 0 && (
                     <circle cx="21" cy="21" r={r} fill="transparent" stroke="#007AFF" strokeWidth="6"
-                        strokeDasharray={`${costsPct} ${100 - costsPct}`} strokeDashoffset={-taxPct} strokeLinecap="round" />
+                        strokeDasharray={`${costsPct} ${100 - costsPct}`} strokeDashoffset={-taxPct} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
                     )}
 
                     {/* Disposable (Green) - Starts after Tax + Costs */}
                     {dispPct > 0 && (
                     <circle cx="21" cy="21" r={r} fill="transparent" stroke="#34C759" strokeWidth="6"
-                        strokeDasharray={`${dispPct} ${100 - dispPct}`} strokeDashoffset={-(taxPct + costsPct)} strokeLinecap="round" />
+                        strokeDasharray={`${dispPct} ${100 - dispPct}`} strokeDashoffset={-(taxPct + costsPct)} strokeLinecap="round" className="transition-all duration-1000 ease-out" />
                     )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-900 dark:text-white">
-                    <span className="text-xl font-extrabold tracking-tight">{gross > 0 ? ((result.netAnnual / gross) * 100).toFixed(0) : '0'}%</span>
+                    <span className="text-xl font-extrabold tracking-tight animate-in fade-in zoom-in duration-500">{gross > 0 ? ((result.netAnnual / gross) * 100).toFixed(0) : '0'}%</span>
                 </div>
             </div>
             <div className="flex gap-3 mt-6">
                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#FF3B30]"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#FF3B30] shadow-[0_0_8px_rgba(255,59,48,0.5)]"></div>
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Tax</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#007AFF]"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#007AFF] shadow-[0_0_8px_rgba(0,122,255,0.5)]"></div>
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Costs</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[#34C759]"></div>
+                    <div className="w-2 h-2 rounded-full bg-[#34C759] shadow-[0_0_8px_rgba(52,199,89,0.5)]"></div>
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Free</span>
                 </div>
             </div>
@@ -88,7 +221,6 @@ const App: React.FC = () => {
 
   const [mode, setMode] = useState<CalcMode>('gross');
   const [targetNet, setTargetNet] = useState<number>(40000);
-  const [result, setResult] = useState<CalculationResult | null>(null);
   const [showSources, setShowSources] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
@@ -100,11 +232,16 @@ const App: React.FC = () => {
       return false;
   });
 
+  // Debounce inputs to improve performance - Reduced delay for snappier UI
+  const debouncedInputs = useDebounce(inputs, 250);
+  const debouncedTargetNet = useDebounce(targetNet, 250);
+
   // Currency Converter State
   const [convertAmount, setConvertAmount] = useState<number>(1000);
   const [fromCurrency, setFromCurrency] = useState<CountryCode>(CountryCode.USA);
   const [toCurrency, setToCurrency] = useState<CountryCode>(CountryCode.DEU);
-  const [convertedResult, setConvertedResult] = useState<number>(0);
+  
+  const debouncedConvertAmount = useDebounce(convertAmount, 250);
 
   const currentRules = COUNTRY_RULES[inputs.country];
 
@@ -163,29 +300,54 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Persistence Effect
   useEffect(() => {
-    localStorage.setItem('gnp_inputs', JSON.stringify(inputs));
-    
-    let incomeToUse = inputs.grossIncome;
-    if (mode === 'net') {
-        incomeToUse = calculateGrossFromNet(targetNet, { ...inputs, grossIncome: 0 });
-    }
-    const finalInputs = { ...inputs, grossIncome: incomeToUse };
-    const res = calculateNetPay(finalInputs);
-    setResult(res);
-  }, [inputs, mode, targetNet]);
+      localStorage.setItem('gnp_inputs', JSON.stringify(inputs));
+  }, [inputs]);
 
-  // Converter Logic
-  useEffect(() => {
+  // OPTIMIZATION: Use useMemo instead of useEffect for synchronous heavy calculations to prevent extra render cycles
+  const result = useMemo(() => {
+      let incomeToUse = debouncedInputs.grossIncome;
+      if (mode === 'net') {
+          incomeToUse = calculateGrossFromNet(debouncedTargetNet, { ...debouncedInputs, grossIncome: 0 });
+      }
+      const finalInputs = { ...debouncedInputs, grossIncome: incomeToUse };
+      return calculateNetPay(finalInputs);
+  }, [debouncedInputs, mode, debouncedTargetNet]);
+
+  // OPTIMIZATION: Memoize currency conversion
+  const convertedResult = useMemo(() => {
       const fromRate = COUNTRY_RULES[fromCurrency].exchangeRatePerUSD;
       const toRate = COUNTRY_RULES[toCurrency].exchangeRatePerUSD;
       if (fromRate && toRate) {
           // Convert to USD first, then to Target
-          const amountInUSD = convertAmount / fromRate;
-          const finalAmount = amountInUSD * toRate;
-          setConvertedResult(finalAmount);
+          const amountInUSD = debouncedConvertAmount / fromRate;
+          return amountInUSD * toRate;
       }
-  }, [convertAmount, fromCurrency, toCurrency]);
+      return 0;
+  }, [debouncedConvertAmount, fromCurrency, toCurrency]);
+
+  // Derived values for Breakdown
+  const employeeDeductions = result ? result.deductionsBreakdown.filter(d => !d.isEmployer) : [];
+  const employerDeductions = result ? result.deductionsBreakdown.filter(d => d.isEmployer) : [];
+
+  const getRateDisplay = () => {
+    const from = COUNTRY_RULES[fromCurrency];
+    const to = COUNTRY_RULES[toCurrency];
+    const rate = to.exchangeRatePerUSD / from.exchangeRatePerUSD;
+    return `1 ${from.currency} ≈ ${rate.toFixed(4)} ${to.currency}`;
+  };
+
+  const applyToCalculator = () => {
+    setInputs(prev => ({
+        ...prev,
+        country: toCurrency, // Switch main calculator to target country
+        grossIncome: parseFloat(convertedResult.toFixed(0)), // Set income
+        subRegion: undefined 
+    }));
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleCostChange = (key: keyof UserInputs['costs'], val: string) => {
     const num = parseFloat(val) || 0;
@@ -202,27 +364,14 @@ const App: React.FC = () => {
       maximumFractionDigits: 0 
     }).format(amount);
   };
-
-  const getFlagUrl = (code: CountryCode) => {
-    const map: Record<string, string> = {
-        [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
-        [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
-        [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
-        [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
-        [CountryCode.JPN]: 'jp'
-    };
-    return `https://flagcdn.com/w40/${map[code]}.png`;
-  };
-
-  const getHDFlagUrl = (code: CountryCode) => {
-    const map: Record<string, string> = {
-        [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
-        [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
-        [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
-        [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
-        [CountryCode.JPN]: 'jp'
-    };
-    return `https://flagcdn.com/w640/${map[code]}.png`;
+  
+  const formatCompact = (amount: number) => {
+     return new Intl.NumberFormat('en-US', { 
+        style: 'currency', 
+        currency: currentRules.currency,
+        notation: 'compact',
+        maximumFractionDigits: 0
+     }).format(amount);
   };
 
   const downloadPDF = async () => {
@@ -248,14 +397,14 @@ const App: React.FC = () => {
         // A4 size
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        // const pdfHeight = pdf.internal.pageSize.getHeight();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgProps = pdf.getImageProperties(imgData);
         const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
         
         pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
         
         const dateStr = new Date().toISOString().split('T')[0];
-        const fileName = `NetPay_Statement_${inputs.country}_${dateStr}.pdf`;
+        const fileName = `Payslip_${inputs.country}_${dateStr}.pdf`;
         
         pdf.save(fileName);
         document.body.style.cursor = 'default';
@@ -297,6 +446,20 @@ const App: React.FC = () => {
     { key: 'emergencyFund', label: 'Emergency Fund' },
     { key: 'freedomFund', label: 'Freedom/Runway Fund' }
   ];
+  
+  // Dynamic Income Presets
+  const getIncomePresets = () => {
+     const rate = currentRules.exchangeRatePerUSD;
+     // Base USD steps: 40k, 80k, 120k, 200k
+     const bases = [40000, 80000, 120000, 200000];
+     return bases.map(b => {
+         const val = b * rate;
+         // Round to nearest thousand for clean UI
+         return Math.round(val / 1000) * 1000;
+     });
+  };
+
+  const incomePresets = getIncomePresets();
 
   // Reusable iOS-style Segmented Control
   const SegmentedControl = ({ options, value, onChange, dark }: { options: {label: string, value: string}[], value: string, onChange: (v: any) => void, dark?: boolean }) => (
@@ -318,7 +481,7 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-[#050505] transition-colors duration-300">
+    <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-[#050505] transition-colors duration-300 selection:bg-blue-500/30">
       {/* Glassmorphic Header */}
       <header className="sticky top-0 z-30 bg-slate-50/80 dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-[#222]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
@@ -383,12 +546,17 @@ const App: React.FC = () => {
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-r from-[#0034b8] to-[#0c58fa] p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                     <div className="relative z-10 flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
-                                <i className="fas fa-sack-dollar text-white"></i>
+                     <div className="relative z-10 flex justify-between items-start">
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                    <i className="fas fa-sack-dollar text-white"></i>
+                                </div>
+                                <h2 className="text-xl font-extrabold tracking-tight">Income</h2>
                             </div>
-                            <h2 className="text-xl font-extrabold tracking-tight">Income</h2>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-wide w-fit">
+                                <i className="fas fa-calendar-alt text-[9px]"></i> Tax Year 2024/25
+                            </span>
                         </div>
                         <div className="w-40">
                              <SegmentedControl 
@@ -448,9 +616,13 @@ const App: React.FC = () => {
                     )}
 
                     <div>
-                        <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">
-                            {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
-                        </label>
+                        <div className="flex justify-between items-center mb-2 pl-1 pr-1">
+                             <label className="text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">
+                                {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
+                            </label>
+                            {/* Frequency Toggle embedded near label */}
+                        </div>
+                        
                         <div className="relative group">
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-extrabold z-10 transition-colors group-focus-within:text-blue-500">
                                 {currentRules.currencySymbol}
@@ -474,80 +646,105 @@ const App: React.FC = () => {
                                 />
                             </div>
                         </div>
-                    </div>
 
-                    {/* Annual Bonus Input */}
-                    <div>
-                        <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Annual Bonus / 13th Month</label>
-                        <div className="relative group">
-                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-extrabold z-10 transition-colors group-focus-within:text-blue-500">
-                                {currentRules.currencySymbol}
-                            </span>
-                            <input 
-                                type="number" 
+                        {/* Income Range Slider & Presets */}
+                        <div className="mt-3 px-1">
+                            <input
+                                type="range"
                                 min="0"
-                                autoComplete="off"
-                                placeholder="0"
-                                className="w-full p-4 pl-10 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-lg"
-                                value={inputs.annualBonus || ''}
-                                onChange={(e) => setInputs({...inputs, annualBonus: parseFloat(e.target.value) || 0})}
+                                max={Math.max(inputs.grossIncome * 2.5, incomePresets[incomePresets.length-1] * 1.2)}
+                                step={1000}
+                                value={mode === 'gross' ? inputs.grossIncome : targetNet}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    mode === 'gross' ? setInputs({...inputs, grossIncome: val}) : setTargetNet(val);
+                                }}
+                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600 hover:accent-blue-500 transition-all"
                             />
+                            <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
+                                {incomePresets.map(preset => (
+                                    <button
+                                        key={preset}
+                                        onClick={() => mode === 'gross' ? setInputs({...inputs, grossIncome: preset}) : setTargetNet(preset)}
+                                        className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c1e] text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-colors border border-transparent hover:border-blue-200 dark:hover:border-blue-800 whitespace-nowrap"
+                                    >
+                                        {formatCompact(preset)}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Detailed Inputs Group */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
+                    {/* Bonus & Details Grid */}
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                         {/* Annual Bonus Input */}
+                        <div className="col-span-1">
+                            <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1 truncate" title="Bonus / 13th Month">Bonus / 13th</label>
+                            <div className="relative group">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-bold text-sm z-10 transition-colors group-focus-within:text-blue-500">
+                                    {currentRules.currencySymbol}
+                                </span>
+                                <input 
+                                    type="number" 
+                                    min="0"
+                                    autoComplete="off"
+                                    placeholder="0"
+                                    className="w-full p-3 pl-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-sm"
+                                    value={inputs.annualBonus || ''}
+                                    onChange={(e) => setInputs({...inputs, annualBonus: parseFloat(e.target.value) || 0})}
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="col-span-1">
                              <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Age</label>
                              <input 
                                 type="number" 
                                 min="15" max="99"
                                 autoComplete="off"
-                                className="w-full p-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-slate-900 dark:text-white"
+                                className="w-full p-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-slate-900 dark:text-white text-sm"
                                 value={inputs.details.age}
                                 onChange={(e) => setInputs({...inputs, details: { ...inputs.details, age: parseInt(e.target.value) || 30 }})}
                             />
                         </div>
+
                         {currentRules.hasMaritalStatusOption && (
-                             <div>
-                                <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Status</label>
-                                <div className="relative">
-                                    <select 
-                                        className="w-full p-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl appearance-none focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-sm text-slate-900 dark:text-white"
-                                        value={inputs.details.maritalStatus}
-                                        onChange={(e) => setInputs({...inputs, details: { ...inputs.details, maritalStatus: e.target.value as 'single'|'married' }})}
-                                    >
-                                        <option value="single">Single</option>
-                                        <option value="married">Married</option>
-                                    </select>
+                             <div className="col-span-2">
+                                <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Marital Status</label>
+                                <div className="grid grid-cols-2 gap-2 bg-[#F2F2F7] dark:bg-[#1c1c1e] p-1 rounded-xl">
+                                     {['single', 'married'].map(status => (
+                                         <button
+                                            key={status}
+                                            onClick={() => setInputs({...inputs, details: { ...inputs.details, maritalStatus: status as any }})}
+                                            className={`py-2 rounded-lg text-xs font-extrabold uppercase tracking-wide transition-all ${
+                                                inputs.details.maritalStatus === status 
+                                                ? 'bg-white dark:bg-[#333] shadow-sm text-blue-600 dark:text-blue-400' 
+                                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                                            }`}
+                                         >
+                                             {status}
+                                         </button>
+                                     ))}
                                 </div>
                             </div>
                         )}
                     </div>
                     
                     {currentRules.hasChurchTaxOption && (
-                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl">
-                            <label htmlFor="churchTax" className="text-sm font-bold text-slate-700 dark:text-slate-200">Church Tax</label>
-                            <div className="relative inline-block w-12 h-6 transition duration-200 ease-in-out rounded-full cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    id="churchTax"
-                                    className="peer sr-only"
-                                    checked={inputs.details.churchTax}
-                                    onChange={(e) => setInputs({...inputs, details: { ...inputs.details, churchTax: e.target.checked }})}
-                                />
-                                <div className="w-full h-full bg-gray-300 dark:bg-slate-600 rounded-full peer-checked:bg-blue-500 transition-colors"></div>
-                                <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-6"></div>
+                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl border border-transparent hover:border-blue-500/20 transition-colors cursor-pointer" onClick={() => setInputs({...inputs, details: { ...inputs.details, churchTax: !inputs.details.churchTax }})}>
+                            <label className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer pointer-events-none">Apply Church Tax</label>
+                            <div className={`w-10 h-6 rounded-full relative transition-colors duration-300 ${inputs.details.churchTax ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600'}`}>
+                                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${inputs.details.churchTax ? 'translate-x-4' : ''}`}></div>
                             </div>
                          </div>
                     )}
                 </div>
             </div>
 
-            {/* Costs Section */}
-            <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl">
+            {/* Costs Section - Improved Functionality */}
+            <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl flex flex-col">
                 {/* Gradient Header */}
-                <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 md:p-8 pb-10 relative text-white">
+                <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 md:p-8 pb-10 relative text-white shrink-0">
                      <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
                      <div className="relative z-10 flex justify-between items-center">
                         <div className="flex items-center gap-3">
@@ -560,33 +757,72 @@ const App: React.FC = () => {
                      </div>
                 </div>
 
-                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-t-[32px] relative z-20">
-                    <div className="grid grid-cols-2 gap-4">
-                        {costFields.map((field) => (
+                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-t-[32px] relative z-20 flex-grow flex flex-col">
+                    
+                    {/* NEW: Budget Dashboard */}
+                    {result && result.netMonthly > 0 && (
+                        <div className="mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-[#18181b] border border-slate-100 dark:border-[#2c2c2e] animate-in fade-in slide-in-from-bottom-2">
+                            <div className="flex justify-between items-end mb-2">
+                                <div>
+                                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Budget Used</p>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                         <span className={`text-xl font-extrabold ${result.personalCostsTotal > result.netMonthly ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
+                                            {((result.personalCostsTotal / result.netMonthly) * 100).toFixed(0)}%
+                                         </span>
+                                         <span className="text-[11px] font-bold text-slate-400">of Net Pay</span>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Remaining</p>
+                                    <p className={`text-xl font-extrabold ${result.disposableMonthly < 0 ? 'text-red-500' : 'text-[#34C759]'}`}>
+                                        {formatCurrency(result.disposableMonthly)}
+                                    </p>
+                                </div>
+                            </div>
+                            {/* Progress Bar */}
+                            <div className="w-full h-2.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                                        (result.personalCostsTotal / result.netMonthly) > 1 ? 'bg-red-500' : 
+                                        (result.personalCostsTotal / result.netMonthly) > 0.8 ? 'bg-yellow-500' : 'bg-[#34C759]'
+                                    }`}
+                                    style={{ width: `${Math.min(((result.personalCostsTotal / result.netMonthly) * 100), 100)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+                        {costFields.map((field) => {
+                            const val = (inputs.costs as any)[field.key];
+                            const pct = (result && result.netMonthly > 0 && val > 0) ? (val / result.netMonthly) * 100 : 0;
+                            return (
                             <div key={field.key} className="relative">
-                                <label className="block text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5 ml-1 whitespace-nowrap">{field.label}</label>
+                                <div className="flex justify-between items-center mb-1.5 ml-1">
+                                    <label className="text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 whitespace-nowrap">{field.label}</label>
+                                    {pct > 1 && (
+                                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${pct > 50 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-slate-100 text-slate-500 dark:bg-[#2c2c2e] dark:text-slate-400'}`}>
+                                            {pct.toFixed(0)}%
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <span className="text-slate-400 dark:text-slate-500 text-xs font-bold">{currentRules.currencySymbol}</span>
                                     </div>
                                     <input 
                                         type="number"
+                                        min="0"
                                         autoComplete="off"
                                         className="w-full p-2.5 pl-7 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
-                                        value={(inputs.costs as any)[field.key] || ''}
+                                        value={val || ''}
                                         placeholder="0"
                                         onChange={(e) => handleCostChange(field.key as any, e.target.value)}
                                     />
                                 </div>
                             </div>
-                        ))}
+                        )})}
                     </div>
-                    {result && result.personalCostsTotal > 0 && (
-                        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-[#222] flex justify-between items-center">
-                            <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400">Total Monthly Costs</span>
-                            <span className="text-[15px] font-extrabold text-[#FF3B30]">-{formatCurrency(result.personalCostsTotal)}</span>
-                        </div>
-                    )}
                 </div>
             </div>
           </div>
@@ -728,99 +964,91 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Quick Convert Horizontal Card */}
-                    <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl">
-                         <div className="bg-gradient-to-r from-[#2FB050] to-[#A0E870] p-5 relative flex items-center justify-between text-white">
+                    <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl group/converter relative z-30">
+                         <div className="bg-gradient-to-r from-[#2FB050] to-[#A0E870] p-5 relative flex items-center justify-between text-white overflow-hidden rounded-t-[32px]">
+                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-32 pointer-events-none"></div>
                              <div className="flex items-center gap-3 relative z-10">
                                  <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
                                     <i className="fas fa-exchange-alt text-white"></i>
                                 </div>
-                                <h3 className="font-extrabold text-lg tracking-tight text-white">Quick Convert</h3>
+                                <div>
+                                    <h3 className="font-extrabold text-lg tracking-tight text-white leading-none">Quick Convert</h3>
+                                    <p className="text-white/80 text-xs font-medium mt-1">{getRateDisplay()}</p>
+                                </div>
                              </div>
-                             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                             {/* Decoration */}
+                             <i className="fas fa-coins text-white/20 text-6xl absolute -right-4 -bottom-8 rotate-12"></i>
                          </div>
-                         <div className="p-6 flex flex-col md:flex-row items-center gap-4">
-                             <div className="flex-1 w-full">
-                                 <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Amount</label>
-                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <span className="text-slate-400 dark:text-slate-500 text-xs font-bold">{COUNTRY_RULES[fromCurrency].currencySymbol}</span>
+                         
+                         <div className="p-6">
+                             <div className="flex flex-col md:flex-row items-end gap-4 relative">
+                                 
+                                 {/* FROM */}
+                                 <div className="flex-1 w-full space-y-2">
+                                    <div className="flex justify-between px-1">
+                                        <label className="text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">From</label>
+                                        <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[fromCurrency].name}</span>
                                     </div>
-                                    <input 
-                                        type="number"
-                                        value={convertAmount}
-                                        onChange={(e) => setConvertAmount(parseFloat(e.target.value) || 0)}
-                                        className="w-full p-3 pl-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg placeholder-gray-400 dark:placeholder-slate-500"
-                                    />
+                                     <div className="flex gap-3">
+                                        <CurrencyDropdown value={fromCurrency} onChange={setFromCurrency} />
+                                        <div className="relative flex-1">
+                                            <input 
+                                                type="number"
+                                                value={convertAmount}
+                                                onChange={(e) => setConvertAmount(parseFloat(e.target.value) || 0)}
+                                                className="w-full h-14 pl-4 pr-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white font-extrabold text-lg outline-none focus:ring-2 focus:ring-[#2FB050]/20 transition-all shadow-inner"
+                                            />
+                                        </div>
+                                     </div>
+                                 </div>
+
+                                 {/* SWAP BUTTON */}
+                                 <button 
+                                     onClick={() => {
+                                         setFromCurrency(toCurrency);
+                                         setToCurrency(fromCurrency);
+                                     }}
+                                     className="absolute left-1/2 -translate-x-1/2 bottom-[22px] md:static md:translate-x-0 md:mb-2 w-10 h-10 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500 hover:bg-[#2FB050] hover:text-white transition-all active:scale-90 shadow-md hover:shadow-lg z-10"
+                                 >
+                                     <i className="fas fa-exchange-alt"></i>
+                                 </button>
+
+                                 {/* TO */}
+                                 <div className="flex-1 w-full space-y-2">
+                                    <div className="flex justify-between px-1">
+                                        <label className="text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">To</label>
+                                        <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[toCurrency].name}</span>
+                                    </div>
+                                     <div className="flex gap-3">
+                                        <CurrencyDropdown value={toCurrency} onChange={setToCurrency} />
+                                        <div className="relative flex-1">
+                                            <div className="w-full h-14 pl-4 pr-4 bg-[#2FB050]/5 border border-[#2FB050]/20 rounded-2xl flex items-center text-[#2a8f43] dark:text-[#4ade80] font-extrabold text-lg overflow-hidden shadow-sm">
+                                                {new Intl.NumberFormat('en-US', { style: 'decimal', maximumFractionDigits: 2 }).format(convertedResult)}
+                                            </div>
+                                        </div>
+                                     </div>
                                  </div>
                              </div>
-                             <div className="flex-1 w-full">
-                                 <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">From</label>
-                                 <div className="relative">
-                                    <img 
-                                        src={getFlagUrl(fromCurrency)} 
-                                        alt="flag" 
-                                        className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full object-cover shadow-sm contrast-125 saturate-150"
-                                        crossOrigin="anonymous"
-                                    />
-                                    <select 
-                                        value={fromCurrency}
-                                        onChange={(e) => setFromCurrency(e.target.value as CountryCode)}
-                                        className="w-full p-3 pl-12 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
-                                    >
-                                        {Object.values(COUNTRY_RULES).map(c => (
-                                            <option key={c.code} value={c.code}>{c.currency}</option>
-                                        ))}
-                                    </select>
-                                    <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                                        <i className="fas fa-chevron-down text-xs"></i>
-                                    </div>
-                                 </div>
-                             </div>
-                             <button 
-                                 onClick={() => {
-                                     setFromCurrency(toCurrency);
-                                     setToCurrency(fromCurrency);
-                                 }}
-                                 className="flex items-center justify-center pt-6 text-[#e6ca29] hover:text-[#c5ad24] hover:scale-110 transition-all active:scale-95 cursor-pointer"
-                                 title="Swap Currencies"
-                             >
-                                 <i className="fas fa-arrow-right text-xl hidden md:block"></i>
-                                 <i className="fas fa-arrow-down text-xl md:hidden"></i>
-                             </button>
-                             <div className="flex-1 w-full">
-                                 <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">To</label>
-                                 <div className="relative">
-                                    <img 
-                                        src={getFlagUrl(toCurrency)} 
-                                        alt="flag" 
-                                        className="absolute left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full object-cover shadow-sm contrast-125 saturate-150"
-                                        crossOrigin="anonymous"
-                                    />
-                                    <select 
-                                        value={toCurrency}
-                                        onChange={(e) => setToCurrency(e.target.value as CountryCode)}
-                                        className="w-full p-3 pl-12 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
-                                    >
-                                        {Object.values(COUNTRY_RULES).map(c => (
-                                            <option key={c.code} value={c.code}>{c.currency}</option>
-                                        ))}
-                                    </select>
-                                    <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                                        <i className="fas fa-chevron-down text-xs"></i>
-                                    </div>
-                                 </div>
-                             </div>
-                             <div className="flex-1 w-full bg-[#A0E870]/10 rounded-2xl p-3 border border-[#A0E870]/20 text-right">
-                                 <label className="block text-[10px] font-bold text-[#5a8c3e] uppercase tracking-wider mb-1">Result</label>
-                                 <div className="text-xl font-extrabold text-[#46752d] truncate">
-                                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: COUNTRY_RULES[toCurrency].currency }).format(convertedResult)}
-                                 </div>
+
+                             {/* Footer Actions */}
+                             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-[#222] flex flex-col sm:flex-row justify-between items-center gap-3">
+                                 <p className="text-[10px] text-slate-400 font-semibold text-center sm:text-left">
+                                    <i className="fas fa-clock mr-1"></i> 
+                                    Real-time estimate. Rates update daily.
+                                 </p>
+                                 <button 
+                                    onClick={applyToCalculator}
+                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold hover:scale-105 active:scale-95 transition-all shadow-lg hover:shadow-xl"
+                                 >
+                                     <span>Use this Salary</span>
+                                     <i className="fas fa-arrow-up transform rotate-45"></i>
+                                 </button>
                              </div>
                          </div>
                     </div>
 
                     {/* Detailed Breakdown Table */}
-                    <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                    <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl relative z-10">
                          {/* Gradient Header */}
                         <div className="bg-gradient-to-r from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900 p-6 flex justify-between items-center relative">
                              <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
@@ -828,7 +1056,7 @@ const App: React.FC = () => {
                                 <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
                                     <i className="fas fa-list-alt text-white"></i>
                                 </div>
-                                <h3 className="font-extrabold text-lg text-white tracking-tight">Breakdown</h3>
+                                <h3 className="font-extrabold text-lg text-white tracking-tight">Payslip Breakdown</h3>
                              </div>
                              <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
                                 <i className="fas fa-arrow-down-to-line"></i> Get PDF
@@ -839,24 +1067,48 @@ const App: React.FC = () => {
                             <table className="w-full text-sm text-left min-w-[600px]">
                                 <thead className="text-xs text-[#86868b] dark:text-slate-400 uppercase font-bold bg-[#F5F5F7] dark:bg-[#18181b] border-b border-gray-100 dark:border-[#333]">
                                     <tr>
-                                        <th className="px-6 py-4 pl-8">Item</th>
+                                        <th className="px-6 py-4 pl-8">Description</th>
                                         <th className="px-6 py-4 text-right">Annual</th>
                                         <th className="px-6 py-4 text-right">Monthly</th>
-                                        <th className="px-6 py-4 text-right">%</th>
+                                        <th className="px-6 py-4 text-right w-24">%</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50 dark:divide-[#222]">
+                                    {/* Earnings Section */}
+                                    <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                        <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Earnings</td>
+                                    </tr>
                                     <tr className="text-slate-900 dark:text-white">
-                                        <td className="px-6 py-4 pl-8 font-bold">Gross Income</td>
-                                        <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossAnnual)}</td>
-                                        <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossMonthly)}</td>
+                                        <td className="px-6 py-4 pl-8 font-bold flex items-center gap-3">
+                                            <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400"><i className="fas fa-briefcase text-[10px]"></i></div>
+                                            Base Salary
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400">{formatCurrency(result.grossAnnual)}</td>
+                                        <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400">{formatCurrency(result.grossMonthly)}</td>
                                         <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">100%</td>
                                     </tr>
-                                    {result.deductionsBreakdown.map((d, idx) => (
-                                        <tr key={idx} className={`hover:bg-gray-50 dark:hover:bg-[#1c1c1e] transition-colors ${d.isEmployer ? 'text-slate-400 dark:text-slate-500' : 'text-[#FF3B30] dark:text-red-400'}`}>
+                                    {inputs.annualBonus > 0 && (
+                                         <tr className="text-slate-900 dark:text-white">
+                                            <td className="px-6 py-4 pl-8 font-bold flex items-center gap-3">
+                                                <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><i className="fas fa-gift text-[10px]"></i></div>
+                                                Annual Bonus
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold">{formatCurrency(inputs.annualBonus)}</td>
+                                            <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>
+                                            <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>
+                                        </tr>
+                                    )}
+
+                                    {/* Deductions Section */}
+                                    <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                        <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-2">Deductions</td>
+                                    </tr>
+                                    {employeeDeductions.length > 0 ? (
+                                        employeeDeductions.map((d, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-[#1c1c1e] transition-colors text-[#FF3B30] dark:text-red-400">
                                             <td className="px-6 py-4 pl-8 flex items-center group font-bold">
-                                                <span className={d.isEmployer ? 'italic font-medium' : ''}>{d.name}</span>
-                                                {d.isEmployer && <span className="ml-2 text-[10px] uppercase tracking-wider font-bold bg-gray-100 dark:bg-[#2c2c2e] text-gray-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Employer</span>}
+                                                <span className="w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 mr-3"><i className="fas fa-minus text-[10px]"></i></span>
+                                                {d.name}
                                                 {d.description && (
                                                     <div className="relative ml-2">
                                                         <i className="fas fa-info-circle text-gray-300 dark:text-slate-600 hover:text-blue-400 cursor-help transition-colors"></i>
@@ -866,21 +1118,50 @@ const App: React.FC = () => {
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-right font-bold">-{formatCurrency(d.amount)}</td>
-                                            <td className="px-6 py-4 text-right font-bold">-{formatCurrency(d.amount / 12)}</td>
-                                            <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">
+                                            <td className="px-6 py-4 text-right font-medium">-{formatCurrency(d.amount)}</td>
+                                            <td className="px-6 py-4 text-right font-medium">-{formatCurrency(d.amount / 12)}</td>
+                                            <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-medium">
                                                 {(d.amount / (result.grossAnnual || 1) * 100).toFixed(1)}%
                                             </td>
                                         </tr>
-                                    ))}
-                                    <tr className="bg-[#F2F2F7] dark:bg-[#1c1c1e]/50 text-slate-900 dark:text-white">
-                                        <td className="px-6 py-4 pl-8 font-extrabold">Net Income</td>
-                                        <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netAnnual)}</td>
-                                        <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netMonthly)}</td>
-                                        <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400 font-bold">
+                                    ))) : (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-4 text-center text-slate-400 text-sm italic">No employee deductions found.</td>
+                                        </tr>
+                                    )}
+                                    
+                                    {/* Net Pay Row */}
+                                    <tr className="bg-blue-50/50 dark:bg-[#007AFF]/10 text-slate-900 dark:text-white border-t-2 border-blue-100 dark:border-blue-900">
+                                        <td className="px-6 py-4 pl-8 font-extrabold flex items-center gap-3 text-blue-700 dark:text-blue-400">
+                                            <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md"><i className="fas fa-check text-[10px]"></i></div>
+                                            Net Pay
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-extrabold text-blue-700 dark:text-blue-400">{formatCurrency(result.netAnnual)}</td>
+                                        <td className="px-6 py-4 text-right font-extrabold text-blue-700 dark:text-blue-400">{formatCurrency(result.netMonthly)}</td>
+                                        <td className="px-6 py-4 text-right text-blue-600 dark:text-blue-400 font-bold">
                                             {(result.netAnnual / (result.grossAnnual || 1) * 100).toFixed(1)}%
                                         </td>
                                     </tr>
+
+                                    {/* Employer Section */}
+                                    {employerDeductions.length > 0 && (
+                                        <>
+                                            <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                                <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Employer Contributions (Informational)</td>
+                                            </tr>
+                                            {employerDeductions.map((d, idx) => (
+                                                <tr key={`emp-${idx}`} className="text-slate-400 dark:text-slate-500 italic">
+                                                    <td className="px-6 py-3 pl-8 flex items-center gap-3">
+                                                        <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500"><i className="fas fa-building text-[10px]"></i></div>
+                                                        {d.name}
+                                                    </td>
+                                                    <td className="px-6 py-3 text-right">{formatCurrency(d.amount)}</td>
+                                                    <td className="px-6 py-3 text-right">{formatCurrency(d.amount / 12)}</td>
+                                                    <td className="px-6 py-3 text-right">-</td>
+                                                </tr>
+                                            ))}
+                                        </>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -895,128 +1176,156 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Hidden Invoice Template for PDF Export - Keeps light theme specifically for printing */}
+      {/* High Fidelity PDF Template - Hidden from view but accessible to html2canvas */}
       {result && (
-          <div id="pdf-invoice-template" className="fixed top-0 left-[-10000px] bg-white text-slate-900 p-12 w-[800px]">
-              <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-start">
-                  <div>
-                      <div className="flex items-center gap-2 mb-2">
-                          <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center text-yellow-400 border-2 border-white">
-                             <i className="fas fa-coins text-2xl"></i>
-                          </div>
-                          <h1 className="text-3xl font-bold">Global Net Pay Calculator</h1>
+          <div id="pdf-invoice-template" className="fixed top-0 left-[-2000px] w-[210mm] min-h-[297mm] bg-white text-slate-900 p-12 font-sans box-border" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+              {/* Header */}
+              <div className="flex justify-between items-start border-b-4 border-slate-900 pb-6 mb-8">
+                  <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-slate-900 text-white rounded flex items-center justify-center text-3xl">
+                          <i className="fas fa-globe"></i>
                       </div>
-                      <p className="text-xl text-slate-500 font-medium">Salary & Tax Estimation Statement</p>
-                  </div>
-                  <div className="text-right">
-                      <p className="text-2xl font-bold">INVOICE / STATEMENT</p>
-                      <p className="text-base text-slate-500 mt-1">Date: {new Date().toLocaleDateString()}</p>
-                      <p className="text-base text-slate-500">Ref: {inputs.country}-{new Date().getFullYear()}</p>
-                  </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8 mb-10">
-                  <div>
-                      <h3 className="text-sm font-bold uppercase text-slate-400 mb-3 tracking-wider">Employee Details</h3>
-                      <div className="space-y-2 text-base">
-                          <p><span className="font-bold w-24 inline-block text-slate-700">Country:</span> {currentRules.name}</p>
-                          <p><span className="font-bold w-24 inline-block text-slate-700">Age:</span> {inputs.details.age}</p>
-                          <p><span className="font-bold w-24 inline-block text-slate-700">Status:</span> {inputs.details.maritalStatus}</p>
+                      <div>
+                          <h1 className="text-2xl font-extrabold uppercase tracking-tight text-slate-900">Global Net Pay</h1>
+                          <p className="text-slate-500 font-medium text-sm">Salary Estimation Statement</p>
                       </div>
                   </div>
                   <div className="text-right">
-                      <h3 className="text-sm font-bold uppercase text-slate-400 mb-3 tracking-wider">Summary</h3>
-                      <div className="text-5xl font-extrabold text-slate-900 mb-1">
-                          {formatCurrency(result.grossAnnual)}
-                      </div>
-                      <p className="text-lg text-slate-500 font-medium">Gross Annual Income</p>
+                      <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Statement Date</p>
+                      <p className="text-lg font-bold text-slate-900">{new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p className="text-sm text-slate-500 mt-1">Currency: {currentRules.currency} ({currentRules.name})</p>
                   </div>
               </div>
 
-              <div className="mb-8">
-                  <table className="w-full text-base border-collapse">
-                      <thead>
-                          <tr className="bg-slate-100 border-b border-slate-200">
-                              <th className="py-4 px-4 text-left font-bold text-slate-700 text-lg">Description</th>
-                              <th className="py-4 px-4 text-right font-bold text-slate-700 text-lg">Annual</th>
-                              <th className="py-4 px-4 text-right font-bold text-slate-700 text-lg">Monthly</th>
-                              <th className="py-4 px-4 text-right font-bold text-slate-700 text-lg">%</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                           <tr className="border-b border-slate-100 even:bg-slate-50">
-                               <td className="py-4 px-4 font-bold">Gross Income</td>
-                               <td className="py-4 px-4 text-right font-medium">{formatCurrency(result.grossAnnual)}</td>
-                               <td className="py-4 px-4 text-right font-medium">{formatCurrency(result.grossMonthly)}</td>
-                               <td className="py-4 px-4 text-right font-medium">100%</td>
-                           </tr>
-                           {inputs.annualBonus > 0 && (
-                                <tr className="border-b border-slate-100 even:bg-slate-50">
-                                    <td className="py-4 px-4 font-bold">Annual Bonus</td>
-                                    <td className="py-4 px-4 text-right font-medium">{formatCurrency(inputs.annualBonus)}</td>
-                                    <td className="py-4 px-4 text-right font-medium">-</td>
-                                    <td className="py-4 px-4 text-right font-medium">-</td>
-                                </tr>
-                           )}
-                           {result.deductionsBreakdown.map((d, i) => (
-                               <tr key={i} className="border-b border-slate-100 text-red-600 even:bg-slate-50">
-                                   <td className="py-4 px-4 flex items-center gap-2 font-medium">
-                                       {d.name} 
-                                       {d.isEmployer && <span className="text-[10px] bg-gray-100 text-gray-500 px-2 rounded uppercase font-bold">Employer</span>}
-                                   </td>
-                                   <td className="py-4 px-4 text-right font-medium">-{formatCurrency(d.amount)}</td>
-                                   <td className="py-4 px-4 text-right font-medium">-{formatCurrency(d.amount/12)}</td>
-                                   <td className="py-4 px-4 text-right font-medium">{(result.grossAnnual > 0 ? (d.amount/result.grossAnnual * 100).toFixed(1) : '0.0')}%</td>
-                               </tr>
-                           ))}
-                           <tr className="bg-slate-100 font-extrabold text-slate-900 border-t-2 border-slate-300">
-                               <td className="py-4 px-4 text-lg">NET INCOME</td>
-                               <td className="py-4 px-4 text-right text-lg">{formatCurrency(result.netAnnual)}</td>
-                               <td className="py-4 px-4 text-right text-lg">{formatCurrency(result.netMonthly)}</td>
-                               <td className="py-4 px-4 text-right text-lg">{(result.netAnnual/(result.grossAnnual || 1)*100).toFixed(1)}%</td>
-                           </tr>
-                      </tbody>
-                  </table>
+              {/* Employee Summary */}
+              <div className="bg-slate-50 p-6 rounded-lg mb-8 border border-slate-100 flex justify-between">
+                  <div>
+                      <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Employee Profile</h3>
+                      <p className="text-sm font-bold text-slate-800"><span className="w-20 inline-block text-slate-500 font-medium">Age:</span> {inputs.details.age}</p>
+                      <p className="text-sm font-bold text-slate-800"><span className="w-20 inline-block text-slate-500 font-medium">Status:</span> {inputs.details.maritalStatus}</p>
+                      <p className="text-sm font-bold text-slate-800"><span className="w-20 inline-block text-slate-500 font-medium">Location:</span> {currentRules.name} {inputs.subRegion ? `(${inputs.subRegion})` : ''}</p>
+                  </div>
+                  <div className="text-right">
+                      <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Gross Annual Pay</h3>
+                      <p className="text-3xl font-extrabold text-slate-900">{formatCurrency(result.grossAnnual)}</p>
+                  </div>
               </div>
 
+              {/* Main Breakdown Columns */}
+              <div className="flex gap-8 mb-8">
+                  {/* Left: Earnings */}
+                  <div className="flex-1">
+                      <h3 className="text-sm font-bold uppercase text-slate-900 border-b-2 border-slate-200 pb-2 mb-4">Earnings</h3>
+                      <table className="w-full text-sm">
+                          <thead>
+                              <tr className="text-slate-400 text-xs uppercase text-left">
+                                  <th className="pb-2 font-medium">Item</th>
+                                  <th className="pb-2 font-medium text-right">Amount</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                              <tr>
+                                  <td className="py-3 font-bold text-slate-700">Basic Salary</td>
+                                  <td className="py-3 font-bold text-slate-900 text-right">{formatCurrency(result.grossAnnual)}</td>
+                              </tr>
+                              {inputs.annualBonus > 0 && (
+                                  <tr>
+                                      <td className="py-3 font-bold text-slate-700">Annual Bonus</td>
+                                      <td className="py-3 font-bold text-slate-900 text-right">{formatCurrency(inputs.annualBonus)}</td>
+                                  </tr>
+                              )}
+                              <tr className="bg-slate-50">
+                                  <td className="py-3 font-bold text-slate-900 pl-2">Total Earnings</td>
+                                  <td className="py-3 font-bold text-slate-900 text-right pr-2">{formatCurrency(result.grossAnnual + inputs.annualBonus)}</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
+
+                  {/* Right: Deductions */}
+                  <div className="flex-1">
+                      <h3 className="text-sm font-bold uppercase text-red-600 border-b-2 border-red-100 pb-2 mb-4">Deductions (Taxes)</h3>
+                      <table className="w-full text-sm">
+                          <thead>
+                              <tr className="text-slate-400 text-xs uppercase text-left">
+                                  <th className="pb-2 font-medium">Description</th>
+                                  <th className="pb-2 font-medium text-right">Annual</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                              {employeeDeductions.map((d, i) => (
+                                  <tr key={i}>
+                                      <td className="py-3 font-medium text-slate-600">{d.name}</td>
+                                      <td className="py-3 font-bold text-red-600 text-right">-{formatCurrency(d.amount)}</td>
+                                  </tr>
+                              ))}
+                              <tr className="bg-red-50">
+                                  <td className="py-3 font-bold text-red-700 pl-2">Total Deductions</td>
+                                  <td className="py-3 font-bold text-red-700 text-right pr-2">-{formatCurrency(result.grossAnnual - result.netAnnual)}</td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+
+              {/* Net Pay Highlight */}
+              <div className="bg-slate-900 text-white p-6 rounded-lg flex justify-between items-center mb-8 shadow-lg">
+                  <div>
+                      <p className="text-sm text-slate-400 font-bold uppercase tracking-widest mb-1">Net Pay (Take Home)</p>
+                      <p className="text-xs text-slate-500">Excludes employer contributions</p>
+                  </div>
+                  <div className="text-right">
+                      <p className="text-4xl font-extrabold">{formatCurrency(result.netAnnual)}</p>
+                      <p className="text-sm text-slate-400 font-medium mt-1">/ Year</p>
+                  </div>
+                  <div className="h-12 w-px bg-slate-700 mx-6"></div>
+                  <div className="text-right">
+                      <p className="text-4xl font-extrabold text-blue-400">{formatCurrency(result.netMonthly)}</p>
+                      <p className="text-sm text-blue-300 font-medium mt-1">/ Month</p>
+                  </div>
+              </div>
+
+              {/* Financial Health / Budget Analysis */}
               {result.personalCostsTotal > 0 && (
-                  <div className="mb-8">
-                      <h3 className="text-sm font-bold uppercase text-slate-400 mb-4 border-b pb-2 tracking-wider">Personal Costs Breakdown</h3>
-                      <div className="grid grid-cols-2 gap-4 text-base">
-                          {Object.entries(inputs.costs || {}).map(([key, val]) => (val as number) > 0 && (
-                              <div key={key} className="flex justify-between border-b border-dotted border-slate-200 pb-1">
-                                  <span className="capitalize text-slate-600 whitespace-nowrap font-medium">{key.replace(/([A-Z])/g, ' $1').replace('freedom Fund', 'Freedom/Runway Fund').trim()}</span>
-                                  <span className="font-bold">{formatCurrency(val as number)}/mo</span>
-                              </div>
-                          ))}
-                          <div className="col-span-2 flex justify-between font-bold pt-2 text-lg">
-                              <span>Total Costs (Annual)</span>
-                              <span className="text-red-600">-{formatCurrency(result.personalCostsTotal * 12)}</span>
+                  <div className="mb-8 border border-slate-200 rounded-lg p-6">
+                      <h3 className="text-sm font-bold uppercase text-slate-900 mb-4 flex items-center gap-2">
+                          <i className="fas fa-chart-pie text-slate-400"></i> Financial Health Analysis
+                      </h3>
+                      <div className="flex gap-8">
+                          <div className="w-1/2">
+                              <table className="w-full text-sm">
+                                  <tbody className="divide-y divide-slate-100">
+                                      {Object.entries(inputs.costs).map(([key, val]) => (val as number) > 0 && (
+                                          <tr key={key}>
+                                              <td className="py-2 capitalize text-slate-600">{key.replace(/([A-Z])/g, ' $1')}</td>
+                                              <td className="py-2 font-bold text-right">{formatCurrency(val as number)}</td>
+                                          </tr>
+                                      ))}
+                                      <tr className="font-bold border-t border-slate-200">
+                                          <td className="py-2 text-slate-900">Total Monthly Costs</td>
+                                          <td className="py-2 text-right text-red-600">-{formatCurrency(result.personalCostsTotal)}</td>
+                                      </tr>
+                                  </tbody>
+                              </table>
+                          </div>
+                          <div className="w-1/2 bg-green-50 rounded p-4 flex flex-col justify-center items-center text-center border border-green-100">
+                              <p className="text-xs font-bold text-green-800 uppercase tracking-wider mb-2">Disposable Income (Monthly)</p>
+                              <p className="text-3xl font-extrabold text-green-600">{formatCurrency(result.disposableMonthly)}</p>
+                              <p className="text-xs text-green-700 mt-2 font-medium">
+                                  You keep <span className="font-bold">{((result.disposableMonthly/result.grossMonthly)*100).toFixed(1)}%</span> of your gross pay after taxes & living costs.
+                              </p>
                           </div>
                       </div>
                   </div>
               )}
 
-              <div className="bg-green-50 border border-green-100 rounded-xl p-8 flex justify-between items-center">
-                   <div>
-                       <p className="text-xl font-bold text-green-800 uppercase mb-1">Disposable Income (Free Cash)</p>
-                       <p className="text-base text-green-600 font-medium">After Taxes & Living Costs</p>
-                   </div>
-                   <div className="flex gap-8 text-right">
-                       <div>
-                           <p className="text-4xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly * 12)}</p>
-                           <p className="text-sm font-bold text-green-600 uppercase tracking-wide mt-1">Annual</p>
-                       </div>
-                       <div className="border-l border-green-200 pl-8">
-                           <p className="text-4xl font-extrabold text-green-700">{formatCurrency(result.disposableMonthly)}</p>
-                           <p className="text-sm font-bold text-green-600 uppercase tracking-wide mt-1">Monthly</p>
-                       </div>
-                   </div>
-              </div>
-
-              <div className="mt-12 pt-6 border-t border-slate-200 text-center text-sm text-slate-400 font-medium">
-                  <p>Generated by Global Net Pay Calculator. This document is for estimation purposes only and does not constitute official financial advice.</p>
-                  <p className="mt-1">Source Rules: {currentRules.sources.map(s => s.label).join(', ')}</p>
+              {/* Footer */}
+              <div className="text-xs text-slate-400 mt-auto border-t pt-4">
+                  <div className="flex justify-between">
+                      <p>Generated by Global Net Pay Calculator</p>
+                      <p>Tax Data Sources: {currentRules.sources.map(s => s.label).join(', ')}</p>
+                  </div>
+                  <p className="mt-2 italic">Disclaimer: This document is a simulation based on statutory tax rules for {currentRules.name}. It does not constitute official financial or legal advice.</p>
               </div>
           </div>
       )}
