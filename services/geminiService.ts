@@ -1,4 +1,5 @@
-import { GoogleGenAI, Modality } from "@google/genai";
+
+import { GoogleGenAI } from "@google/genai";
 
 export const queryGemini = async (prompt: string, country: string): Promise<string> => {
   try {
@@ -40,40 +41,5 @@ export const queryGemini = async (prompt: string, country: string): Promise<stri
   } catch (error) {
     console.error("Gemini API Error:", error);
     return "Sorry, I couldn't fetch the latest tax info right now. Please try again later.";
-  }
-};
-
-export const editImageWithGemini = async (base64Data: string, prompt: string, mimeType: string): Promise<string | null> => {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType: mimeType,
-            },
-          },
-          {
-            text: prompt,
-          },
-        ],
-      },
-      config: {
-        responseModalities: [Modality.IMAGE],
-      },
-    });
-
-    const part = response.candidates?.[0]?.content?.parts?.[0];
-    if (part?.inlineData?.data) {
-      return part.inlineData.data;
-    }
-    return null;
-  } catch (error) {
-    console.error("Gemini Image Edit Error:", error);
-    return null;
   }
 };

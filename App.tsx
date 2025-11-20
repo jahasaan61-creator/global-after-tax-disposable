@@ -32,7 +32,7 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
             <div className="relative w-32 h-32 md:w-40 md:h-40">
                 <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90 origin-center">
                     {/* Track */}
-                    <circle cx="21" cy="21" r={r} fill="transparent" className="stroke-gray-200 dark:stroke-slate-800 transition-colors duration-300" strokeWidth="6" />
+                    <circle cx="21" cy="21" r={r} fill="transparent" className="stroke-gray-200 dark:stroke-[#222] transition-colors duration-300" strokeWidth="6" />
                     
                     {/* Tax (Red) - Starts at 0 */}
                     {taxPct > 0 && (
@@ -300,14 +300,14 @@ const App: React.FC = () => {
 
   // Reusable iOS-style Segmented Control
   const SegmentedControl = ({ options, value, onChange, dark }: { options: {label: string, value: string}[], value: string, onChange: (v: any) => void, dark?: boolean }) => (
-    <div className={`${dark ? 'bg-black/20' : 'bg-slate-200/80 dark:bg-slate-700'} p-1 rounded-[14px] flex relative select-none cursor-pointer shadow-inner`}>
+    <div className={`${dark ? 'bg-black/30' : 'bg-slate-200/80 dark:bg-[#1c1c1e]'} p-1 rounded-[14px] flex relative select-none cursor-pointer shadow-inner border border-transparent dark:border-[#333]`}>
         {options.map((opt) => (
             <button 
                 key={opt.value}
                 onClick={() => onChange(opt.value)}
                 className={`flex-1 py-2 px-3 text-sm font-extrabold rounded-[10px] transition-all duration-200 active:scale-95 ${
                     value === opt.value 
-                        ? (dark ? 'bg-white/90 text-slate-900' : 'bg-white dark:bg-slate-600 text-black dark:text-white') + ' shadow-[0_2px_8px_rgba(0,0,0,0.12)] transform scale-[1.02]' 
+                        ? (dark ? 'bg-white/90 text-slate-900' : 'bg-white dark:bg-[#333] text-black dark:text-white') + ' shadow-[0_2px_8px_rgba(0,0,0,0.12)] transform scale-[1.02]' 
                         : (dark ? 'text-white/60 hover:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white')
                 }`}
             >
@@ -318,9 +318,9 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+    <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-[#050505] transition-colors duration-300">
       {/* Glassmorphic Header */}
-      <header className="sticky top-0 z-30 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-800/60">
+      <header className="sticky top-0 z-30 bg-slate-50/80 dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-[#222]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
             <div className="flex items-center gap-3">
                  <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-lg text-yellow-400 overflow-hidden border-2 border-white/20">
@@ -331,21 +331,21 @@ const App: React.FC = () => {
             <div className="flex gap-3 items-center">
                 <button 
                     onClick={shareLink}
-                    className="h-9 px-5 rounded-full bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700 text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
+                    className="h-9 px-5 rounded-full bg-white dark:bg-[#18181b] border border-gray-200/60 dark:border-[#333] text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-[#222] transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
                 >
                     {copyFeedback ? <i className="fas fa-check text-green-500"></i> : <i className="fas fa-share-square text-blue-500"></i>}
                     {copyFeedback ? 'Copied!' : 'Share'}
                 </button>
                 <button 
                     onClick={() => setShowSources(!showSources)}
-                    className="h-9 w-9 rounded-full bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm active:scale-95 duration-150"
+                    className="h-9 w-9 rounded-full bg-white dark:bg-[#18181b] border border-gray-200/60 dark:border-[#333] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#222] transition shadow-sm active:scale-95 duration-150"
                     title="Data Sources"
                 >
                     <i className="fas fa-info text-slate-500 dark:text-slate-400 text-sm"></i>
                 </button>
                 <button 
                     onClick={() => setDarkMode(!darkMode)}
-                    className="h-9 w-9 rounded-full bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm active:scale-95 duration-150 text-yellow-500 dark:text-blue-300"
+                    className="h-9 w-9 rounded-full bg-white dark:bg-[#18181b] border border-gray-200/60 dark:border-[#333] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#222] transition shadow-sm active:scale-95 duration-150 text-yellow-500 dark:text-blue-300"
                     title="Toggle Theme"
                 >
                     {darkMode ? <i className="fas fa-moon"></i> : <i className="fas fa-sun"></i>}
@@ -356,7 +356,7 @@ const App: React.FC = () => {
 
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
         {showSources && (
-             <div className="mb-8 bg-white dark:bg-slate-900 border border-orange-100 dark:border-slate-800 p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-top-2 transition-all duration-300 hover:shadow-2xl">
+             <div className="mb-8 bg-white dark:bg-[#101012] border border-orange-100 dark:border-[#333] p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-top-2 transition-all duration-300 hover:shadow-2xl">
                 <div className="flex items-center gap-2 mb-3 text-orange-600">
                     <i className="fas fa-exclamation-triangle"></i>
                     <h3 className="font-bold text-sm">Data Sources & Disclaimers</h3>
@@ -379,7 +379,7 @@ const App: React.FC = () => {
           {/* Left Column: Inputs */}
           <div className="lg:col-span-4 space-y-6">
             {/* Income Section */}
-            <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+            <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-r from-[#0034b8] to-[#0c58fa] p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
@@ -401,7 +401,7 @@ const App: React.FC = () => {
                      </div>
                 </div>
 
-                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-slate-900 rounded-t-[32px] relative z-20 space-y-5">
+                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-t-[32px] relative z-20 space-y-5">
                     <div>
                         <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
                         <div className="relative">
@@ -412,7 +412,7 @@ const App: React.FC = () => {
                                 crossOrigin="anonymous"
                             />
                             <select 
-                                className="w-full p-4 pl-14 pr-10 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-slate-800 transition-all outline-none text-slate-900 dark:text-white cursor-pointer"
+                                className="w-full p-4 pl-14 pr-10 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-[#2c2c2e] transition-all outline-none text-slate-900 dark:text-white cursor-pointer"
                                 value={inputs.country}
                                 onChange={(e) => setInputs({...inputs, country: e.target.value as CountryCode, subRegion: undefined })}
                             >
@@ -431,7 +431,7 @@ const App: React.FC = () => {
                              <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">{currentRules.subNationalLabel}</label>
                              <div className="relative">
                                 <select 
-                                    className="w-full p-4 pr-10 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-slate-800 transition-all outline-none text-slate-900 dark:text-white cursor-pointer"
+                                    className="w-full p-4 pr-10 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-[#2c2c2e] transition-all outline-none text-slate-900 dark:text-white cursor-pointer"
                                     value={inputs.subRegion || ''}
                                     onChange={(e) => setInputs({...inputs, subRegion: e.target.value })}
                                 >
@@ -459,7 +459,7 @@ const App: React.FC = () => {
                                 type="number" 
                                 min="0"
                                 autoComplete="off"
-                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
+                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
                                 value={mode === 'gross' ? inputs.grossIncome : targetNet}
                                 onChange={(e) => {
                                     const val = parseFloat(e.target.value) || 0;
@@ -488,7 +488,7 @@ const App: React.FC = () => {
                                 min="0"
                                 autoComplete="off"
                                 placeholder="0"
-                                className="w-full p-4 pl-10 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-lg"
+                                className="w-full p-4 pl-10 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-lg"
                                 value={inputs.annualBonus || ''}
                                 onChange={(e) => setInputs({...inputs, annualBonus: parseFloat(e.target.value) || 0})}
                             />
@@ -503,7 +503,7 @@ const App: React.FC = () => {
                                 type="number" 
                                 min="15" max="99"
                                 autoComplete="off"
-                                className="w-full p-3 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-slate-900 dark:text-white"
+                                className="w-full p-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-slate-900 dark:text-white"
                                 value={inputs.details.age}
                                 onChange={(e) => setInputs({...inputs, details: { ...inputs.details, age: parseInt(e.target.value) || 30 }})}
                             />
@@ -513,7 +513,7 @@ const App: React.FC = () => {
                                 <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Status</label>
                                 <div className="relative">
                                     <select 
-                                        className="w-full p-3 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl appearance-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-sm text-slate-900 dark:text-white"
+                                        className="w-full p-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl appearance-none focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-sm text-slate-900 dark:text-white"
                                         value={inputs.details.maritalStatus}
                                         onChange={(e) => setInputs({...inputs, details: { ...inputs.details, maritalStatus: e.target.value as 'single'|'married' }})}
                                     >
@@ -526,7 +526,7 @@ const App: React.FC = () => {
                     </div>
                     
                     {currentRules.hasChurchTaxOption && (
-                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-slate-800 rounded-2xl">
+                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl">
                             <label htmlFor="churchTax" className="text-sm font-bold text-slate-700 dark:text-slate-200">Church Tax</label>
                             <div className="relative inline-block w-12 h-6 transition duration-200 ease-in-out rounded-full cursor-pointer">
                                 <input 
@@ -545,7 +545,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Costs Section */}
-            <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+            <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
@@ -560,7 +560,7 @@ const App: React.FC = () => {
                      </div>
                 </div>
 
-                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-slate-900 rounded-t-[32px] relative z-20">
+                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-t-[32px] relative z-20">
                     <div className="grid grid-cols-2 gap-4">
                         {costFields.map((field) => (
                             <div key={field.key} className="relative">
@@ -572,7 +572,7 @@ const App: React.FC = () => {
                                     <input 
                                         type="number"
                                         autoComplete="off"
-                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
+                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
                                         value={(inputs.costs as any)[field.key] || ''}
                                         placeholder="0"
                                         onChange={(e) => handleCostChange(field.key as any, e.target.value)}
@@ -582,7 +582,7 @@ const App: React.FC = () => {
                         ))}
                     </div>
                     {result && result.personalCostsTotal > 0 && (
-                        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800 flex justify-between items-center">
+                        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-[#222] flex justify-between items-center">
                             <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400">Total Monthly Costs</span>
                             <span className="text-[15px] font-extrabold text-[#FF3B30]">-{formatCurrency(result.personalCostsTotal)}</span>
                         </div>
@@ -605,37 +605,36 @@ const App: React.FC = () => {
                              <img 
                                 src={getHDFlagUrl(inputs.country)} 
                                 alt="Country Flag" 
-                                className="w-full h-full object-cover contrast-125 saturate-150 brightness-90 dark:brightness-50"
+                                className="w-full h-full object-cover contrast-125 saturate-[1.1] brightness-75 dark:brightness-50"
                              />
                              {/* Cinematic Overlay */}
-                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/80 mix-blend-multiply"></div>
-                             <div className="absolute inset-0 bg-black/30"></div>
+                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 mix-blend-multiply"></div>
                              
                              {/* Moving Sheen/Shimmer */}
-                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
+                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
                         </div>
 
-                        {/* Content Layer - RESIZED and REALIGNED */}
-                        <div className="relative z-10 p-6 md:p-8 flex flex-col md:flex-row justify-between items-end gap-6">
-                            <div className="flex-1">
+                        {/* Content Layer - RESIZED and REALIGNED for better stacking on large mobile/tablets */}
+                        <div className="relative z-10 p-6 md:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+                            <div className="flex-1 min-w-0 w-full">
                                 <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg transition-transform duration-300 group-hover:scale-110">
+                                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
                                         <i className="fas fa-briefcase text-xl text-white drop-shadow-md"></i>
                                     </div>
                                     <p className="text-white/90 text-base md:text-lg font-bold uppercase tracking-wider shadow-black drop-shadow-md">
                                         {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
                                     </p>
                                 </div>
-                                <h2 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl mt-2 leading-none">
+                                <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl mt-2 leading-none break-words">
                                     {formatCurrency(result.grossAnnual)}
                                 </h2>
                             </div>
                             
-                            {/* Enlarged Monthly Button */}
-                            <div className="flex flex-col items-end gap-2 pb-1">
-                                 <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 hover:bg-white/20 group-hover:translate-x-[-5px]">
-                                     <span className="text-white/90 text-xs font-extrabold uppercase tracking-wide drop-shadow-sm">Monthly</span>
-                                     <span className="text-2xl font-extrabold tracking-tight text-white drop-shadow-md">{formatCurrency(result.grossMonthly)}</span>
+                            {/* Enlarged Monthly Button - Full width on tablet/mobile stack */}
+                            <div className="flex flex-col items-start lg:items-end gap-2 pb-1 w-full lg:w-auto">
+                                 <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 hover:bg-white/20 group-hover:translate-x-0 lg:group-hover:translate-x-[-5px] w-full lg:w-auto justify-between lg:justify-start">
+                                     <span className="text-white/90 text-xs font-extrabold uppercase tracking-wide drop-shadow-sm whitespace-nowrap">Monthly</span>
+                                     <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white drop-shadow-md break-all">{formatCurrency(result.grossMonthly)}</span>
                                 </div>
                             </div>
                         </div>
@@ -710,13 +709,13 @@ const App: React.FC = () => {
                         </div>
                         
                         {/* Chart Card */}
-                        <div className="bg-white dark:bg-slate-900 p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 text-slate-900 dark:text-white relative overflow-hidden group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl">
-                             <div className="absolute -right-8 -bottom-8 text-slate-50 dark:text-slate-800 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                        <div className="bg-white dark:bg-[#101012] p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] text-slate-900 dark:text-white relative overflow-hidden group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl">
+                             <div className="absolute -right-8 -bottom-8 text-slate-50 dark:text-[#18181b] text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-chart-pie"></i>
                              </div>
                              <div className="relative z-10 w-full h-full flex flex-col">
                                 <div className="flex items-center gap-3 mb-2">
-                                     <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-50 dark:border-slate-700">
+                                     <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-[#1c1c1e] flex items-center justify-center border border-slate-50 dark:border-[#333]">
                                         <i className="fas fa-chart-pie text-lg text-slate-900 dark:text-white"></i>
                                      </div>
                                      <p className="text-slate-500 dark:text-slate-400 text-[13px] font-bold uppercase tracking-wider">Tax / Cost Ratio</p>
@@ -729,7 +728,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Quick Convert Horizontal Card */}
-                    <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                    <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl">
                          <div className="bg-gradient-to-r from-[#2FB050] to-[#A0E870] p-5 relative flex items-center justify-between text-white">
                              <div className="flex items-center gap-3 relative z-10">
                                  <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
@@ -750,7 +749,7 @@ const App: React.FC = () => {
                                         type="number"
                                         value={convertAmount}
                                         onChange={(e) => setConvertAmount(parseFloat(e.target.value) || 0)}
-                                        className="w-full p-3 pl-8 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg placeholder-gray-400 dark:placeholder-slate-500"
+                                        className="w-full p-3 pl-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg placeholder-gray-400 dark:placeholder-slate-500"
                                     />
                                  </div>
                              </div>
@@ -766,7 +765,7 @@ const App: React.FC = () => {
                                     <select 
                                         value={fromCurrency}
                                         onChange={(e) => setFromCurrency(e.target.value as CountryCode)}
-                                        className="w-full p-3 pl-12 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
+                                        className="w-full p-3 pl-12 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
                                     >
                                         {Object.values(COUNTRY_RULES).map(c => (
                                             <option key={c.code} value={c.code}>{c.currency}</option>
@@ -800,7 +799,7 @@ const App: React.FC = () => {
                                     <select 
                                         value={toCurrency}
                                         onChange={(e) => setToCurrency(e.target.value as CountryCode)}
-                                        className="w-full p-3 pl-12 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
+                                        className="w-full p-3 pl-12 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
                                     >
                                         {Object.values(COUNTRY_RULES).map(c => (
                                             <option key={c.code} value={c.code}>{c.currency}</option>
@@ -821,7 +820,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Detailed Breakdown Table */}
-                    <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                    <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl">
                          {/* Gradient Header */}
                         <div className="bg-gradient-to-r from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900 p-6 flex justify-between items-center relative">
                              <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
@@ -838,7 +837,7 @@ const App: React.FC = () => {
 
                         <div className="p-0 overflow-x-auto">
                             <table className="w-full text-sm text-left min-w-[600px]">
-                                <thead className="text-xs text-[#86868b] dark:text-slate-400 uppercase font-bold bg-[#F5F5F7] dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800">
+                                <thead className="text-xs text-[#86868b] dark:text-slate-400 uppercase font-bold bg-[#F5F5F7] dark:bg-[#18181b] border-b border-gray-100 dark:border-[#333]">
                                     <tr>
                                         <th className="px-6 py-4 pl-8">Item</th>
                                         <th className="px-6 py-4 text-right">Annual</th>
@@ -846,7 +845,7 @@ const App: React.FC = () => {
                                         <th className="px-6 py-4 text-right">%</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+                                <tbody className="divide-y divide-gray-50 dark:divide-[#222]">
                                     <tr className="text-slate-900 dark:text-white">
                                         <td className="px-6 py-4 pl-8 font-bold">Gross Income</td>
                                         <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossAnnual)}</td>
@@ -854,10 +853,10 @@ const App: React.FC = () => {
                                         <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">100%</td>
                                     </tr>
                                     {result.deductionsBreakdown.map((d, idx) => (
-                                        <tr key={idx} className={`hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors ${d.isEmployer ? 'text-slate-400 dark:text-slate-500' : 'text-[#FF3B30] dark:text-red-400'}`}>
+                                        <tr key={idx} className={`hover:bg-gray-50 dark:hover:bg-[#1c1c1e] transition-colors ${d.isEmployer ? 'text-slate-400 dark:text-slate-500' : 'text-[#FF3B30] dark:text-red-400'}`}>
                                             <td className="px-6 py-4 pl-8 flex items-center group font-bold">
                                                 <span className={d.isEmployer ? 'italic font-medium' : ''}>{d.name}</span>
-                                                {d.isEmployer && <span className="ml-2 text-[10px] uppercase tracking-wider font-bold bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Employer</span>}
+                                                {d.isEmployer && <span className="ml-2 text-[10px] uppercase tracking-wider font-bold bg-gray-100 dark:bg-[#2c2c2e] text-gray-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Employer</span>}
                                                 {d.description && (
                                                     <div className="relative ml-2">
                                                         <i className="fas fa-info-circle text-gray-300 dark:text-slate-600 hover:text-blue-400 cursor-help transition-colors"></i>
@@ -874,7 +873,7 @@ const App: React.FC = () => {
                                             </td>
                                         </tr>
                                     ))}
-                                    <tr className="bg-[#F2F2F7] dark:bg-slate-800/30 text-slate-900 dark:text-white">
+                                    <tr className="bg-[#F2F2F7] dark:bg-[#1c1c1e]/50 text-slate-900 dark:text-white">
                                         <td className="px-6 py-4 pl-8 font-extrabold">Net Income</td>
                                         <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netAnnual)}</td>
                                         <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netMonthly)}</td>
