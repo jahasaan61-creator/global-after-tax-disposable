@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Global Net Pay Calculator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              slate: {
+                850: '#1e293b',
+                950: '#020617',
+              }
+            }
+          }
+        }
+      }
+    </script>
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
@@ -20,12 +35,21 @@
       ::-webkit-scrollbar-track {
         background: #f1f5f9;
       }
+      .dark ::-webkit-scrollbar-track {
+        background: #0f172a;
+      }
       ::-webkit-scrollbar-thumb {
         background: #cbd5e1;
         border-radius: 4px;
       }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #334155;
+      }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
       }
     </style>
   <script type="importmap">
@@ -39,7 +63,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-50 text-slate-900 antialiased">
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-300">
     <div id="root"></div>
   </body>
 </html>

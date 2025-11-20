@@ -65,10 +65,10 @@ export const ImageEditor: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-slate-200 dark:border-slate-800">
             {/* Header */}
-            <div className="bg-slate-900 p-5 flex justify-between items-center">
+            <div className="bg-slate-900 dark:bg-slate-950 p-5 flex justify-between items-center border-b border-slate-800">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg">
                         <i className="fas fa-wand-magic-sparkles text-white"></i>
@@ -87,22 +87,22 @@ export const ImageEditor: React.FC = () => {
             </div>
 
             {/* Body */}
-            <div className="p-6 flex-1 overflow-y-auto bg-slate-50">
+            <div className="p-6 flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950/50">
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Source Image */}
                     <div className="space-y-3">
-                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Original Image</label>
+                        <label className="block text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Original Image</label>
                         <div 
                             onClick={() => fileInputRef.current?.click()}
-                            className={`aspect-square rounded-2xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all overflow-hidden relative ${!selectedImage ? 'bg-white' : ''}`}
+                            className={`aspect-square rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-800 transition-all overflow-hidden relative ${!selectedImage ? 'bg-white dark:bg-slate-900' : 'bg-slate-900'}`}
                         >
                             {selectedImage ? (
                                 <img src={selectedImage} alt="Original" className="w-full h-full object-contain" />
                             ) : (
                                 <div className="text-center p-4">
-                                    <i className="fas fa-cloud-upload-alt text-3xl text-slate-300 mb-2"></i>
-                                    <p className="text-sm text-slate-500 font-bold">Click to Upload</p>
+                                    <i className="fas fa-cloud-upload-alt text-3xl text-slate-300 dark:text-slate-600 mb-2"></i>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 font-bold">Click to Upload</p>
                                 </div>
                             )}
                             <input 
@@ -117,8 +117,8 @@ export const ImageEditor: React.FC = () => {
 
                     {/* Result Image */}
                     <div className="space-y-3">
-                        <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider">Result</label>
-                        <div className="aspect-square rounded-2xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden relative shadow-inner">
+                        <label className="block text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Result</label>
+                        <div className="aspect-square rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden relative shadow-inner">
                             {loading ? (
                                 <div className="flex flex-col items-center gap-3">
                                     <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
@@ -127,28 +127,28 @@ export const ImageEditor: React.FC = () => {
                             ) : generatedImage ? (
                                 <img src={generatedImage} alt="Generated" className="w-full h-full object-contain" />
                             ) : (
-                                <p className="text-xs text-slate-400 font-medium">AI Output will appear here</p>
+                                <p className="text-xs text-slate-400 dark:text-slate-600 font-medium">AI Output will appear here</p>
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* Controls */}
-                <div className="mt-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
-                    <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">Magic Prompt</label>
+                <div className="mt-6 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+                    <label className="block text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Magic Prompt</label>
                     <div className="flex gap-3">
                         <input 
                             type="text" 
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
                             placeholder="e.g. Add a retro filter, Remove the background..."
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                            className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder-slate-400 dark:placeholder-slate-500"
                             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                         />
                         <button 
                             onClick={handleGenerate}
                             disabled={loading || !selectedImage || !prompt}
-                            className="bg-slate-900 text-white px-6 rounded-xl font-bold text-sm hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                            className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-6 rounded-xl font-bold text-sm hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
                         >
                             Generate
                         </button>
@@ -156,13 +156,13 @@ export const ImageEditor: React.FC = () => {
                     <div className="mt-3 flex justify-between items-center">
                          <div className="flex gap-2">
                             {['Make it cyber-punk', 'Turn into a sketch', 'Add fireworks'].map((p, i) => (
-                                <button key={i} onClick={() => setPrompt(p)} className="text-[10px] bg-slate-100 px-2 py-1 rounded-md text-slate-600 hover:bg-slate-200 font-medium transition">
+                                <button key={i} onClick={() => setPrompt(p)} className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-medium transition">
                                     {p}
                                 </button>
                             ))}
                          </div>
                          {generatedImage && (
-                             <button onClick={handleDownload} className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                             <button onClick={handleDownload} className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1">
                                  <i className="fas fa-download"></i> Download
                              </button>
                          )}

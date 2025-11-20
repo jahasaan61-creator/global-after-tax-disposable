@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Modality } from "@google/genai";
 
 export const queryGemini = async (prompt: string, country: string): Promise<string> => {
@@ -44,17 +43,18 @@ export const queryGemini = async (prompt: string, country: string): Promise<stri
   }
 };
 
-export const editImageWithGemini = async (base64Image: string, prompt: string, mimeType: string): Promise<string | null> => {
+export const editImageWithGemini = async (base64Data: string, prompt: string, mimeType: string): Promise<string | null> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
         parts: [
           {
             inlineData: {
-              data: base64Image, 
-              mimeType: mimeType, 
+              data: base64Data,
+              mimeType: mimeType,
             },
           },
           {
@@ -63,17 +63,17 @@ export const editImageWithGemini = async (base64Image: string, prompt: string, m
         ],
       },
       config: {
-          responseModalities: [Modality.IMAGE], 
+        responseModalities: [Modality.IMAGE],
       },
     });
-    
+
     const part = response.candidates?.[0]?.content?.parts?.[0];
-    if (part && part.inlineData) {
-        return part.inlineData.data;
+    if (part?.inlineData?.data) {
+      return part.inlineData.data;
     }
     return null;
   } catch (error) {
-      console.error("Gemini Image Edit Error:", error);
-      return null;
+    console.error("Gemini Image Edit Error:", error);
+    return null;
   }
 };

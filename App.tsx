@@ -4,7 +4,6 @@ import { CountryCode, UserInputs, CalculationResult } from './types';
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
 import { GeminiAssistant } from './components/GeminiAssistant';
-import { ImageEditor } from './components/ImageEditor';
 
 // Declare jsPDF and html2canvas on Window interface
 declare global {
@@ -33,7 +32,7 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
             <div className="relative w-32 h-32 md:w-40 md:h-40">
                 <svg viewBox="0 0 42 42" className="w-full h-full transform -rotate-90 origin-center">
                     {/* Track */}
-                    <circle cx="21" cy="21" r={r} fill="transparent" stroke="#E5E7EB" strokeWidth="6" />
+                    <circle cx="21" cy="21" r={r} fill="transparent" className="stroke-gray-200 dark:stroke-slate-800 transition-colors duration-300" strokeWidth="6" />
                     
                     {/* Tax (Red) - Starts at 0 */}
                     {taxPct > 0 && (
@@ -53,22 +52,22 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
                         strokeDasharray={`${dispPct} ${100 - dispPct}`} strokeDashoffset={-(taxPct + costsPct)} strokeLinecap="round" />
                     )}
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-900">
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-900 dark:text-white">
                     <span className="text-xl font-extrabold tracking-tight">{gross > 0 ? ((result.netAnnual / gross) * 100).toFixed(0) : '0'}%</span>
                 </div>
             </div>
             <div className="flex gap-3 mt-6">
                  <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#FF3B30]"></div>
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Tax</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Tax</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#007AFF]"></div>
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Costs</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Costs</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-[#34C759]"></div>
-                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wide">Free</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wide">Free</span>
                 </div>
             </div>
         </div>
@@ -92,6 +91,14 @@ const App: React.FC = () => {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [showSources, setShowSources] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem('gnp_theme');
+          if (saved) return saved === 'dark';
+          return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      return false;
+  });
 
   // Currency Converter State
   const [convertAmount, setConvertAmount] = useState<number>(1000);
@@ -100,6 +107,15 @@ const App: React.FC = () => {
   const [convertedResult, setConvertedResult] = useState<number>(0);
 
   const currentRules = COUNTRY_RULES[inputs.country];
+
+  useEffect(() => {
+      if (darkMode) {
+          document.documentElement.classList.add('dark');
+      } else {
+          document.documentElement.classList.remove('dark');
+      }
+      localStorage.setItem('gnp_theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -284,15 +300,15 @@ const App: React.FC = () => {
 
   // Reusable iOS-style Segmented Control
   const SegmentedControl = ({ options, value, onChange, dark }: { options: {label: string, value: string}[], value: string, onChange: (v: any) => void, dark?: boolean }) => (
-    <div className={`${dark ? 'bg-black/20' : 'bg-slate-200/80'} p-1 rounded-[14px] flex relative select-none cursor-pointer shadow-inner`}>
+    <div className={`${dark ? 'bg-black/20' : 'bg-slate-200/80 dark:bg-slate-700'} p-1 rounded-[14px] flex relative select-none cursor-pointer shadow-inner`}>
         {options.map((opt) => (
             <button 
                 key={opt.value}
                 onClick={() => onChange(opt.value)}
                 className={`flex-1 py-2 px-3 text-sm font-extrabold rounded-[10px] transition-all duration-200 active:scale-95 ${
                     value === opt.value 
-                        ? (dark ? 'bg-white/90 text-slate-900' : 'bg-white text-black') + ' shadow-[0_2px_8px_rgba(0,0,0,0.12)] transform scale-[1.02]' 
-                        : (dark ? 'text-white/60 hover:text-white' : 'text-slate-500 hover:text-slate-900')
+                        ? (dark ? 'bg-white/90 text-slate-900' : 'bg-white dark:bg-slate-600 text-black dark:text-white') + ' shadow-[0_2px_8px_rgba(0,0,0,0.12)] transform scale-[1.02]' 
+                        : (dark ? 'text-white/60 hover:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white')
                 }`}
             >
                 {opt.label}
@@ -302,31 +318,37 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col font-sans text-[#1d1d1f] bg-[#F5F5F7]">
+    <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
       {/* Glassmorphic Header */}
-      <header className="sticky top-0 z-30 bg-[#F5F5F7]/80 backdrop-blur-xl border-b border-gray-200/60">
+      <header className="sticky top-0 z-30 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-slate-800/60">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
             <div className="flex items-center gap-3">
                  <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-lg text-yellow-400 overflow-hidden border-2 border-white/20">
                     <i className="fas fa-coins text-2xl"></i>
                 </div>
-                <h1 className="text-xl font-bold tracking-tight hidden sm:block">Global Net Pay</h1>
+                <h1 className="text-xl font-bold tracking-tight hidden sm:block dark:text-white">Global Net Pay</h1>
             </div>
             <div className="flex gap-3 items-center">
-                <ImageEditor />
                 <button 
                     onClick={shareLink}
-                    className="h-9 px-5 rounded-full bg-white border border-gray-200/60 text-[13px] font-bold text-slate-700 hover:bg-gray-50 transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
+                    className="h-9 px-5 rounded-full bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700 text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm flex items-center gap-2 active:scale-95 duration-150"
                 >
                     {copyFeedback ? <i className="fas fa-check text-green-500"></i> : <i className="fas fa-share-square text-blue-500"></i>}
                     {copyFeedback ? 'Copied!' : 'Share'}
                 </button>
                 <button 
                     onClick={() => setShowSources(!showSources)}
-                    className="h-9 w-9 rounded-full bg-white border border-gray-200/60 flex items-center justify-center hover:bg-gray-50 transition shadow-sm active:scale-95 duration-150"
+                    className="h-9 w-9 rounded-full bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm active:scale-95 duration-150"
                     title="Data Sources"
                 >
-                    <i className="fas fa-info text-slate-500 text-sm"></i>
+                    <i className="fas fa-info text-slate-500 dark:text-slate-400 text-sm"></i>
+                </button>
+                <button 
+                    onClick={() => setDarkMode(!darkMode)}
+                    className="h-9 w-9 rounded-full bg-white dark:bg-slate-800 border border-gray-200/60 dark:border-slate-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-slate-700 transition shadow-sm active:scale-95 duration-150 text-yellow-500 dark:text-blue-300"
+                    title="Toggle Theme"
+                >
+                    {darkMode ? <i className="fas fa-moon"></i> : <i className="fas fa-sun"></i>}
                 </button>
             </div>
         </div>
@@ -334,17 +356,17 @@ const App: React.FC = () => {
 
       <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
         {showSources && (
-             <div className="mb-8 bg-white border border-orange-100 p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-top-2 transition-all duration-300 hover:shadow-2xl">
+             <div className="mb-8 bg-white dark:bg-slate-900 border border-orange-100 dark:border-slate-800 p-6 rounded-3xl shadow-sm animate-in fade-in slide-in-from-top-2 transition-all duration-300 hover:shadow-2xl">
                 <div className="flex items-center gap-2 mb-3 text-orange-600">
                     <i className="fas fa-exclamation-triangle"></i>
                     <h3 className="font-bold text-sm">Data Sources & Disclaimers</h3>
                 </div>
-                <p className="text-sm text-gray-500 mb-4 font-medium">
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4 font-medium">
                     This tool provides estimates based on 2024/2025 statutory rules. It is not legal or financial advice.
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                     {currentRules.sources.map((s, i) => (
-                        <a key={i} href={s.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-500 hover:underline bg-blue-50/50 p-2 rounded-lg font-medium">
+                        <a key={i} href={s.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-500 hover:underline bg-blue-50/50 dark:bg-blue-900/20 p-2 rounded-lg font-medium">
                             <i className="fas fa-external-link-alt text-xs"></i> {s.label} <span className="text-gray-400 text-xs ml-auto">{s.date}</span>
                         </a>
                     ))}
@@ -357,7 +379,7 @@ const App: React.FC = () => {
           {/* Left Column: Inputs */}
           <div className="lg:col-span-4 space-y-6">
             {/* Income Section */}
-            <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-r from-[#0034b8] to-[#0c58fa] p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
@@ -379,9 +401,9 @@ const App: React.FC = () => {
                      </div>
                 </div>
 
-                <div className="p-6 md:p-8 -mt-4 bg-white rounded-t-[32px] relative z-20 space-y-5">
+                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-slate-900 rounded-t-[32px] relative z-20 space-y-5">
                     <div>
-                        <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
+                        <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
                         <div className="relative">
                             <img 
                                 src={getFlagUrl(inputs.country)} 
@@ -390,7 +412,7 @@ const App: React.FC = () => {
                                 crossOrigin="anonymous"
                             />
                             <select 
-                                className="w-full p-4 pl-14 pr-10 bg-[#F2F2F7] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-slate-900 cursor-pointer"
+                                className="w-full p-4 pl-14 pr-10 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-slate-800 transition-all outline-none text-slate-900 dark:text-white cursor-pointer"
                                 value={inputs.country}
                                 onChange={(e) => setInputs({...inputs, country: e.target.value as CountryCode, subRegion: undefined })}
                             >
@@ -406,10 +428,10 @@ const App: React.FC = () => {
 
                     {currentRules.subNationalRules && (
                         <div>
-                             <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">{currentRules.subNationalLabel}</label>
+                             <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">{currentRules.subNationalLabel}</label>
                              <div className="relative">
                                 <select 
-                                    className="w-full p-4 pr-10 bg-[#F2F2F7] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none text-slate-900 cursor-pointer"
+                                    className="w-full p-4 pr-10 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-slate-800 transition-all outline-none text-slate-900 dark:text-white cursor-pointer"
                                     value={inputs.subRegion || ''}
                                     onChange={(e) => setInputs({...inputs, subRegion: e.target.value })}
                                 >
@@ -426,18 +448,18 @@ const App: React.FC = () => {
                     )}
 
                     <div>
-                        <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">
+                        <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">
                             {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
                         </label>
                         <div className="relative group">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold z-10 transition-colors group-focus-within:text-blue-500">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-extrabold z-10 transition-colors group-focus-within:text-blue-500">
                                 {currentRules.currencySymbol}
                             </span>
                             <input 
                                 type="number" 
                                 min="0"
                                 autoComplete="off"
-                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-gray-400 focus:bg-white focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
+                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
                                 value={mode === 'gross' ? inputs.grossIncome : targetNet}
                                 onChange={(e) => {
                                     const val = parseFloat(e.target.value) || 0;
@@ -456,9 +478,9 @@ const App: React.FC = () => {
 
                     {/* Annual Bonus Input */}
                     <div>
-                        <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Annual Bonus / 13th Month</label>
+                        <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Annual Bonus / 13th Month</label>
                         <div className="relative group">
-                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold z-10 transition-colors group-focus-within:text-blue-500">
+                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-extrabold z-10 transition-colors group-focus-within:text-blue-500">
                                 {currentRules.currencySymbol}
                             </span>
                             <input 
@@ -466,7 +488,7 @@ const App: React.FC = () => {
                                 min="0"
                                 autoComplete="off"
                                 placeholder="0"
-                                className="w-full p-4 pl-10 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-lg"
+                                className="w-full p-4 pl-10 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-lg"
                                 value={inputs.annualBonus || ''}
                                 onChange={(e) => setInputs({...inputs, annualBonus: parseFloat(e.target.value) || 0})}
                             />
@@ -476,22 +498,22 @@ const App: React.FC = () => {
                     {/* Detailed Inputs Group */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                             <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Age</label>
+                             <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Age</label>
                              <input 
                                 type="number" 
                                 min="15" max="99"
                                 autoComplete="off"
-                                className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold"
+                                className="w-full p-3 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-slate-900 dark:text-white"
                                 value={inputs.details.age}
                                 onChange={(e) => setInputs({...inputs, details: { ...inputs.details, age: parseInt(e.target.value) || 30 }})}
                             />
                         </div>
                         {currentRules.hasMaritalStatusOption && (
                              <div>
-                                <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Status</label>
+                                <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Status</label>
                                 <div className="relative">
                                     <select 
-                                        className="w-full p-3 bg-[#F2F2F7] border-none rounded-2xl appearance-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-sm"
+                                        className="w-full p-3 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl appearance-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-sm text-slate-900 dark:text-white"
                                         value={inputs.details.maritalStatus}
                                         onChange={(e) => setInputs({...inputs, details: { ...inputs.details, maritalStatus: e.target.value as 'single'|'married' }})}
                                     >
@@ -504,8 +526,8 @@ const App: React.FC = () => {
                     </div>
                     
                     {currentRules.hasChurchTaxOption && (
-                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] rounded-2xl">
-                            <label htmlFor="churchTax" className="text-sm font-bold text-slate-700">Church Tax</label>
+                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-slate-800 rounded-2xl">
+                            <label htmlFor="churchTax" className="text-sm font-bold text-slate-700 dark:text-slate-200">Church Tax</label>
                             <div className="relative inline-block w-12 h-6 transition duration-200 ease-in-out rounded-full cursor-pointer">
                                 <input 
                                     type="checkbox" 
@@ -514,7 +536,7 @@ const App: React.FC = () => {
                                     checked={inputs.details.churchTax}
                                     onChange={(e) => setInputs({...inputs, details: { ...inputs.details, churchTax: e.target.checked }})}
                                 />
-                                <div className="w-full h-full bg-gray-300 rounded-full peer-checked:bg-blue-500 transition-colors"></div>
+                                <div className="w-full h-full bg-gray-300 dark:bg-slate-600 rounded-full peer-checked:bg-blue-500 transition-colors"></div>
                                 <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-6"></div>
                             </div>
                          </div>
@@ -523,7 +545,7 @@ const App: React.FC = () => {
             </div>
 
             {/* Costs Section */}
-            <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
+            <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-2xl">
                 {/* Gradient Header */}
                 <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 md:p-8 pb-10 relative text-white">
                      <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
@@ -538,19 +560,19 @@ const App: React.FC = () => {
                      </div>
                 </div>
 
-                <div className="p-6 md:p-8 -mt-4 bg-white rounded-t-[32px] relative z-20">
+                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-slate-900 rounded-t-[32px] relative z-20">
                     <div className="grid grid-cols-2 gap-4">
                         {costFields.map((field) => (
                             <div key={field.key} className="relative">
-                                <label className="block text-[10px] uppercase font-extrabold text-slate-400 mb-1.5 ml-1 whitespace-nowrap">{field.label}</label>
+                                <label className="block text-[10px] uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5 ml-1 whitespace-nowrap">{field.label}</label>
                                 <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <span className="text-slate-400 text-xs font-bold">{currentRules.currencySymbol}</span>
+                                        <span className="text-slate-400 dark:text-slate-500 text-xs font-bold">{currentRules.currencySymbol}</span>
                                     </div>
                                     <input 
                                         type="number"
                                         autoComplete="off"
-                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] border-none rounded-xl text-slate-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
+                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
                                         value={(inputs.costs as any)[field.key] || ''}
                                         placeholder="0"
                                         onChange={(e) => handleCostChange(field.key as any, e.target.value)}
@@ -560,8 +582,8 @@ const App: React.FC = () => {
                         ))}
                     </div>
                     {result && result.personalCostsTotal > 0 && (
-                        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center">
-                            <span className="text-[13px] font-bold text-slate-500">Total Monthly Costs</span>
+                        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-slate-800 flex justify-between items-center">
+                            <span className="text-[13px] font-bold text-slate-500 dark:text-slate-400">Total Monthly Costs</span>
                             <span className="text-[15px] font-extrabold text-[#FF3B30]">-{formatCurrency(result.personalCostsTotal)}</span>
                         </div>
                     )}
@@ -583,7 +605,7 @@ const App: React.FC = () => {
                              <img 
                                 src={getHDFlagUrl(inputs.country)} 
                                 alt="Country Flag" 
-                                className="w-full h-full object-cover contrast-125 saturate-150 brightness-90"
+                                className="w-full h-full object-cover contrast-125 saturate-150 brightness-90 dark:brightness-50"
                              />
                              {/* Cinematic Overlay */}
                              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/80 mix-blend-multiply"></div>
@@ -688,16 +710,16 @@ const App: React.FC = () => {
                         </div>
                         
                         {/* Chart Card */}
-                        <div className="bg-white p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white text-slate-900 relative overflow-hidden group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl">
-                             <div className="absolute -right-8 -bottom-8 text-slate-50 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                        <div className="bg-white dark:bg-slate-900 p-6 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 text-slate-900 dark:text-white relative overflow-hidden group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl">
+                             <div className="absolute -right-8 -bottom-8 text-slate-50 dark:text-slate-800 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                                 <i className="fas fa-chart-pie"></i>
                              </div>
                              <div className="relative z-10 w-full h-full flex flex-col">
                                 <div className="flex items-center gap-3 mb-2">
-                                     <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center border border-slate-50">
-                                        <i className="fas fa-chart-pie text-lg text-slate-900"></i>
+                                     <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-50 dark:border-slate-700">
+                                        <i className="fas fa-chart-pie text-lg text-slate-900 dark:text-white"></i>
                                      </div>
-                                     <p className="text-slate-500 text-[13px] font-bold uppercase tracking-wider">Tax / Cost Ratio</p>
+                                     <p className="text-slate-500 dark:text-slate-400 text-[13px] font-bold uppercase tracking-wider">Tax / Cost Ratio</p>
                                 </div>
                                 <div className="flex-grow flex items-center justify-center mt-2">
                                     <DonutChart result={result} />
@@ -707,7 +729,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Quick Convert Horizontal Card */}
-                    <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                    <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-2xl">
                          <div className="bg-gradient-to-r from-[#2FB050] to-[#A0E870] p-5 relative flex items-center justify-between text-white">
                              <div className="flex items-center gap-3 relative z-10">
                                  <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
@@ -719,21 +741,21 @@ const App: React.FC = () => {
                          </div>
                          <div className="p-6 flex flex-col md:flex-row items-center gap-4">
                              <div className="flex-1 w-full">
-                                 <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">Amount</label>
+                                 <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Amount</label>
                                  <div className="relative group">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <span className="text-slate-400 text-xs font-bold">{COUNTRY_RULES[fromCurrency].currencySymbol}</span>
+                                        <span className="text-slate-400 dark:text-slate-500 text-xs font-bold">{COUNTRY_RULES[fromCurrency].currencySymbol}</span>
                                     </div>
                                     <input 
                                         type="number"
                                         value={convertAmount}
                                         onChange={(e) => setConvertAmount(parseFloat(e.target.value) || 0)}
-                                        className="w-full p-3 pl-8 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg placeholder-gray-400"
+                                        className="w-full p-3 pl-8 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-lg placeholder-gray-400 dark:placeholder-slate-500"
                                     />
                                  </div>
                              </div>
                              <div className="flex-1 w-full">
-                                 <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">From</label>
+                                 <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">From</label>
                                  <div className="relative">
                                     <img 
                                         src={getFlagUrl(fromCurrency)} 
@@ -744,7 +766,7 @@ const App: React.FC = () => {
                                     <select 
                                         value={fromCurrency}
                                         onChange={(e) => setFromCurrency(e.target.value as CountryCode)}
-                                        className="w-full p-3 pl-12 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
+                                        className="w-full p-3 pl-12 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
                                     >
                                         {Object.values(COUNTRY_RULES).map(c => (
                                             <option key={c.code} value={c.code}>{c.currency}</option>
@@ -767,7 +789,7 @@ const App: React.FC = () => {
                                  <i className="fas fa-arrow-down text-xl md:hidden"></i>
                              </button>
                              <div className="flex-1 w-full">
-                                 <label className="block text-[11px] font-extrabold text-[#86868b] uppercase tracking-wider mb-2 pl-1">To</label>
+                                 <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">To</label>
                                  <div className="relative">
                                     <img 
                                         src={getFlagUrl(toCurrency)} 
@@ -778,7 +800,7 @@ const App: React.FC = () => {
                                     <select 
                                         value={toCurrency}
                                         onChange={(e) => setToCurrency(e.target.value as CountryCode)}
-                                        className="w-full p-3 pl-12 bg-[#F2F2F7] border-none rounded-2xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
+                                        className="w-full p-3 pl-12 bg-[#F2F2F7] dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-[#e6ca29]/20 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
                                     >
                                         {Object.values(COUNTRY_RULES).map(c => (
                                             <option key={c.code} value={c.code}>{c.currency}</option>
@@ -799,9 +821,9 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Detailed Breakdown Table */}
-                    <div className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden transition-all duration-300 hover:shadow-2xl">
+                    <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.2)] border border-white dark:border-slate-800 overflow-hidden transition-all duration-300 hover:shadow-2xl">
                          {/* Gradient Header */}
-                        <div className="bg-gradient-to-r from-slate-700 to-slate-800 p-6 flex justify-between items-center relative">
+                        <div className="bg-gradient-to-r from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900 p-6 flex justify-between items-center relative">
                              <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                              <div className="relative z-10 flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
@@ -816,7 +838,7 @@ const App: React.FC = () => {
 
                         <div className="p-0 overflow-x-auto">
                             <table className="w-full text-sm text-left min-w-[600px]">
-                                <thead className="text-xs text-[#86868b] uppercase font-bold bg-[#F5F5F7] border-b border-gray-100">
+                                <thead className="text-xs text-[#86868b] dark:text-slate-400 uppercase font-bold bg-[#F5F5F7] dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800">
                                     <tr>
                                         <th className="px-6 py-4 pl-8">Item</th>
                                         <th className="px-6 py-4 text-right">Annual</th>
@@ -824,22 +846,22 @@ const App: React.FC = () => {
                                         <th className="px-6 py-4 text-right">%</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    <tr className="text-slate-900">
+                                <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+                                    <tr className="text-slate-900 dark:text-white">
                                         <td className="px-6 py-4 pl-8 font-bold">Gross Income</td>
                                         <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossAnnual)}</td>
                                         <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.grossMonthly)}</td>
-                                        <td className="px-6 py-4 text-right text-slate-400 font-semibold">100%</td>
+                                        <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">100%</td>
                                     </tr>
                                     {result.deductionsBreakdown.map((d, idx) => (
-                                        <tr key={idx} className={`hover:bg-gray-50 transition-colors ${d.isEmployer ? 'text-slate-400' : 'text-[#FF3B30]'}`}>
+                                        <tr key={idx} className={`hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors ${d.isEmployer ? 'text-slate-400 dark:text-slate-500' : 'text-[#FF3B30] dark:text-red-400'}`}>
                                             <td className="px-6 py-4 pl-8 flex items-center group font-bold">
                                                 <span className={d.isEmployer ? 'italic font-medium' : ''}>{d.name}</span>
-                                                {d.isEmployer && <span className="ml-2 text-[10px] uppercase tracking-wider font-bold bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Employer</span>}
+                                                {d.isEmployer && <span className="ml-2 text-[10px] uppercase tracking-wider font-bold bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-2 py-0.5 rounded-full">Employer</span>}
                                                 {d.description && (
                                                     <div className="relative ml-2">
-                                                        <i className="fas fa-info-circle text-gray-300 hover:text-blue-400 cursor-help transition-colors"></i>
-                                                        <div className="absolute left-0 bottom-6 w-64 bg-[#1d1d1f] text-white text-xs p-3 rounded-xl shadow-xl hidden group-hover:block z-20 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-medium">
+                                                        <i className="fas fa-info-circle text-gray-300 dark:text-slate-600 hover:text-blue-400 cursor-help transition-colors"></i>
+                                                        <div className="absolute left-0 bottom-6 w-64 bg-[#1d1d1f] dark:bg-black text-white text-xs p-3 rounded-xl shadow-xl hidden group-hover:block z-20 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-medium">
                                                             {d.description}
                                                         </div>
                                                     </div>
@@ -847,16 +869,16 @@ const App: React.FC = () => {
                                             </td>
                                             <td className="px-6 py-4 text-right font-bold">-{formatCurrency(d.amount)}</td>
                                             <td className="px-6 py-4 text-right font-bold">-{formatCurrency(d.amount / 12)}</td>
-                                            <td className="px-6 py-4 text-right text-slate-400 font-semibold">
+                                            <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">
                                                 {(d.amount / (result.grossAnnual || 1) * 100).toFixed(1)}%
                                             </td>
                                         </tr>
                                     ))}
-                                    <tr className="bg-[#F2F2F7] text-slate-900">
+                                    <tr className="bg-[#F2F2F7] dark:bg-slate-800/30 text-slate-900 dark:text-white">
                                         <td className="px-6 py-4 pl-8 font-extrabold">Net Income</td>
                                         <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netAnnual)}</td>
                                         <td className="px-6 py-4 text-right font-extrabold">{formatCurrency(result.netMonthly)}</td>
-                                        <td className="px-6 py-4 text-right text-slate-500 font-bold">
+                                        <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400 font-bold">
                                             {(result.netAnnual / (result.grossAnnual || 1) * 100).toFixed(1)}%
                                         </td>
                                     </tr>
@@ -866,7 +888,7 @@ const App: React.FC = () => {
                     </div>
                     
                     <div className="text-center pt-4 pb-8">
-                         <p className="text-xs text-slate-400 font-bold">Calculations are estimates based on {currentRules.name} tax laws.</p>
+                         <p className="text-xs text-slate-400 dark:text-slate-500 font-bold">Calculations are estimates based on {currentRules.name} tax laws.</p>
                     </div>
                  </>
              )}
@@ -874,7 +896,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Hidden Invoice Template for PDF Export */}
+      {/* Hidden Invoice Template for PDF Export - Keeps light theme specifically for printing */}
       {result && (
           <div id="pdf-invoice-template" className="fixed top-0 left-[-10000px] bg-white text-slate-900 p-12 w-[800px]">
               <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-start">
@@ -952,7 +974,7 @@ const App: React.FC = () => {
                                <td className="py-4 px-4 text-lg">NET INCOME</td>
                                <td className="py-4 px-4 text-right text-lg">{formatCurrency(result.netAnnual)}</td>
                                <td className="py-4 px-4 text-right text-lg">{formatCurrency(result.netMonthly)}</td>
-                               <td className="py-4 px-4 text-right text-lg">{(result.grossAnnual > 0 ? (result.netAnnual/result.grossAnnual*100).toFixed(1) : '0.0')}%</td>
+                               <td className="py-4 px-4 text-right text-lg">{(result.netAnnual/(result.grossAnnual || 1)*100).toFixed(1)}%</td>
                            </tr>
                       </tbody>
                   </table>

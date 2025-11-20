@@ -68,9 +68,9 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[550px] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col z-50 overflow-hidden animate-fade-in-up">
+        <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[550px] bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col z-50 overflow-hidden animate-fade-in-up transition-colors">
           {/* Header */}
-          <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+          <div className="bg-slate-900 dark:bg-slate-950 text-white p-4 flex items-center justify-between border-b border-slate-800">
             <div className="flex items-center gap-2">
                <i className="fas fa-robot text-blue-400"></i>
                <h3 className="font-bold">Tax Assistant</h3>
@@ -79,13 +79,13 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-900/50">
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] p-3 rounded-lg text-sm ${
                   msg.role === 'user' 
                     ? 'bg-blue-600 text-white rounded-br-none' 
-                    : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm prose prose-sm'
+                    : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none shadow-sm prose prose-sm dark:prose-invert'
                 }`}>
                   <div className="whitespace-pre-wrap font-medium">{msg.text}</div>
                 </div>
@@ -93,7 +93,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="flex space-x-2">
                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
@@ -106,13 +106,13 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
           </div>
           
           {/* Quick Chips */}
-          <div className="px-3 py-2 bg-slate-50 flex gap-2 overflow-x-auto whitespace-nowrap border-t border-slate-100 scrollbar-hide">
+          <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900 flex gap-2 overflow-x-auto whitespace-nowrap border-t border-slate-100 dark:border-slate-800 scrollbar-hide">
             {quickPrompts.map((p, i) => (
                 <button 
                     key={i}
                     onClick={() => handleSend(p)}
                     disabled={loading}
-                    className="px-3 py-1 bg-white border border-blue-100 text-blue-600 text-xs rounded-full hover:bg-blue-50 transition shadow-sm font-bold"
+                    className="px-3 py-1 bg-white dark:bg-slate-800 border border-blue-100 dark:border-slate-700 text-blue-600 dark:text-blue-400 text-xs rounded-full hover:bg-blue-50 dark:hover:bg-slate-700 transition shadow-sm font-bold"
                 >
                     {p}
                 </button>
@@ -120,7 +120,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
           </div>
 
           {/* Input */}
-          <div className="p-3 bg-white border-t border-slate-100">
+          <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
             <div className="relative">
               <input
                 type="text"
@@ -128,17 +128,17 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
                 placeholder="Ask about deductibles..."
-                className="w-full pl-4 pr-10 py-2 rounded-full border border-slate-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-medium"
+                className="w-full pl-4 pr-10 py-2 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500"
               />
               <button 
                 onClick={() => handleSend()}
                 disabled={loading}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-800 disabled:opacity-50 p-1"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-50 p-1"
               >
                 <i className="fas fa-paper-plane"></i>
               </button>
             </div>
-            <div className="text-[10px] text-center text-slate-400 mt-2 font-semibold">
+            <div className="text-[10px] text-center text-slate-400 dark:text-slate-500 mt-2 font-semibold">
               AI can make mistakes. Double check with sources.
             </div>
           </div>
