@@ -32,10 +32,10 @@ export interface Deductible {
   brackets?: TaxBracket[]; 
   
   // Advanced Tax Logic
-  cap?: number; 
-  cappedBase?: number; 
-  exemptAmount?: number; 
-  fixedCredits?: number; 
+  cap?: number; // The maximum amount of DEDUCTION (tax paid)
+  cappedBase?: number; // The maximum INCOME upon which tax is calculated (e.g. Social Security Wage Base)
+  exemptAmount?: number; // Standard Deduction or 0% band
+  fixedCredits?: number; // Tax Credits (subtracts from tax bill)
   
   // Married / Conditional Logic
   exemptAmountMarried?: number;
@@ -44,8 +44,8 @@ export interface Deductible {
 
   // Specific Flags
   employerPaid?: boolean; 
-  isTaxSurcharge?: boolean; // Applies to the calculated Tax amount (e.g. Soli, Church) OR operates as a surtax
-  surchargeThreshold?: number; // Only apply if base amount > this
+  isTaxSurcharge?: boolean; // Applies to the calculated Tax amount (e.g. Soli, Church) NOT Gross Income
+  surchargeThreshold?: number; // Only apply if base tax amount > this
   
   // Dynamic Rates
   ratesByAge?: { minAge: number; maxAge: number; rate: number }[];
@@ -64,7 +64,7 @@ export interface CountryRules {
   name: string;
   currency: string;
   currencySymbol: string;
-  exchangeRatePerUSD: number; // New field for converter
+  exchangeRatePerUSD: number; 
   federalDeductibles: Deductible[];
   subNationalLabel?: string; 
   subNationalRules?: SubNationalRule[];
@@ -92,14 +92,14 @@ export interface CalculationResult {
   deductionsBreakdown: DeductionResult[];
   disposableMonthly: number;
   personalCostsTotal: number;
-  marginalRate: number; // Tax paid on the last unit of currency
+  marginalRate: number; 
 }
 
 export interface UserDetails {
   age: number;
   maritalStatus: 'single' | 'married';
   churchTax: boolean;
-  isExpat?: boolean; // For 30% ruling
+  isExpat?: boolean; 
 }
 
 export interface UserInputs {
