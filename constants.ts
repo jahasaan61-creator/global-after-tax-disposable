@@ -102,6 +102,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         ]
       },
       { id: 'TX', name: 'Texas', deductibles: [] },
+      { id: 'FL', name: 'Florida', deductibles: [] },
       {
         id: 'NY',
         name: 'New York',
@@ -127,6 +128,29 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
             cappedBase: 89344
            }
         ]
+      },
+      {
+          id: 'IL',
+          name: 'Illinois',
+          deductibles: [
+              { name: 'IL State Tax', description: 'Flat Rate 4.95%.', type: 'percentage', rate: 0.0495, exemptAmount: 2775 }
+          ]
+      },
+      {
+          id: 'PA',
+          name: 'Pennsylvania',
+          deductibles: [
+              { name: 'PA State Tax', description: 'Flat Rate 3.07%.', type: 'percentage', rate: 0.0307 }
+          ]
+      },
+      {
+          id: 'MA',
+          name: 'Massachusetts',
+          deductibles: [
+              { name: 'MA State Tax', description: 'Flat Rate 5%.', type: 'percentage', rate: 0.05, exemptAmount: 4400 },
+              { name: 'MA Surtax', description: '4% on income > $1M.', type: 'progressive', brackets: [{threshold: 0, rate: 0}, {threshold: 1000000, rate: 0.04}] },
+              { name: 'MA PFML', description: 'Paid Family & Medical Leave.', type: 'percentage', rate: 0.0046, cappedBase: 161700 }
+          ]
       },
       {
         id: 'WA',

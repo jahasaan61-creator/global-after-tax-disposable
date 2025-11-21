@@ -85,7 +85,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-50 flex items-center justify-center w-14 h-14"
+        className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 rounded-full shadow-lg hover:scale-105 transition-transform z-[150] flex items-center justify-center w-14 h-14"
         title="Ask AI Assistant"
       >
         {isOpen ? <i className="fas fa-times text-xl"></i> : <i className="fas fa-sparkles text-xl"></i>}
@@ -93,7 +93,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[550px] bg-white dark:bg-[#101012] rounded-xl shadow-2xl border border-slate-200 dark:border-[#222] flex flex-col z-50 overflow-hidden animate-fade-in-up transition-colors">
+        <div className="fixed bottom-24 right-6 w-80 md:w-96 h-[550px] bg-white dark:bg-[#101012] rounded-xl shadow-2xl border border-slate-200 dark:border-[#222] flex flex-col z-[150] overflow-hidden animate-fade-in-up transition-colors">
           {/* Header */}
           <div className="bg-slate-900 dark:bg-black text-white p-4 flex items-center justify-between border-b border-slate-800 dark:border-[#222]">
             <div className="flex items-center gap-2">
