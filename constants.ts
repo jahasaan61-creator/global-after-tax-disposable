@@ -664,5 +664,52 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         exemptAmount: 1000000 // Basic (430k) + Min Emp (550k) approx
       }
     ]
+  },
+  [CountryCode.NLD]: {
+    code: CountryCode.NLD,
+    name: 'Netherlands',
+    currency: 'EUR',
+    currencySymbol: '€',
+    exchangeRatePerUSD: 0.93,
+    hasExpatOption: true, // 30% Ruling
+    sources: [
+        { label: 'Belastingdienst 2025', url: 'https://www.belastingdienst.nl/', date: '2024-11-15' }
+    ],
+    federalDeductibles: [
+        {
+            name: 'Box 1 Income Tax',
+            description: 'Progressive Tax (2025).',
+            type: 'progressive',
+            brackets: [
+                { threshold: 0, rate: 0.3697 }, // ~37% up to €75k
+                { threshold: 75518, rate: 0.4950 } // 49.50% above
+            ]
+        },
+        {
+            name: 'General Tax Credit',
+            description: 'Algemene heffingskorting (Reduces Tax).',
+            type: 'credit_progressive',
+            // Max credit ~3362. Reduces by ~6.6% for income > 24812
+            exemptAmount: 3362, // Base credit
+            brackets: [
+               { threshold: 0, rate: 0 },
+               { threshold: 24812, rate: 0.0668 } // Reduction rate
+            ]
+        },
+        {
+            name: 'Labour Tax Credit',
+            description: 'Arbeidskorting (Reduces Tax).',
+            type: 'credit_progressive',
+            // Simplified curve for 2024/25
+            exemptAmount: 0,
+            brackets: [
+                { threshold: 0, rate: -0.084 }, // Builds up credit (neg rate = positive credit increase)
+                { threshold: 11000, rate: -0.31 },
+                { threshold: 23000, rate: -0.025 }, // Slower buildup
+                { threshold: 37000, rate: 0.065 }   // Reduction starts
+            ],
+            cap: 5532 // Max Labour Credit
+        }
+    ]
   }
 };

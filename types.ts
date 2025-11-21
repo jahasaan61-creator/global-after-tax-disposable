@@ -14,6 +14,7 @@ export enum CountryCode {
   IND = 'IND', // India
   JPN = 'JPN', // Japan
   AUS = 'AUS', // Australia
+  NLD = 'NLD', // Netherlands
 }
 
 export interface TaxBracket {
@@ -25,7 +26,7 @@ export interface TaxBracket {
 export interface Deductible {
   name: string;
   description?: string;
-  type: 'percentage' | 'fixed' | 'progressive';
+  type: 'percentage' | 'fixed' | 'progressive' | 'credit_progressive';
   rate?: number; 
   amount?: number; 
   brackets?: TaxBracket[]; 
@@ -72,6 +73,7 @@ export interface CountryRules {
   // Context Flags
   hasMaritalStatusOption?: boolean;
   hasChurchTaxOption?: boolean;
+  hasExpatOption?: boolean; // For 30% ruling
 }
 
 export interface DeductionResult {
@@ -90,12 +92,14 @@ export interface CalculationResult {
   deductionsBreakdown: DeductionResult[];
   disposableMonthly: number;
   personalCostsTotal: number;
+  marginalRate: number; // Tax paid on the last unit of currency
 }
 
 export interface UserDetails {
   age: number;
   maritalStatus: 'single' | 'married';
   churchTax: boolean;
+  isExpat?: boolean; // For 30% ruling
 }
 
 export interface UserInputs {

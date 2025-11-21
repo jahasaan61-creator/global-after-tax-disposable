@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CountryCode, UserInputs, CalculationResult } from './types';
 import { COUNTRY_RULES } from './constants';
@@ -20,9 +21,9 @@ const getFlagUrl = (code: CountryCode) => {
       [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
       [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
       [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
-      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au'
+      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl'
   };
-  return `https://flagcdn.com/w40/${map[code]}.png`;
+  return `https://flagcdn.com/w40/${map[code] || 'us'}.png`;
 };
 
 const getHDFlagUrl = (code: CountryCode) => {
@@ -31,9 +32,9 @@ const getHDFlagUrl = (code: CountryCode) => {
       [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
       [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
       [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
-      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au'
+      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl'
   };
-  return `https://flagcdn.com/w640/${map[code]}.png`;
+  return `https://flagcdn.com/w640/${map[code] || 'us'}.png`;
 };
 
 // --- COMPONENTS ---
@@ -498,8 +499,16 @@ const App: React.FC = () => {
     frequency: 'annual',
     country: CountryCode.USA,
     costs: { rent: 0, groceries: 0, utilities: 0, transport: 0, insurance: 0, emergencyFund: 0, debt: 0, freedomFund: 0 },
-    details: { age: 30, maritalStatus: 'single', churchTax: false },
+    details: { age: 30, maritalStatus: 'single', churchTax: false, isExpat: false },
     annualBonus: 0
+  });
+  
+  // Comparison State
+  const [isComparison, setIsComparison] = useState(false);
+  const [inputsB, setInputsB] = useState<UserInputs>({
+      ...inputs,
+      country: CountryCode.GBR, // Default comparison to UK
+      grossIncome: 40000
   });
 
   const [mode, setMode] = useState<CalcMode>('gross');
@@ -518,6 +527,7 @@ const App: React.FC = () => {
 
   // Debounce inputs to improve performance - Reduced delay for snappier UI
   const debouncedInputs = useDebounce(inputs, 250);
+  const debouncedInputsB = useDebounce(inputsB, 250);
   const debouncedTargetNet = useDebounce(targetNet, 250);
 
   // Currency Converter State
@@ -528,6 +538,7 @@ const App: React.FC = () => {
   const debouncedConvertAmount = useDebounce(convertAmount, 250);
 
   const currentRules = COUNTRY_RULES[inputs.country];
+  const rulesB = COUNTRY_RULES[inputsB.country];
 
   useEffect(() => {
       if (darkMode) {
@@ -598,6 +609,14 @@ const App: React.FC = () => {
       const finalInputs = { ...debouncedInputs, grossIncome: incomeToUse };
       return calculateNetPay(finalInputs);
   }, [debouncedInputs, mode, debouncedTargetNet]);
+  
+  // Comparison Result
+  const resultB = useMemo(() => {
+      if (!isComparison) return null;
+      // Mode logic only applies to Inputs A, assume B is entered as Gross for simplicity in comparison mode,
+      // OR mirror mode if we want. Let's stick to B being entered directly as Gross to avoid confusion.
+      return calculateNetPay(debouncedInputsB);
+  }, [debouncedInputsB, isComparison]);
 
   // OPTIMIZATION: Memoize currency conversion
   const convertedResult = useMemo(() => {
@@ -664,10 +683,11 @@ const App: React.FC = () => {
     setMode(newMode);
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, code?: CountryCode) => {
+    const rules = code ? COUNTRY_RULES[code] : currentRules;
     return new Intl.NumberFormat('en-US', { 
       style: 'currency', 
-      currency: currentRules.currency,
+      currency: rules.currency,
       maximumFractionDigits: 0 
     }).format(amount);
   };
@@ -780,6 +800,16 @@ const App: React.FC = () => {
                 <h1 className="text-xl font-bold tracking-tight hidden sm:block dark:text-white">Global Net Pay</h1>
             </div>
             <div className="flex gap-3 items-center">
+                 {/* Comparison Toggle */}
+                 <button 
+                    onClick={() => setIsComparison(!isComparison)}
+                    className={`h-9 px-4 rounded-full border border-gray-200/60 dark:border-[#333] text-[13px] font-bold transition-all duration-200 shadow-sm flex items-center gap-2 active:scale-95 ${isComparison ? 'bg-blue-600 text-white border-blue-600' : 'bg-white dark:bg-[#18181b] text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-[#222]'}`}
+                    title="Compare Countries"
+                >
+                    <i className="fas fa-balance-scale"></i>
+                    <span className="hidden md:inline">Compare</span>
+                </button>
+
                 <button 
                     onClick={shareLink}
                     className="h-9 px-5 rounded-full bg-white dark:bg-[#18181b] border border-gray-200/60 dark:border-[#333] text-[13px] font-bold text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-[#222] transition-all duration-200 shadow-sm flex items-center gap-2 active:scale-95"
@@ -825,653 +855,800 @@ const App: React.FC = () => {
              </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
-          
-          {/* Left Column: Inputs */}
-          <div className="lg:col-span-4 space-y-6">
-            {/* Income Section */}
-            <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl relative hover:z-50">
-                {/* Gradient Header Background (Clipped) */}
-                <div className="absolute top-0 left-0 right-0 h-[120px] rounded-t-[32px] overflow-hidden z-0">
-                     <div className="absolute inset-0 bg-gradient-to-r from-[#0034b8] to-[#0c58fa]"></div>
-                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-                </div>
-
-                {/* Header Content (Z-Index Raised to 30 to be above Body) */}
-                <div className="p-6 md:p-8 pb-10 relative z-30 text-white shrink-0">
-                     <div className="relative z-10 flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
-                                <i className="fas fa-sack-dollar text-white"></i>
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-xl font-extrabold tracking-tight">Income</h2>
-                                    <InfoTooltip text="Enter your gross income, location, and personal details to calculate your net pay." className="text-white" direction="bottom" />
-                                </div>
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide opacity-80">
-                                    <i className="fas fa-calendar-alt text-[9px]"></i> 2024/25
-                                </span>
-                            </div>
+        {/* CONDITIONAL RENDERING FOR COMPARISON MODE */}
+        {isComparison ? (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {/* COMPARISON COLUMN A */}
+                    <div className="bg-white dark:bg-[#101012] rounded-3xl p-6 border border-gray-200 dark:border-[#333] shadow-lg">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">A</div>
+                            <h3 className="font-bold text-lg">Scenario A</h3>
                         </div>
-                        
-                        {/* Compact Gross/Net Toggle */}
-                        <div className="bg-black/20 p-1 rounded-lg flex relative z-30 border border-white/10 backdrop-blur-md shadow-inner h-8">
-                            <button
-                                onClick={() => handleModeToggle('gross')}
-                                className={`relative z-10 px-3 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all duration-200 flex items-center gap-1.5 ${mode === 'gross' ? 'bg-white text-blue-600 shadow-sm' : 'text-white/60 hover:text-white'}`}
-                            >
-                                <i className="fas fa-wallet text-[10px]"></i> Gross
-                            </button>
-                            <button
-                                onClick={() => handleModeToggle('net')}
-                                className={`relative z-10 px-3 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all duration-200 flex items-center gap-1.5 ${mode === 'net' ? 'bg-white text-blue-600 shadow-sm' : 'text-white/60 hover:text-white'}`}
-                            >
-                                <i className="fas fa-bullseye text-[10px]"></i> Net
-                            </button>
-                        </div>
-                     </div>
-                </div>
-
-                {/* Body Content (Z-Index 20) */}
-                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-b-[32px] rounded-t-[32px] relative z-20 flex flex-col gap-5">
-                    <div className="relative z-30">
-                        <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
-                        <CurrencyDropdown 
-                            value={inputs.country} 
-                            onChange={(val) => setInputs({...inputs, country: val, subRegion: undefined })} 
-                            className="w-full"
-                        />
-                    </div>
-
-                    <RegionDropdown 
-                        country={inputs.country}
-                        value={inputs.subRegion || ''}
-                        onChange={(val) => setInputs({...inputs, subRegion: val })}
-                    />
-
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-2 pl-1 pr-1">
-                             <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">
-                                {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
-                            </label>
-                        </div>
-                        
-                        <SmartNumberInput
-                            value={mode === 'gross' ? inputs.grossIncome : targetNet}
-                            onChangeValue={(val) => mode === 'gross' ? setInputs({...inputs, grossIncome: val}) : setTargetNet(val)}
-                            step={500}
-                            highlight={highlightIncome}
-                            prefix={currentRules.currencySymbol}
-                            inputClassName={`w-full h-14 pl-14 pr-[140px] bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#252528] focus:ring-4 ${mode === 'net' ? 'focus:ring-green-500/10' : 'focus:ring-blue-500/10'} outline-none transition-all duration-200 font-extrabold text-xl tracking-tight`}
-                            suffixContent={
-                                <SegmentedControl 
-                                    options={[{label: 'Yr', value: 'annual'}, {label: 'Mo', value: 'monthly'}]}
-                                    value={inputs.frequency}
-                                    onChange={(v) => setInputs({...inputs, frequency: v})}
-                                />
-                            }
-                        />
-
-                        {/* Income Range Slider & Presets */}
-                        <div className="mt-4 px-1">
-                            <input
-                                type="range"
-                                min="0"
-                                max={Math.max(inputs.grossIncome * 2.5, incomePresets[incomePresets.length-1] * 1.2)}
-                                step={1000}
-                                value={mode === 'gross' ? inputs.grossIncome : targetNet}
-                                onChange={(e) => {
-                                    const val = parseFloat(e.target.value);
-                                    mode === 'gross' ? setInputs({...inputs, grossIncome: val}) : setTargetNet(val);
-                                }}
-                                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600 hover:accent-blue-500 transition-all"
-                            />
-                            <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
-                                {incomePresets.map(preset => (
-                                    <button
-                                        key={preset}
-                                        onClick={() => mode === 'gross' ? setInputs({...inputs, grossIncome: preset}) : setTargetNet(preset)}
-                                        className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c1e] text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800 whitespace-nowrap shadow-sm"
-                                    >
-                                        {formatCompact(preset)}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Bonus & Details Grid */}
-                    <div className="grid grid-cols-2 gap-4 relative z-0">
-                         {/* Annual Bonus Input */}
-                        <div className="col-span-1">
-                            <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1 truncate" title="Bonus / 13th Month">Bonus / 13th</label>
+                        <div className="space-y-4">
+                            <CurrencyDropdown value={inputs.country} onChange={(v) => setInputs({...inputs, country: v})} className="w-full" />
                             <SmartNumberInput 
-                                value={inputs.annualBonus || 0}
-                                onChangeValue={(val) => setInputs({...inputs, annualBonus: val})}
-                                step={100}
-                                min={0}
+                                value={inputs.grossIncome} 
+                                onChangeValue={(v) => setInputs({...inputs, grossIncome: v})}
                                 prefix={currentRules.currencySymbol}
-                                inputClassName="w-full h-14 pl-16 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#252528] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all duration-200 font-bold text-sm"
+                                inputClassName="w-full h-12 pl-10 pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500">Age</label>
+                                    <SmartNumberInput value={inputs.details.age} onChangeValue={(v) => setInputs({...inputs, details: {...inputs.details, age: v}})} inputClassName="w-full h-10 pl-2 text-center bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold" />
+                                </div>
+                                {currentRules.hasMaritalStatusOption && (
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500">Status</label>
+                                        <select 
+                                            value={inputs.details.maritalStatus}
+                                            onChange={(e) => setInputs({...inputs, details: {...inputs.details, maritalStatus: e.target.value as any}})}
+                                            className="w-full h-10 px-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-sm outline-none"
+                                        >
+                                            <option value="single">Single</option>
+                                            <option value="married">Married</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                            {/* Result Mini Card A */}
+                            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                                <p className="text-xs font-bold text-blue-500 uppercase">Net Annual</p>
+                                <p className="text-2xl font-extrabold text-blue-700 dark:text-blue-400">{formatCurrency(result.netAnnual, inputs.country)}</p>
+                                <p className="text-xs font-medium text-blue-400 mt-1">{(result.netAnnual / result.grossAnnual * 100).toFixed(1)}% of Gross</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* COMPARISON COLUMN B */}
+                    <div className="bg-white dark:bg-[#101012] rounded-3xl p-6 border border-gray-200 dark:border-[#333] shadow-lg">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold">B</div>
+                            <h3 className="font-bold text-lg">Scenario B</h3>
+                        </div>
+                        <div className="space-y-4">
+                            <CurrencyDropdown value={inputsB.country} onChange={(v) => setInputsB({...inputsB, country: v})} className="w-full" />
+                            <SmartNumberInput 
+                                value={inputsB.grossIncome} 
+                                onChangeValue={(v) => setInputsB({...inputsB, grossIncome: v})}
+                                prefix={rulesB.currencySymbol}
+                                inputClassName="w-full h-12 pl-10 pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500">Age</label>
+                                    <SmartNumberInput value={inputsB.details.age} onChangeValue={(v) => setInputsB({...inputsB, details: {...inputsB.details, age: v}})} inputClassName="w-full h-10 pl-2 text-center bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold" />
+                                </div>
+                                {rulesB.hasMaritalStatusOption && (
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500">Status</label>
+                                        <select 
+                                            value={inputsB.details.maritalStatus}
+                                            onChange={(e) => setInputsB({...inputsB, details: {...inputsB.details, maritalStatus: e.target.value as any}})}
+                                            className="w-full h-10 px-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-sm outline-none"
+                                        >
+                                            <option value="single">Single</option>
+                                            <option value="married">Married</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                             {/* Result Mini Card B */}
+                             {resultB && (
+                                <div className="mt-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
+                                    <p className="text-xs font-bold text-purple-500 uppercase">Net Annual</p>
+                                    <p className="text-2xl font-extrabold text-purple-700 dark:text-purple-400">{formatCurrency(resultB.netAnnual, inputsB.country)}</p>
+                                    <p className="text-xs font-medium text-purple-400 mt-1">{(resultB.netAnnual / resultB.grossAnnual * 100).toFixed(1)}% of Gross</p>
+                                </div>
+                             )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Comparison Charts */}
+                {result && resultB && (
+                    <div className="bg-white dark:bg-[#101012] rounded-3xl p-8 border border-gray-200 dark:border-[#333] shadow-xl">
+                        <h2 className="text-2xl font-extrabold mb-6 flex items-center gap-2">
+                            <i className="fas fa-chart-bar text-slate-400"></i> Analysis
+                        </h2>
+                        
+                        <div className="space-y-6">
+                             {/* Tax Burden Comparison */}
+                             <div>
+                                 <div className="flex justify-between text-sm font-bold mb-2">
+                                     <span>Tax Burden (Effective Rate)</span>
+                                 </div>
+                                 <div className="h-8 flex rounded-full overflow-hidden">
+                                     <div className="bg-blue-500 h-full flex items-center justify-center text-white text-xs font-bold relative" style={{width: '50%'}}>
+                                        {((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1)}% (A)
+                                     </div>
+                                     <div className="bg-purple-500 h-full flex items-center justify-center text-white text-xs font-bold relative" style={{width: '50%'}}>
+                                        {((1 - resultB.netAnnual/resultB.grossAnnual)*100).toFixed(1)}% (B)
+                                     </div>
+                                 </div>
+                                 <div className="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span>{inputs.country}</span>
+                                    <span>{inputsB.country}</span>
+                                 </div>
+                             </div>
+                             
+                             {/* Marginal Rate Comparison */}
+                             <div className="grid grid-cols-2 gap-4">
+                                 <div className="p-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl">
+                                     <p className="text-xs font-bold text-gray-400 uppercase">Marginal Rate (A)</p>
+                                     <p className="text-xl font-extrabold">{(result.marginalRate * 100).toFixed(1)}%</p>
+                                     <p className="text-[10px] text-gray-400">Tax on next {currentRules.currencySymbol}100</p>
+                                 </div>
+                                 <div className="p-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl">
+                                     <p className="text-xs font-bold text-gray-400 uppercase">Marginal Rate (B)</p>
+                                     <p className="text-xl font-extrabold">{(resultB.marginalRate * 100).toFixed(1)}%</p>
+                                     <p className="text-[10px] text-gray-400">Tax on next {rulesB.currencySymbol}100</p>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 animate-in fade-in zoom-in-95 duration-300">
+            
+            {/* Left Column: Inputs */}
+            <div className="lg:col-span-4 space-y-6">
+                {/* Income Section */}
+                <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl relative hover:z-50">
+                    {/* Gradient Header Background (Clipped) */}
+                    <div className="absolute top-0 left-0 right-0 h-[120px] rounded-t-[32px] overflow-hidden z-0">
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#0034b8] to-[#0c58fa]"></div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                    </div>
+
+                    {/* Header Content (Z-Index Raised to 30 to be above Body) */}
+                    <div className="p-6 md:p-8 pb-10 relative z-30 text-white shrink-0">
+                        <div className="relative z-10 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                    <i className="fas fa-sack-dollar text-white"></i>
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-xl font-extrabold tracking-tight">Income</h2>
+                                        <InfoTooltip text="Enter your gross income, location, and personal details to calculate your net pay." className="text-white" direction="bottom" />
+                                    </div>
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide opacity-80">
+                                        <i className="fas fa-calendar-alt text-[9px]"></i> 2024/25
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {/* Compact Gross/Net Toggle */}
+                            <div className="bg-black/20 p-1 rounded-lg flex relative z-30 border border-white/10 backdrop-blur-md shadow-inner h-8">
+                                <button
+                                    onClick={() => handleModeToggle('gross')}
+                                    className={`relative z-10 px-3 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all duration-200 flex items-center gap-1.5 ${mode === 'gross' ? 'bg-white text-blue-600 shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                >
+                                    <i className="fas fa-wallet text-[10px]"></i> Gross
+                                </button>
+                                <button
+                                    onClick={() => handleModeToggle('net')}
+                                    className={`relative z-10 px-3 rounded-md text-[10px] font-extrabold uppercase tracking-wide transition-all duration-200 flex items-center gap-1.5 ${mode === 'net' ? 'bg-white text-blue-600 shadow-sm' : 'text-white/60 hover:text-white'}`}
+                                >
+                                    <i className="fas fa-bullseye text-[10px]"></i> Net
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Body Content (Z-Index 20) */}
+                    <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-b-[32px] rounded-t-[32px] relative z-20 flex flex-col gap-5">
+                        <div className="relative z-30">
+                            <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
+                            <CurrencyDropdown 
+                                value={inputs.country} 
+                                onChange={(val) => setInputs({...inputs, country: val, subRegion: undefined })} 
+                                className="w-full"
                             />
                         </div>
-                        
-                        <div className="col-span-1">
-                             <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Age</label>
-                             <SmartNumberInput 
-                                value={inputs.details.age}
-                                onChangeValue={(val) => setInputs({...inputs, details: { ...inputs.details, age: val || 30 }})}
-                                step={1}
-                                min={15} max={99}
-                                inputClassName="w-full h-14 pl-2 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl focus:bg-white dark:focus:bg-[#252528] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all duration-200 text-center font-bold text-slate-900 dark:text-white text-sm"
-                             />
+
+                        <RegionDropdown 
+                            country={inputs.country}
+                            value={inputs.subRegion || ''}
+                            onChange={(val) => setInputs({...inputs, subRegion: val })}
+                        />
+
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-center mb-2 pl-1 pr-1">
+                                <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">
+                                    {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
+                                </label>
+                            </div>
+                            
+                            <SmartNumberInput
+                                value={mode === 'gross' ? inputs.grossIncome : targetNet}
+                                onChangeValue={(val) => mode === 'gross' ? setInputs({...inputs, grossIncome: val}) : setTargetNet(val)}
+                                step={500}
+                                highlight={highlightIncome}
+                                prefix={currentRules.currencySymbol}
+                                inputClassName={`w-full h-14 pl-14 pr-[140px] bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#252528] focus:ring-4 ${mode === 'net' ? 'focus:ring-green-500/10' : 'focus:ring-blue-500/10'} outline-none transition-all duration-200 font-extrabold text-xl tracking-tight`}
+                                suffixContent={
+                                    <SegmentedControl 
+                                        options={[{label: 'Yr', value: 'annual'}, {label: 'Mo', value: 'monthly'}]}
+                                        value={inputs.frequency}
+                                        onChange={(v) => setInputs({...inputs, frequency: v})}
+                                    />
+                                }
+                            />
+
+                            {/* Income Range Slider & Presets */}
+                            <div className="mt-4 px-1">
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max={Math.max(inputs.grossIncome * 2.5, incomePresets[incomePresets.length-1] * 1.2)}
+                                    step={1000}
+                                    value={mode === 'gross' ? inputs.grossIncome : targetNet}
+                                    onChange={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        mode === 'gross' ? setInputs({...inputs, grossIncome: val}) : setTargetNet(val);
+                                    }}
+                                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600 hover:accent-blue-500 transition-all"
+                                />
+                                <div className="flex gap-2 mt-3 overflow-x-auto pb-2 scrollbar-hide">
+                                    {incomePresets.map(preset => (
+                                        <button
+                                            key={preset}
+                                            onClick={() => mode === 'gross' ? setInputs({...inputs, grossIncome: preset}) : setTargetNet(preset)}
+                                            className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-[#1c1c1e] text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/30 dark:hover:text-blue-400 transition-all border border-transparent hover:border-blue-200 dark:hover:border-blue-800 whitespace-nowrap shadow-sm"
+                                        >
+                                            {formatCompact(preset)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
-                        {currentRules.hasMaritalStatusOption && (
-                             <div className="col-span-2">
-                                <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Marital Status</label>
-                                <div className="grid grid-cols-2 gap-2 bg-[#F2F2F7] dark:bg-[#1c1c1e] p-1 rounded-xl h-14 items-center">
-                                     {['single', 'married'].map(status => (
-                                         <button
-                                            key={status}
-                                            onClick={() => setInputs({...inputs, details: { ...inputs.details, maritalStatus: status as any }})}
-                                            className={`h-12 rounded-lg text-xs font-extrabold uppercase tracking-wide transition-all duration-200 ${
-                                                inputs.details.maritalStatus === status 
-                                                ? 'bg-white dark:bg-[#333] shadow-sm text-blue-600 dark:text-blue-400 transform scale-[1.02]' 
-                                                : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
-                                            }`}
-                                         >
-                                             {status}
-                                         </button>
-                                     ))}
+                        {/* Bonus & Details Grid */}
+                        <div className="grid grid-cols-2 gap-4 relative z-0">
+                            {/* Annual Bonus Input */}
+                            <div className="col-span-1">
+                                <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1 truncate" title="Bonus / 13th Month">Bonus / 13th</label>
+                                <SmartNumberInput 
+                                    value={inputs.annualBonus || 0}
+                                    onChangeValue={(val) => setInputs({...inputs, annualBonus: val})}
+                                    step={100}
+                                    min={0}
+                                    prefix={currentRules.currencySymbol}
+                                    inputClassName="w-full h-14 pl-16 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#252528] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all duration-200 font-bold text-sm"
+                                />
+                            </div>
+                            
+                            <div className="col-span-1">
+                                <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Age</label>
+                                <SmartNumberInput 
+                                    value={inputs.details.age}
+                                    onChangeValue={(val) => setInputs({...inputs, details: { ...inputs.details, age: val || 30 }})}
+                                    step={1}
+                                    min={15} max={99}
+                                    inputClassName="w-full h-14 pl-2 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl focus:bg-white dark:focus:bg-[#252528] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all duration-200 text-center font-bold text-slate-900 dark:text-white text-sm"
+                                />
+                            </div>
+
+                            {currentRules.hasMaritalStatusOption && (
+                                <div className="col-span-2">
+                                    <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Marital Status</label>
+                                    <div className="grid grid-cols-2 gap-2 bg-[#F2F2F7] dark:bg-[#1c1c1e] p-1 rounded-xl h-14 items-center">
+                                        {['single', 'married'].map(status => (
+                                            <button
+                                                key={status}
+                                                onClick={() => setInputs({...inputs, details: { ...inputs.details, maritalStatus: status as any }})}
+                                                className={`h-12 rounded-lg text-xs font-extrabold uppercase tracking-wide transition-all duration-200 ${
+                                                    inputs.details.maritalStatus === status 
+                                                    ? 'bg-white dark:bg-[#333] shadow-sm text-blue-600 dark:text-blue-400 transform scale-[1.02]' 
+                                                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                                                }`}
+                                            >
+                                                {status}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {currentRules.hasChurchTaxOption && (
+                            <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer h-14 group" onClick={() => setInputs({...inputs, details: { ...inputs.details, churchTax: !inputs.details.churchTax }})}>
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer pointer-events-none">Apply Church Tax</label>
+                                <div className={`w-10 h-6 rounded-full relative transition-colors duration-300 ${inputs.details.churchTax ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600 group-hover:bg-gray-400 dark:group-hover:bg-slate-500'}`}>
+                                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${inputs.details.churchTax ? 'translate-x-4' : ''}`}></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* NLD 30% Ruling Option */}
+                        {currentRules.hasExpatOption && (
+                            <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer h-14 group" onClick={() => setInputs({...inputs, details: { ...inputs.details, isExpat: !inputs.details.isExpat }})}>
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer pointer-events-none">30% Ruling (Expat)</label>
+                                <div className={`w-10 h-6 rounded-full relative transition-colors duration-300 ${inputs.details.isExpat ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600 group-hover:bg-gray-400 dark:group-hover:bg-slate-500'}`}>
+                                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${inputs.details.isExpat ? 'translate-x-4' : ''}`}></div>
                                 </div>
                             </div>
                         )}
                     </div>
-                    
-                    {currentRules.hasChurchTaxOption && (
-                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer h-14 group" onClick={() => setInputs({...inputs, details: { ...inputs.details, churchTax: !inputs.details.churchTax }})}>
-                            <label className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer pointer-events-none">Apply Church Tax</label>
-                            <div className={`w-10 h-6 rounded-full relative transition-colors duration-300 ${inputs.details.churchTax ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600 group-hover:bg-gray-400 dark:group-hover:bg-slate-500'}`}>
-                                <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${inputs.details.churchTax ? 'translate-x-4' : ''}`}></div>
+                </div>
+
+                {/* Costs Section */}
+                <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl flex flex-col relative hover:z-50">
+                    {/* Gradient Header Background (Clipped) */}
+                    <div className="absolute top-0 left-0 right-0 h-[120px] rounded-t-[32px] overflow-hidden z-0">
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600"></div>
+                        <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
+                    </div>
+
+                    {/* Header Content (Raised to Z-30) */}
+                    <div className="p-6 md:p-8 pb-10 relative z-30 text-white shrink-0">
+                        <div className="relative z-10 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                    <i className="fas fa-receipt text-white"></i>
+                                </div>
+                                <h2 className="text-xl font-extrabold tracking-tight">Monthly Costs</h2>
+                                <InfoTooltip text="Input your recurring monthly costs (rent, groceries, etc.) to see your disposable income." className="text-white" direction="bottom" />
                             </div>
-                         </div>
-                    )}
+                            <span className="text-[10px] font-bold uppercase tracking-wide bg-white/20 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">Optional</span>
+                        </div>
+                    </div>
+
+                    {/* Body Content (Z-20) */}
+                    <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-t-[32px] rounded-b-[32px] relative z-20 flex-grow flex flex-col">
+                        
+                        {/* Budget Dashboard */}
+                        {result && result.netMonthly > 0 && (
+                            <div className="mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-[#18181b] border border-slate-100 dark:border-[#2c2c2e] animate-in fade-in slide-in-from-bottom-2">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div>
+                                        <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Budget Used</p>
+                                        <div className="flex items-baseline gap-1 mt-1">
+                                            <span className={`text-xl font-extrabold ${result.personalCostsTotal > result.netMonthly ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
+                                                {((result.personalCostsTotal / result.netMonthly) * 100).toFixed(0)}%
+                                            </span>
+                                            <span className="text-[11px] font-bold text-slate-400">of Net Pay</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Remaining</p>
+                                        <p className={`text-xl font-extrabold ${result.disposableMonthly < 0 ? 'text-red-500' : 'text-[#34C759]'}`}>
+                                            {formatCurrency(result.disposableMonthly)}
+                                        </p>
+                                    </div>
+                                </div>
+                                {/* Progress Bar */}
+                                <div className="w-full h-2.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden">
+                                    <div 
+                                        className={`h-full rounded-full transition-all duration-500 ease-out ${
+                                            (result.personalCostsTotal / result.netMonthly) > 1 ? 'bg-red-500' : 
+                                            (result.personalCostsTotal / result.netMonthly) > 0.8 ? 'bg-yellow-500' : 'bg-[#34C759]'
+                                        }`}
+                                        style={{ width: `${Math.min(((result.personalCostsTotal / result.netMonthly) * 100), 100)}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-5">
+                            {costFields.map((field) => {
+                                const val = (inputs.costs as any)[field.key];
+                                const pct = (result && result.netMonthly > 0 && val > 0) ? (val / result.netMonthly) * 100 : 0;
+                                return (
+                                <div key={field.key} className="relative">
+                                    <div className="flex justify-between items-center mb-1.5 ml-1">
+                                        <label className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">{field.label}</label>
+                                        {pct > 1 && (
+                                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${pct > 50 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-slate-100 text-slate-500 dark:bg-[#2c2c2e] dark:text-slate-400'}`}>
+                                                {pct.toFixed(0)}%
+                                            </span>
+                                        )}
+                                    </div>
+                                    
+                                    <SmartNumberInput
+                                        value={val || 0}
+                                        onChangeValue={(v) => handleCostChange(field.key as any, v)}
+                                        step={50}
+                                        min={0}
+                                        prefix={currentRules.currencySymbol}
+                                        inputClassName="w-full h-14 pl-14 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-4 focus:ring-red-500/10 outline-none transition-all duration-200 font-bold text-sm"
+                                    />
+                                </div>
+                            )})}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Costs Section */}
-            <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl flex flex-col relative hover:z-50">
-                {/* Gradient Header Background (Clipped) */}
-                <div className="absolute top-0 left-0 right-0 h-[120px] rounded-t-[32px] overflow-hidden z-0">
-                     <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600"></div>
-                     <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
-                </div>
-
-                {/* Header Content (Raised to Z-30) */}
-                <div className="p-6 md:p-8 pb-10 relative z-30 text-white shrink-0">
-                     <div className="relative z-10 flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
-                                <i className="fas fa-receipt text-white"></i>
+            {/* Right Column: Results */}
+            <div className="lg:col-span-8 space-y-6" id="results-panel">
+                {result && (
+                    <>
+                        {/* Hero Card (Gross) */}
+                        <div 
+                            className="relative rounded-[32px] shadow-2xl group border border-white/10 transition-all duration-500 hover:shadow-[0_25px_60px_rgba(0,0,0,0.5)] h-auto min-h-[200px] perspective-1000 bg-black hover:z-50"
+                            style={{ perspective: '1000px' }}
+                        >
+                            {/* Clipped Background Layer */}
+                            <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 transform-style-3d transition-transform duration-700 group-hover:rotate-x-2 group-hover:rotate-y-2 group-hover:scale-105 origin-center">
+                                <img 
+                                    src={getHDFlagUrl(inputs.country)} 
+                                    alt="Country Flag" 
+                                    className="w-full h-full object-cover contrast-125 saturate-[1.1] brightness-75 dark:brightness-50"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 mix-blend-multiply"></div>
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
                             </div>
-                            <h2 className="text-xl font-extrabold tracking-tight">Monthly Costs</h2>
-                            <InfoTooltip text="Input your recurring monthly costs (rent, groceries, etc.) to see your disposable income." className="text-white" direction="bottom" />
-                        </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wide bg-white/20 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">Optional</span>
-                     </div>
-                </div>
 
-                {/* Body Content (Z-20) */}
-                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-t-[32px] rounded-b-[32px] relative z-20 flex-grow flex flex-col">
-                    
-                    {/* Budget Dashboard */}
-                    {result && result.netMonthly > 0 && (
-                        <div className="mb-6 p-4 rounded-2xl bg-slate-50 dark:bg-[#18181b] border border-slate-100 dark:border-[#2c2c2e] animate-in fade-in slide-in-from-bottom-2">
-                            <div className="flex justify-between items-end mb-2">
-                                <div>
-                                    <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Budget Used</p>
-                                    <div className="flex items-baseline gap-1 mt-1">
-                                         <span className={`text-xl font-extrabold ${result.personalCostsTotal > result.netMonthly ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
-                                            {((result.personalCostsTotal / result.netMonthly) * 100).toFixed(0)}%
-                                         </span>
-                                         <span className="text-[11px] font-bold text-slate-400">of Net Pay</span>
+                            {/* Content Layer */}
+                            <div className="relative z-10 p-6 md:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+                                <div className="flex-1 min-w-0 w-full">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
+                                            <i className="fas fa-briefcase text-xl text-white drop-shadow-md"></i>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-white/90 text-base md:text-lg font-bold uppercase tracking-wider shadow-black drop-shadow-md">
+                                                {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
+                                            </p>
+                                            <InfoTooltip text="This is the total yearly salary before any taxes or deductions are taken out." className="text-white" direction="bottom" />
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Remaining</p>
-                                    <p className={`text-xl font-extrabold ${result.disposableMonthly < 0 ? 'text-red-500' : 'text-[#34C759]'}`}>
-                                        {formatCurrency(result.disposableMonthly)}
-                                    </p>
-                                </div>
-                            </div>
-                            {/* Progress Bar */}
-                            <div className="w-full h-2.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden">
-                                <div 
-                                    className={`h-full rounded-full transition-all duration-500 ease-out ${
-                                        (result.personalCostsTotal / result.netMonthly) > 1 ? 'bg-red-500' : 
-                                        (result.personalCostsTotal / result.netMonthly) > 0.8 ? 'bg-yellow-500' : 'bg-[#34C759]'
-                                    }`}
-                                    style={{ width: `${Math.min(((result.personalCostsTotal / result.netMonthly) * 100), 100)}%` }}
-                                ></div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-                        {costFields.map((field) => {
-                            const val = (inputs.costs as any)[field.key];
-                            const pct = (result && result.netMonthly > 0 && val > 0) ? (val / result.netMonthly) * 100 : 0;
-                            return (
-                            <div key={field.key} className="relative">
-                                <div className="flex justify-between items-center mb-1.5 ml-1">
-                                    <label className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">{field.label}</label>
-                                    {pct > 1 && (
-                                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${pct > 50 ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-slate-100 text-slate-500 dark:bg-[#2c2c2e] dark:text-slate-400'}`}>
-                                            {pct.toFixed(0)}%
-                                        </span>
-                                    )}
+                                    <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl mt-2 leading-none break-words">
+                                        {formatCurrency(result.grossAnnual)}
+                                    </h2>
                                 </div>
                                 
-                                <SmartNumberInput
-                                    value={val || 0}
-                                    onChangeValue={(v) => handleCostChange(field.key as any, v)}
-                                    step={50}
-                                    min={0}
-                                    prefix={currentRules.currencySymbol}
-                                    inputClassName="w-full h-14 pl-14 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-4 focus:ring-red-500/10 outline-none transition-all duration-200 font-bold text-sm"
-                                />
-                            </div>
-                        )})}
-                    </div>
-                </div>
-            </div>
-          </div>
-
-          {/* Right Column: Results */}
-          <div className="lg:col-span-8 space-y-6" id="results-panel">
-             {result && (
-                 <>
-                    {/* Hero Card (Gross) */}
-                    <div 
-                        className="relative rounded-[32px] shadow-2xl group border border-white/10 transition-all duration-500 hover:shadow-[0_25px_60px_rgba(0,0,0,0.5)] h-auto min-h-[200px] perspective-1000 bg-black hover:z-50"
-                        style={{ perspective: '1000px' }}
-                    >
-                        {/* Clipped Background Layer */}
-                        <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 transform-style-3d transition-transform duration-700 group-hover:rotate-x-2 group-hover:rotate-y-2 group-hover:scale-105 origin-center">
-                             <img 
-                                src={getHDFlagUrl(inputs.country)} 
-                                alt="Country Flag" 
-                                className="w-full h-full object-cover contrast-125 saturate-[1.1] brightness-75 dark:brightness-50"
-                             />
-                             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 mix-blend-multiply"></div>
-                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
-                        </div>
-
-                        {/* Content Layer */}
-                        <div className="relative z-10 p-6 md:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-                            <div className="flex-1 min-w-0 w-full">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
-                                        <i className="fas fa-briefcase text-xl text-white drop-shadow-md"></i>
+                                {/* Enlarged Monthly Button */}
+                                <div className="flex flex-col items-start lg:items-end gap-2 pb-1 w-full lg:w-auto">
+                                    <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 hover:bg-white/20 group-hover:translate-x-0 lg:group-hover:translate-x-[-5px] w-full lg:w-auto justify-between lg:justify-start">
+                                        <span className="text-white/90 text-xs font-extrabold uppercase tracking-wide drop-shadow-sm whitespace-nowrap">Monthly</span>
+                                        <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white drop-shadow-md break-all">{formatCurrency(result.grossMonthly)}</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <p className="text-white/90 text-base md:text-lg font-bold uppercase tracking-wider shadow-black drop-shadow-md">
-                                            {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
-                                        </p>
-                                        <InfoTooltip text="This is the total yearly salary before any taxes or deductions are taken out." className="text-white" direction="bottom" />
-                                    </div>
-                                </div>
-                                <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl mt-2 leading-none break-words">
-                                    {formatCurrency(result.grossAnnual)}
-                                </h2>
-                            </div>
-                            
-                            {/* Enlarged Monthly Button */}
-                            <div className="flex flex-col items-start lg:items-end gap-2 pb-1 w-full lg:w-auto">
-                                 <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 hover:bg-white/20 group-hover:translate-x-0 lg:group-hover:translate-x-[-5px] w-full lg:w-auto justify-between lg:justify-start">
-                                     <span className="text-white/90 text-xs font-extrabold uppercase tracking-wide drop-shadow-sm whitespace-nowrap">Monthly</span>
-                                     <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white drop-shadow-md break-all">{formatCurrency(result.grossMonthly)}</span>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Key Metrics Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[240px]">
-                        {/* Net Pay Card */}
-                        <div className="relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50">
-                             {/* Clipped Background */}
-                            <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#007AFF] to-[#0055ff] dark:from-[#0055ff] dark:to-[#0033cc]">
-                                <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                                    <i className="fas fa-money-bill-wave"></i>
+                        {/* Key Metrics Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[240px]">
+                            {/* Net Pay Card */}
+                            <div className="relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50">
+                                {/* Clipped Background */}
+                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#007AFF] to-[#0055ff] dark:from-[#0055ff] dark:to-[#0033cc]">
+                                    <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                        <i className="fas fa-money-bill-wave"></i>
+                                    </div>
+                                </div>
+                                
+                                <div className="absolute top-6 right-6 z-20">
+                                    <InfoTooltip text="The actual amount of money landing in your bank account each month after all taxes." className="text-white" />
+                                </div>
+                                
+                                <div className="relative z-10 flex flex-col h-full justify-between p-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                            <i className="fas fa-wallet text-lg text-white"></i>
+                                        </div>
+                                        <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
+                                            <div>Net Monthly</div>
+                                            <div>Pay</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 mb-4">
+                                        <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.netMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
+                                            {formatCurrency(result.netMonthly)}
+                                        </h3>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-white/20 flex justify-between items-end">
+                                        <div>
+                                            <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Net</p>
+                                            <p className="text-white font-extrabold text-xl">{formatCurrency(result.netAnnual)}</p>
+                                        </div>
+                                        <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Disposable Card */}
+                            <div className="relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50">
+                                {/* Clipped Background */}
+                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#34C759] to-[#2a9d48] dark:from-[#1b8a3b] dark:to-[#146c2e]">
+                                    <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                        <i className="fas fa-star"></i>
+                                    </div>
+                                </div>
+
+                                <div className="absolute top-6 right-6 z-20">
+                                    <InfoTooltip text="The amount you have left after paying taxes AND your monthly living costs (rent, bills, etc)." className="text-white" />
+                                </div>
+                                
+                                <div className="relative z-10 flex flex-col h-full justify-between p-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                            <i className="fas fa-smile-beam text-lg text-white"></i>
+                                        </div>
+                                        <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
+                                            <div>Disposable</div>
+                                            <div>Monthly</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 mb-4">
+                                        <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.disposableMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
+                                            {formatCurrency(result.disposableMonthly)}
+                                        </h3>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-white/20 flex justify-between items-end">
+                                        <div>
+                                            <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Disposable</p>
+                                            <p className="text-white font-extrabold text-xl">{formatCurrency(result.disposableMonthly * 12)}</p>
+                                        </div>
+                                        <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
+                                    </div>
                                 </div>
                             </div>
                             
-                            <div className="absolute top-6 right-6 z-20">
-                                <InfoTooltip text="The actual amount of money landing in your bank account each month after all taxes." className="text-white" />
+                            {/* Chart Card */}
+                            <div className="relative rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] text-slate-900 dark:text-white group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl hover:z-50">
+                                {/* Clipped Background */}
+                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-white dark:bg-[#101012]">
+                                    <div className="absolute -right-8 -bottom-8 text-slate-50 dark:text-[#18181b] text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                        <i className="fas fa-chart-pie"></i>
+                                    </div>
+                                </div>
+
+                                <div className="relative z-10 w-full h-full flex flex-col p-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-[#1c1c1e] flex items-center justify-center border border-slate-50 dark:border-[#333]">
+                                            <i className="fas fa-chart-pie text-lg text-slate-900 dark:text-white"></i>
+                                        </div>
+                                        <p className="text-slate-500 dark:text-slate-400 text-[13px] font-bold uppercase tracking-wider">Tax / Cost Ratio</p>
+                                        <InfoTooltip text="Visual breakdown of where your money goes: Taxes (Red), Living Costs (Blue), and Savings (Green)." className="text-slate-400" />
+                                    </div>
+                                    <div className="flex-grow flex items-center justify-center mt-2">
+                                        <DonutChart result={result} />
+                                    </div>
+                                </div>
                             </div>
+                        </div>
+
+                        {/* Quick Convert Horizontal Card */}
+                        <div className="rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl group/converter relative z-30 bg-white dark:bg-[#101012] hover:z-50">
                             
-                            <div className="relative z-10 flex flex-col h-full justify-between p-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
-                                        <i className="fas fa-wallet text-lg text-white"></i>
-                                    </div>
-                                    <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
-                                        <div>Net Monthly</div>
-                                        <div>Pay</div>
-                                    </div>
-                                </div>
+                            {/* Clipped Header Background */}
+                            <div className="absolute top-0 left-0 right-0 h-[96px] rounded-t-[32px] overflow-hidden z-0">
+                                <div className="absolute inset-0 bg-gradient-to-r from-[#2FB050] to-[#A0E870]"></div>
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-32 pointer-events-none"></div>
+                                <i className="fas fa-coins text-white/20 text-6xl absolute -right-4 -bottom-8 rotate-12"></i>
+                            </div>
 
-                                <div className="mt-6 mb-4">
-                                    <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.netMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
-                                        {formatCurrency(result.netMonthly)}
-                                    </h3>
-                                </div>
-
-                                <div className="pt-4 border-t border-white/20 flex justify-between items-end">
+                            {/* Header Content (Raised to Z-30) */}
+                            <div className="p-5 relative z-30 flex items-center justify-between text-white">
+                                <div className="flex items-center gap-3 relative z-10">
+                                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                        <i className="fas fa-exchange-alt text-white"></i>
+                                    </div>
                                     <div>
-                                        <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Net</p>
-                                        <p className="text-white font-extrabold text-xl">{formatCurrency(result.netAnnual)}</p>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-extrabold text-lg tracking-tight text-white leading-none">Quick Convert</h3>
+                                            <InfoTooltip text="Estimate how much this salary is worth in another currency or country." className="text-white" direction="bottom" />
+                                        </div>
+                                        <p className="text-white/80 text-xs font-medium mt-1">{getRateDisplay()}</p>
                                     </div>
-                                    <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
+                                </div>
+                            </div>
+                            
+                            {/* Body Content (Z-20) */}
+                            <div className="p-6 relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012]">
+                                <div className="flex flex-col md:flex-row items-end gap-4 relative">
+                                    
+                                    {/* FROM */}
+                                    <div className="flex-1 w-full space-y-2">
+                                        <div className="flex justify-between px-1">
+                                            <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">From</label>
+                                            <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[fromCurrency].name}</span>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <CurrencyDropdown value={fromCurrency} onChange={setFromCurrency} useShortName={true} />
+                                            <div className="relative flex-1">
+                                                <SmartNumberInput 
+                                                    value={convertAmount}
+                                                    onChangeValue={setConvertAmount}
+                                                    step={100}
+                                                    min={0}
+                                                    inputClassName="w-full h-14 pl-4 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-extrabold text-lg outline-none focus:bg-white dark:focus:bg-[#252528] focus:ring-4 focus:ring-[#2FB050]/10 transition-all duration-200 shadow-inner"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SWAP BUTTON */}
+                                    <button 
+                                        onClick={() => {
+                                            setFromCurrency(toCurrency);
+                                            setToCurrency(fromCurrency);
+                                        }}
+                                        className="absolute left-1/2 -translate-x-1/2 bottom-[22px] md:static md:translate-x-0 md:mb-2 w-10 h-10 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500 hover:bg-[#2FB050] hover:text-white transition-all active:scale-90 shadow-md hover:shadow-lg z-10"
+                                    >
+                                        <i className="fas fa-exchange-alt"></i>
+                                    </button>
+
+                                    {/* TO */}
+                                    <div className="flex-1 w-full space-y-2">
+                                        <div className="flex justify-between px-1">
+                                            <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">To</label>
+                                            <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[toCurrency].name}</span>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <CurrencyDropdown value={toCurrency} onChange={setToCurrency} useShortName={true} />
+                                            <div className="relative flex-1">
+                                                <div className="w-full h-14 pl-4 pr-4 bg-[#2FB050]/5 border border-[#2FB050]/20 rounded-2xl flex items-center text-[#2a8f43] dark:text-[#4ade80] font-extrabold text-lg overflow-hidden shadow-sm">
+                                                    {new Intl.NumberFormat('en-US', { style: 'decimal', maximumFractionDigits: 2 }).format(convertedResult)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Footer Actions */}
+                                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-[#222] flex flex-col sm:flex-row justify-between items-center gap-3">
+                                    <p className="text-[10px] text-slate-400 font-semibold text-center sm:text-left">
+                                        <i className="fas fa-clock mr-1"></i> 
+                                        Real-time estimate. Rates update daily.
+                                    </p>
+                                    <button 
+                                        onClick={applyToCalculator}
+                                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
+                                    >
+                                        <span>Use this Salary</span>
+                                        <i className="fas fa-arrow-up transform rotate-45"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Disposable Card */}
-                        <div className="relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50">
-                             {/* Clipped Background */}
-                             <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#34C759] to-[#2a9d48] dark:from-[#1b8a3b] dark:to-[#146c2e]">
-                                 <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                                    <i className="fas fa-star"></i>
-                                </div>
-                             </div>
+                        {/* Detailed Breakdown Table */}
+                        <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl relative z-10 hover:z-50">
+                            {/* Clipped Header Background */}
+                            <div className="absolute top-0 left-0 right-0 h-[88px] rounded-t-[32px] overflow-hidden z-0">
+                                <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900"></div>
+                                <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                            </div>
 
-                             <div className="absolute top-6 right-6 z-20">
-                                <InfoTooltip text="The amount you have left after paying taxes AND your monthly living costs (rent, bills, etc)." className="text-white" />
-                             </div>
-                            
-                            <div className="relative z-10 flex flex-col h-full justify-between p-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
-                                        <i className="fas fa-smile-beam text-lg text-white"></i>
+                            {/* Header Content (Raised to Z-30) */}
+                            <div className="p-6 flex justify-between items-center relative z-30">
+                                <div className="relative z-10 flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                        <i className="fas fa-list-alt text-white"></i>
                                     </div>
-                                    <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
-                                        <div>Disposable</div>
-                                        <div>Monthly</div>
-                                    </div>
+                                    <h3 className="font-extrabold text-lg text-white tracking-tight">Payslip Breakdown</h3>
+                                    <InfoTooltip text="A line-by-line explanation of every tax and deduction taken from your salary." className="text-white" direction="bottom" />
                                 </div>
+                                <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
+                                    <i className="fas fa-arrow-down-to-line"></i> Get PDF
+                                </button>
+                            </div>
 
-                                <div className="mt-6 mb-4">
-                                    <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.disposableMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
-                                        {formatCurrency(result.disposableMonthly)}
-                                    </h3>
-                                </div>
+                            {/* Body Content (Z-20) */}
+                            <div className="p-0 overflow-x-auto relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012]">
+                                <table className="w-full text-sm text-left min-w-[600px]">
+                                    <thead className="text-xs text-[#86868b] dark:text-slate-400 uppercase font-bold bg-[#F5F5F7] dark:bg-[#18181b] border-b border-gray-100 dark:border-[#333]">
+                                        <tr>
+                                            <th className="px-6 py-4 pl-8">Description</th>
+                                            <th className="px-6 py-4 text-right">Annual</th>
+                                            <th className="px-6 py-4 text-right">Monthly</th>
+                                            <th className="px-6 py-4 text-right w-24">%</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 dark:divide-[#222]">
+                                        {/* Earnings Section */}
+                                        <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                            <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Earnings</td>
+                                        </tr>
+                                        <tr className="text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
+                                            <td className="px-6 py-4 pl-8 font-bold flex items-center gap-3">
+                                                <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400"><i className="fas fa-briefcase text-[10px]"></i></div>
+                                                Base Salary
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.grossAnnual)}</td>
+                                            <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.grossMonthly)}</td>
+                                            <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">100%</td>
+                                        </tr>
+                                        {inputs.annualBonus > 0 && (
+                                            <tr className="text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
+                                                <td className="px-6 py-4 pl-8 font-bold flex items-center gap-3">
+                                                    <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><i className="fas fa-gift text-[10px]"></i></div>
+                                                    Annual Bonus
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-bold whitespace-nowrap">{formatCurrency(inputs.annualBonus)}</td>
+                                                <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>
+                                                <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>
+                                            </tr>
+                                        )}
 
-                                <div className="pt-4 border-t border-white/20 flex justify-between items-end">
-                                    <div>
-                                        <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Disposable</p>
-                                        <p className="text-white font-extrabold text-xl">{formatCurrency(result.disposableMonthly * 12)}</p>
-                                    </div>
-                                    <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
-                                </div>
+                                        {/* Deductions Section */}
+                                        <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                            <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-2">Deductions</td>
+                                        </tr>
+                                        {employeeDeductions.length > 0 ? (
+                                            employeeDeductions.map((d, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-[#1c1c1e] transition-colors text-[#FF3B30] dark:text-red-400">
+                                                <td className="px-6 py-4 pl-8 flex items-center group font-bold">
+                                                    <span className="w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 mr-3"><i className="fas fa-minus text-[10px]"></i></span>
+                                                    {d.name}
+                                                    {d.description && (
+                                                        <div className="relative ml-2">
+                                                            <i className="fas fa-info-circle text-gray-300 dark:text-slate-600 hover:text-blue-400 cursor-help transition-colors"></i>
+                                                            <div className="absolute left-0 bottom-6 w-64 bg-[#1d1d1f] dark:bg-black text-white text-xs p-3 rounded-xl shadow-xl hidden group-hover:block z-20 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-medium border border-gray-700">
+                                                                {d.description}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-medium whitespace-nowrap">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount))}</td>
+                                                <td className="px-6 py-4 text-right font-medium whitespace-nowrap">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount / 12))}</td>
+                                                <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-medium">
+                                                    {(d.amount / (result.grossAnnual || 1) * 100).toFixed(1)}%
+                                                </td>
+                                            </tr>
+                                        ))) : (
+                                            <tr>
+                                                <td colSpan={4} className="px-6 py-4 text-center text-slate-400 text-sm italic">No employee deductions found.</td>
+                                            </tr>
+                                        )}
+                                        
+                                        {/* Net Pay Row */}
+                                        <tr className="bg-blue-50/50 dark:bg-[#007AFF]/10 text-slate-900 dark:text-white border-t-2 border-blue-100 dark:border-blue-900">
+                                            <td className="px-6 py-4 pl-8 font-extrabold flex items-center gap-3 text-blue-700 dark:text-blue-400">
+                                                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md"><i className="fas fa-check text-[10px]"></i></div>
+                                                Net Pay
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-extrabold text-blue-700 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.netAnnual)}</td>
+                                            <td className="px-6 py-4 text-right font-extrabold text-blue-700 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.netMonthly)}</td>
+                                            <td className="px-6 py-4 text-right text-blue-600 dark:text-blue-400 font-bold">
+                                                {(result.netAnnual / (result.grossAnnual || 1) * 100).toFixed(1)}%
+                                            </td>
+                                        </tr>
+
+                                        {/* Employer Section */}
+                                        {employerDeductions.length > 0 && (
+                                            <>
+                                                <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                                    <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Employer Contributions (Informational)</td>
+                                                </tr>
+                                                {employerDeductions.map((d, idx) => (
+                                                    <tr key={`emp-${idx}`} className="text-slate-400 dark:text-slate-500 italic hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
+                                                        <td className="px-6 py-3 pl-8 flex items-center gap-3">
+                                                            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500"><i className="fas fa-building text-[10px]"></i></div>
+                                                            {d.name}
+                                                        </td>
+                                                        <td className="px-6 py-3 text-right whitespace-nowrap">{formatCurrency(d.amount)}</td>
+                                                        <td className="px-6 py-3 text-right whitespace-nowrap">{formatCurrency(d.amount / 12)}</td>
+                                                        <td className="px-6 py-3 text-right">-</td>
+                                                    </tr>
+                                                ))}
+                                            </>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                         
-                        {/* Chart Card */}
-                        <div className="relative rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] text-slate-900 dark:text-white group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl hover:z-50">
-                             {/* Clipped Background */}
-                             <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-white dark:bg-[#101012]">
-                                 <div className="absolute -right-8 -bottom-8 text-slate-50 dark:text-[#18181b] text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                                    <i className="fas fa-chart-pie"></i>
-                                 </div>
-                             </div>
-
-                             <div className="relative z-10 w-full h-full flex flex-col p-6">
-                                <div className="flex items-center gap-3 mb-2">
-                                     <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-[#1c1c1e] flex items-center justify-center border border-slate-50 dark:border-[#333]">
-                                        <i className="fas fa-chart-pie text-lg text-slate-900 dark:text-white"></i>
-                                     </div>
-                                     <p className="text-slate-500 dark:text-slate-400 text-[13px] font-bold uppercase tracking-wider">Tax / Cost Ratio</p>
-                                     <InfoTooltip text="Visual breakdown of where your money goes: Taxes (Red), Living Costs (Blue), and Savings (Green)." className="text-slate-400" />
-                                </div>
-                                <div className="flex-grow flex items-center justify-center mt-2">
-                                    <DonutChart result={result} />
-                                </div>
-                             </div>
+                        <div className="text-center pt-4 pb-8">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold">Calculations are estimates based on {currentRules.name} tax laws.</p>
                         </div>
-                    </div>
-
-                    {/* Quick Convert Horizontal Card */}
-                    <div className="rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl group/converter relative z-30 bg-white dark:bg-[#101012] hover:z-50">
-                         
-                         {/* Clipped Header Background */}
-                         <div className="absolute top-0 left-0 right-0 h-[96px] rounded-t-[32px] overflow-hidden z-0">
-                             <div className="absolute inset-0 bg-gradient-to-r from-[#2FB050] to-[#A0E870]"></div>
-                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-32 pointer-events-none"></div>
-                             <i className="fas fa-coins text-white/20 text-6xl absolute -right-4 -bottom-8 rotate-12"></i>
-                         </div>
-
-                         {/* Header Content (Raised to Z-30) */}
-                         <div className="p-5 relative z-30 flex items-center justify-between text-white">
-                             <div className="flex items-center gap-3 relative z-10">
-                                 <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
-                                    <i className="fas fa-exchange-alt text-white"></i>
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="font-extrabold text-lg tracking-tight text-white leading-none">Quick Convert</h3>
-                                        <InfoTooltip text="Estimate how much this salary is worth in another currency or country." className="text-white" direction="bottom" />
-                                    </div>
-                                    <p className="text-white/80 text-xs font-medium mt-1">{getRateDisplay()}</p>
-                                </div>
-                             </div>
-                         </div>
-                         
-                         {/* Body Content (Z-20) */}
-                         <div className="p-6 relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012]">
-                             <div className="flex flex-col md:flex-row items-end gap-4 relative">
-                                 
-                                 {/* FROM */}
-                                 <div className="flex-1 w-full space-y-2">
-                                    <div className="flex justify-between px-1">
-                                        <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">From</label>
-                                        <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[fromCurrency].name}</span>
-                                    </div>
-                                     <div className="flex gap-3">
-                                        <CurrencyDropdown value={fromCurrency} onChange={setFromCurrency} useShortName={true} />
-                                        <div className="relative flex-1">
-                                            <SmartNumberInput 
-                                                value={convertAmount}
-                                                onChangeValue={setConvertAmount}
-                                                step={100}
-                                                min={0}
-                                                inputClassName="w-full h-14 pl-4 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-extrabold text-lg outline-none focus:bg-white dark:focus:bg-[#252528] focus:ring-4 focus:ring-[#2FB050]/10 transition-all duration-200 shadow-inner"
-                                            />
-                                        </div>
-                                     </div>
-                                 </div>
-
-                                 {/* SWAP BUTTON */}
-                                 <button 
-                                     onClick={() => {
-                                         setFromCurrency(toCurrency);
-                                         setToCurrency(fromCurrency);
-                                     }}
-                                     className="absolute left-1/2 -translate-x-1/2 bottom-[22px] md:static md:translate-x-0 md:mb-2 w-10 h-10 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500 hover:bg-[#2FB050] hover:text-white transition-all active:scale-90 shadow-md hover:shadow-lg z-10"
-                                 >
-                                     <i className="fas fa-exchange-alt"></i>
-                                 </button>
-
-                                 {/* TO */}
-                                 <div className="flex-1 w-full space-y-2">
-                                    <div className="flex justify-between px-1">
-                                        <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">To</label>
-                                        <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[toCurrency].name}</span>
-                                    </div>
-                                     <div className="flex gap-3">
-                                        <CurrencyDropdown value={toCurrency} onChange={setToCurrency} useShortName={true} />
-                                        <div className="relative flex-1">
-                                            <div className="w-full h-14 pl-4 pr-4 bg-[#2FB050]/5 border border-[#2FB050]/20 rounded-2xl flex items-center text-[#2a8f43] dark:text-[#4ade80] font-extrabold text-lg overflow-hidden shadow-sm">
-                                                {new Intl.NumberFormat('en-US', { style: 'decimal', maximumFractionDigits: 2 }).format(convertedResult)}
-                                            </div>
-                                        </div>
-                                     </div>
-                                 </div>
-                             </div>
-
-                             {/* Footer Actions */}
-                             <div className="mt-6 pt-4 border-t border-slate-100 dark:border-[#222] flex flex-col sm:flex-row justify-between items-center gap-3">
-                                 <p className="text-[10px] text-slate-400 font-semibold text-center sm:text-left">
-                                    <i className="fas fa-clock mr-1"></i> 
-                                    Real-time estimate. Rates update daily.
-                                 </p>
-                                 <button 
-                                    onClick={applyToCalculator}
-                                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
-                                 >
-                                     <span>Use this Salary</span>
-                                     <i className="fas fa-arrow-up transform rotate-45"></i>
-                                 </button>
-                             </div>
-                         </div>
-                    </div>
-
-                    {/* Detailed Breakdown Table */}
-                    <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl relative z-10 hover:z-50">
-                         {/* Clipped Header Background */}
-                        <div className="absolute top-0 left-0 right-0 h-[88px] rounded-t-[32px] overflow-hidden z-0">
-                             <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900"></div>
-                             <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-                        </div>
-
-                        {/* Header Content (Raised to Z-30) */}
-                        <div className="p-6 flex justify-between items-center relative z-30">
-                             <div className="relative z-10 flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
-                                    <i className="fas fa-list-alt text-white"></i>
-                                </div>
-                                <h3 className="font-extrabold text-lg text-white tracking-tight">Payslip Breakdown</h3>
-                                <InfoTooltip text="A line-by-line explanation of every tax and deduction taken from your salary." className="text-white" direction="bottom" />
-                             </div>
-                             <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
-                                <i className="fas fa-arrow-down-to-line"></i> Get PDF
-                            </button>
-                        </div>
-
-                        {/* Body Content (Z-20) */}
-                        <div className="p-0 overflow-x-auto relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012]">
-                            <table className="w-full text-sm text-left min-w-[600px]">
-                                <thead className="text-xs text-[#86868b] dark:text-slate-400 uppercase font-bold bg-[#F5F5F7] dark:bg-[#18181b] border-b border-gray-100 dark:border-[#333]">
-                                    <tr>
-                                        <th className="px-6 py-4 pl-8">Description</th>
-                                        <th className="px-6 py-4 text-right">Annual</th>
-                                        <th className="px-6 py-4 text-right">Monthly</th>
-                                        <th className="px-6 py-4 text-right w-24">%</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-[#222]">
-                                    {/* Earnings Section */}
-                                    <tr className="bg-slate-50/50 dark:bg-[#151517]">
-                                        <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Earnings</td>
-                                    </tr>
-                                    <tr className="text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
-                                        <td className="px-6 py-4 pl-8 font-bold flex items-center gap-3">
-                                            <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400"><i className="fas fa-briefcase text-[10px]"></i></div>
-                                            Base Salary
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.grossAnnual)}</td>
-                                        <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.grossMonthly)}</td>
-                                        <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">100%</td>
-                                    </tr>
-                                    {inputs.annualBonus > 0 && (
-                                         <tr className="text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
-                                            <td className="px-6 py-4 pl-8 font-bold flex items-center gap-3">
-                                                <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><i className="fas fa-gift text-[10px]"></i></div>
-                                                Annual Bonus
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-bold whitespace-nowrap">{formatCurrency(inputs.annualBonus)}</td>
-                                            <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>
-                                            <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>
-                                        </tr>
-                                    )}
-
-                                    {/* Deductions Section */}
-                                    <tr className="bg-slate-50/50 dark:bg-[#151517]">
-                                        <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-2">Deductions</td>
-                                    </tr>
-                                    {employeeDeductions.length > 0 ? (
-                                        employeeDeductions.map((d, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-[#1c1c1e] transition-colors text-[#FF3B30] dark:text-red-400">
-                                            <td className="px-6 py-4 pl-8 flex items-center group font-bold">
-                                                <span className="w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 mr-3"><i className="fas fa-minus text-[10px]"></i></span>
-                                                {d.name}
-                                                {d.description && (
-                                                    <div className="relative ml-2">
-                                                        <i className="fas fa-info-circle text-gray-300 dark:text-slate-600 hover:text-blue-400 cursor-help transition-colors"></i>
-                                                        <div className="absolute left-0 bottom-6 w-64 bg-[#1d1d1f] dark:bg-black text-white text-xs p-3 rounded-xl shadow-xl hidden group-hover:block z-20 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-medium border border-gray-700">
-                                                            {d.description}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-medium whitespace-nowrap">-{formatCurrency(d.amount)}</td>
-                                            <td className="px-6 py-4 text-right font-medium whitespace-nowrap">-{formatCurrency(d.amount / 12)}</td>
-                                            <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-medium">
-                                                {(d.amount / (result.grossAnnual || 1) * 100).toFixed(1)}%
-                                            </td>
-                                        </tr>
-                                    ))) : (
-                                        <tr>
-                                            <td colSpan={4} className="px-6 py-4 text-center text-slate-400 text-sm italic">No employee deductions found.</td>
-                                        </tr>
-                                    )}
-                                    
-                                    {/* Net Pay Row */}
-                                    <tr className="bg-blue-50/50 dark:bg-[#007AFF]/10 text-slate-900 dark:text-white border-t-2 border-blue-100 dark:border-blue-900">
-                                        <td className="px-6 py-4 pl-8 font-extrabold flex items-center gap-3 text-blue-700 dark:text-blue-400">
-                                            <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md"><i className="fas fa-check text-[10px]"></i></div>
-                                            Net Pay
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-extrabold text-blue-700 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.netAnnual)}</td>
-                                        <td className="px-6 py-4 text-right font-extrabold text-blue-700 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.netMonthly)}</td>
-                                        <td className="px-6 py-4 text-right text-blue-600 dark:text-blue-400 font-bold">
-                                            {(result.netAnnual / (result.grossAnnual || 1) * 100).toFixed(1)}%
-                                        </td>
-                                    </tr>
-
-                                    {/* Employer Section */}
-                                    {employerDeductions.length > 0 && (
-                                        <>
-                                            <tr className="bg-slate-50/50 dark:bg-[#151517]">
-                                                <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Employer Contributions (Informational)</td>
-                                            </tr>
-                                            {employerDeductions.map((d, idx) => (
-                                                <tr key={`emp-${idx}`} className="text-slate-400 dark:text-slate-500 italic hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
-                                                    <td className="px-6 py-3 pl-8 flex items-center gap-3">
-                                                        <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500"><i className="fas fa-building text-[10px]"></i></div>
-                                                        {d.name}
-                                                    </td>
-                                                    <td className="px-6 py-3 text-right whitespace-nowrap">{formatCurrency(d.amount)}</td>
-                                                    <td className="px-6 py-3 text-right whitespace-nowrap">{formatCurrency(d.amount / 12)}</td>
-                                                    <td className="px-6 py-3 text-right">-</td>
-                                                </tr>
-                                            ))}
-                                        </>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <div className="text-center pt-4 pb-8">
-                         <p className="text-xs text-slate-400 dark:text-slate-500 font-bold">Calculations are estimates based on {currentRules.name} tax laws.</p>
-                    </div>
-                 </>
-             )}
-          </div>
-        </div>
+                    </>
+                )}
+            </div>
+            </div>
+        )}
       </main>
       {/* Hidden Invoice Template for PDF Generation */}
       <div id="pdf-invoice-template" className="fixed top-0 left-0 -z-50 bg-white text-slate-900 p-12 w-[210mm] min-h-[297mm]" style={{ fontFamily: 'sans-serif' }}>
@@ -1547,8 +1724,8 @@ const App: React.FC = () => {
                         {employeeDeductions.map((d, i) => (
                             <tr key={i} className="border-b border-gray-50 text-red-600">
                                 <td className="py-3 px-4">{d.name}</td>
-                                <td className="py-3 px-4 text-right">-{formatCurrency(d.amount)}</td>
-                                <td className="py-3 px-4 text-right">-{formatCurrency(d.amount/12)}</td>
+                                <td className="py-3 px-4 text-right">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount))}</td>
+                                <td className="py-3 px-4 text-right">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount/12))}</td>
                                 <td className="py-3 px-4 text-right">{(d.amount / result.grossAnnual * 100).toFixed(1)}%</td>
                             </tr>
                         ))}
