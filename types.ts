@@ -26,6 +26,7 @@ export interface TaxBracket {
 export interface Deductible {
   name: string;
   description?: string;
+  // 'credit_progressive' is for tax credits that scale with income (e.g. Dutch Heffingskorting)
   type: 'percentage' | 'fixed' | 'progressive' | 'credit_progressive';
   rate?: number; 
   amount?: number; 
