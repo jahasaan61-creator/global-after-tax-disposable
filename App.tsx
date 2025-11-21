@@ -40,7 +40,7 @@ const getHDFlagUrl = (code: CountryCode) => {
 // --- COMPONENTS ---
 
 // Enhanced Searchable Dropdown
-const CurrencyDropdown = ({ value, onChange }: { value: CountryCode, onChange: (v: CountryCode) => void }) => {
+const CurrencyDropdown = ({ value, onChange, className }: { value: CountryCode, onChange: (v: CountryCode) => void, className?: string }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -72,7 +72,7 @@ const CurrencyDropdown = ({ value, onChange }: { value: CountryCode, onChange: (
   ), [search]);
 
   return (
-      <div className="relative w-[45%] sm:w-[42%]" ref={ref}>
+      <div className={`relative ${className || 'w-[45%] sm:w-[42%]'}`} ref={ref}>
           <button 
               onClick={() => setOpen(!open)}
               className="w-full h-14 pl-3 pr-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl flex items-center gap-3 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 hover:bg-white/50 dark:hover:bg-[#333] transition-all shadow-sm group"
@@ -80,15 +80,15 @@ const CurrencyDropdown = ({ value, onChange }: { value: CountryCode, onChange: (
               <div className="w-9 h-9 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-sm shrink-0 group-hover:scale-110 transition-transform bg-white">
                   <img src={getFlagUrl(value)} alt={rule.name} className="w-full h-full object-cover" />
               </div>
-              <div className="flex flex-col items-start overflow-hidden">
-                  <span className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">{rule.currency}</span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate w-full text-left">{rule.code}</span>
+              <div className="flex flex-col items-start overflow-hidden text-left">
+                  <span className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">{rule.name}</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate w-full">{rule.currency} ({rule.code})</span>
               </div>
               <i className="fas fa-chevron-down text-[10px] text-slate-400 ml-auto group-hover:text-blue-500 transition-colors"></i>
           </button>
 
           {open && (
-              <div className="absolute top-full left-0 mt-2 w-[280px] max-h-[320px] flex flex-col bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#333] z-[60] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+              <div className="absolute top-full left-0 mt-2 w-full min-w-[280px] max-h-[320px] flex flex-col bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#333] z-[60] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                   <div className="p-3 border-b border-gray-50 dark:border-[#333] bg-white dark:bg-[#1c1c1e] sticky top-0 z-10">
                       <div className="relative">
                           <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
@@ -112,8 +112,8 @@ const CurrencyDropdown = ({ value, onChange }: { value: CountryCode, onChange: (
                             <img src={getFlagUrl(c.code)} alt={c.name} className="w-7 h-7 rounded-full object-cover shadow-sm shrink-0 border border-black/5 dark:border-white/10" />
                             <div className="flex flex-col min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-slate-900 dark:text-white">{c.currency}</span>
-                                    <span className="text-[10px] text-slate-500 truncate">- {c.name}</span>
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white">{c.name}</span>
+                                    <span className="text-[10px] text-slate-500 truncate">({c.code})</span>
                                 </div>
                             </div>
                             {c.code === value && <i className="fas fa-check text-blue-500 text-xs ml-auto"></i>}
@@ -123,6 +123,101 @@ const CurrencyDropdown = ({ value, onChange }: { value: CountryCode, onChange: (
                         <div className="p-6 text-center">
                             <i className="fas fa-search-minus text-slate-300 text-xl mb-2"></i>
                             <p className="text-xs text-slate-400 font-medium">No countries found</p>
+                        </div>
+                    )}
+                  </div>
+              </div>
+          )}
+      </div>
+  );
+};
+
+// Region (State/Province) Dropdown
+const RegionDropdown = ({ country, value, onChange }: { country: CountryCode, value: string, onChange: (v: string) => void }) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const rule = COUNTRY_RULES[country];
+  const subRules = rule.subNationalRules || [];
+
+  useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+          if (ref.current && !ref.current.contains(event.target as Node)) {
+              setOpen(false);
+              setSearch(''); 
+          }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (open && inputRef.current) {
+        inputRef.current.focus();
+    }
+  }, [open]);
+
+  const filtered = useMemo(() => subRules.filter(r => 
+      r.name.toLowerCase().includes(search.toLowerCase())
+  ), [subRules, search]);
+
+  // Early return allowed here because hooks have already been called unconditionally above.
+  if (!subRules.length) return null;
+
+  const selectedRegion = subRules.find(r => r.id === value);
+
+  return (
+      <div className="relative w-full mt-4 z-20" ref={ref}>
+           <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">{rule.subNationalLabel}</label>
+           <button 
+              onClick={() => setOpen(!open)}
+              className="w-full h-14 pl-3 pr-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl flex items-center gap-3 cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 hover:bg-white/50 dark:hover:bg-[#333] transition-all shadow-sm group"
+          >
+              <div className="w-9 h-9 rounded-2xl bg-white dark:bg-[#2c2c2e] flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 group-hover:scale-110 transition-transform">
+                 <i className="fas fa-map-marker-alt text-slate-400 dark:text-slate-500 group-hover:text-blue-500 transition-colors"></i>
+              </div>
+              <div className="flex flex-col items-start overflow-hidden text-left">
+                  <span className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
+                      {selectedRegion ? selectedRegion.name : `Select ${rule.subNationalLabel}`}
+                  </span>
+              </div>
+              <i className="fas fa-chevron-down text-[10px] text-slate-400 ml-auto group-hover:text-blue-500 transition-colors"></i>
+          </button>
+
+          {open && (
+              <div className="absolute top-full left-0 mt-2 w-full flex flex-col bg-white dark:bg-[#1c1c1e] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#333] z-[60] animate-in fade-in zoom-in-95 duration-200 overflow-hidden max-h-[280px]">
+                   <div className="p-3 border-b border-gray-50 dark:border-[#333] bg-white dark:bg-[#1c1c1e] sticky top-0 z-10">
+                      <div className="relative">
+                          <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                          <input 
+                            ref={inputRef}
+                            type="text" 
+                            placeholder={`Search ${rule.subNationalLabel}...`}
+                            className="w-full pl-8 pr-3 py-2.5 bg-slate-50 dark:bg-[#2c2c2e] rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                          />
+                      </div>
+                  </div>
+                  <div className="overflow-y-auto flex-1 p-1 scrollbar-thin">
+                      {filtered.map((r) => (
+                        <button 
+                            key={r.id}
+                            onClick={() => { onChange(r.id); setOpen(false); setSearch(''); }}
+                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-[#2c2c2e] transition-colors text-left group border-b border-transparent last:border-0 ${r.id === value ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                        >
+                             <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-[#333] flex items-center justify-center shrink-0 text-slate-400 group-hover:text-blue-500">
+                                <span className="text-[10px] font-bold">{r.id.substring(0,2)}</span>
+                             </div>
+                             <span className="text-xs font-bold text-slate-900 dark:text-white">{r.name}</span>
+                             {r.id === value && <i className="fas fa-check text-blue-500 text-xs ml-auto"></i>}
+                        </button>
+                      ))}
+                      {filtered.length === 0 && (
+                        <div className="p-6 text-center">
+                            <p className="text-xs text-slate-400 font-medium">No regions found</p>
                         </div>
                     )}
                   </div>
@@ -542,9 +637,9 @@ const App: React.FC = () => {
           {/* Left Column: Inputs */}
           <div className="lg:col-span-4 space-y-6">
             {/* Income Section */}
-            <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] overflow-hidden transition-all duration-300 hover:shadow-2xl">
+            <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl">
                 {/* Gradient Header */}
-                <div className="bg-gradient-to-r from-[#0034b8] to-[#0c58fa] p-6 md:p-8 pb-10 relative text-white">
+                <div className="bg-gradient-to-r from-[#0034b8] to-[#0c58fa] p-6 md:p-8 pb-10 relative text-white rounded-t-[32px]">
                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
                      <div className="relative z-10 flex justify-between items-start">
                         <div className="flex flex-col gap-2">
@@ -569,53 +664,23 @@ const App: React.FC = () => {
                      </div>
                 </div>
 
-                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-t-[32px] relative z-20 space-y-5">
-                    <div>
+                <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-b-[32px] rounded-t-[32px] relative z-20 space-y-5">
+                    <div className="relative z-30">
                         <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
-                        <div className="relative">
-                            <img 
-                                src={getFlagUrl(inputs.country)} 
-                                alt="flag" 
-                                className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full object-cover shadow-sm z-10 contrast-125 saturate-150"
-                                crossOrigin="anonymous"
-                            />
-                            <select 
-                                className="w-full p-4 pl-14 pr-10 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-[#2c2c2e] transition-all outline-none text-slate-900 dark:text-white cursor-pointer"
-                                value={inputs.country}
-                                onChange={(e) => setInputs({...inputs, country: e.target.value as CountryCode, subRegion: undefined })}
-                            >
-                                {Object.values(COUNTRY_RULES).map(c => (
-                                    <option key={c.code} value={c.code}>{c.name} ({c.currency})</option>
-                                ))}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                                <i className="fas fa-chevron-down text-xs"></i>
-                            </div>
-                        </div>
+                        <CurrencyDropdown 
+                            value={inputs.country} 
+                            onChange={(val) => setInputs({...inputs, country: val, subRegion: undefined })} 
+                            className="w-full"
+                        />
                     </div>
 
-                    {currentRules.subNationalRules && (
-                        <div>
-                             <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">{currentRules.subNationalLabel}</label>
-                             <div className="relative">
-                                <select 
-                                    className="w-full p-4 pr-10 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl appearance-none text-[15px] font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-[#2c2c2e] transition-all outline-none text-slate-900 dark:text-white cursor-pointer"
-                                    value={inputs.subRegion || ''}
-                                    onChange={(e) => setInputs({...inputs, subRegion: e.target.value })}
-                                >
-                                    <option value="">Select {currentRules.subNationalLabel}...</option>
-                                    {currentRules.subNationalRules.map(r => (
-                                        <option key={r.id} value={r.id}>{r.name}</option>
-                                    ))}
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400">
-                                    <i className="fas fa-chevron-down text-xs"></i>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <RegionDropdown 
+                        country={inputs.country}
+                        value={inputs.subRegion || ''}
+                        onChange={(val) => setInputs({...inputs, subRegion: val })}
+                    />
 
-                    <div>
+                    <div className="relative z-10 pt-2">
                         <div className="flex justify-between items-center mb-2 pl-1 pr-1">
                              <label className="text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">
                                 {mode === 'gross' ? 'Gross Income' : 'Desired Net Income'}
@@ -676,7 +741,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Bonus & Details Grid */}
-                    <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="grid grid-cols-2 gap-4 pt-2 relative z-0">
                          {/* Annual Bonus Input */}
                         <div className="col-span-1">
                             <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1 truncate" title="Bonus / 13th Month">Bonus / 13th</label>
