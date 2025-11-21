@@ -40,7 +40,7 @@ const getHDFlagUrl = (code: CountryCode) => {
 // --- COMPONENTS ---
 
 // Enhanced Searchable Dropdown
-const CurrencyDropdown = ({ value, onChange, className }: { value: CountryCode, onChange: (v: CountryCode) => void, className?: string }) => {
+const CurrencyDropdown = ({ value, onChange, className, useShortName }: { value: CountryCode, onChange: (v: CountryCode) => void, className?: string, useShortName?: boolean }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -81,8 +81,12 @@ const CurrencyDropdown = ({ value, onChange, className }: { value: CountryCode, 
                   <img src={getFlagUrl(value)} alt={rule.name} className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col items-start overflow-hidden text-left">
-                  <span className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">{rule.name}</span>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate w-full">{rule.currency} ({rule.code})</span>
+                  <span className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
+                    {useShortName ? rule.currency : rule.name}
+                  </span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate w-full">
+                    {useShortName ? rule.name : `${rule.currency} (${rule.code})`}
+                  </span>
               </div>
               <i className="fas fa-chevron-down text-[10px] text-slate-400 ml-auto group-hover:text-blue-500 transition-colors"></i>
           </button>
@@ -112,8 +116,12 @@ const CurrencyDropdown = ({ value, onChange, className }: { value: CountryCode, 
                             <img src={getFlagUrl(c.code)} alt={c.name} className="w-7 h-7 rounded-full object-cover shadow-sm shrink-0 border border-black/5 dark:border-white/10" />
                             <div className="flex flex-col min-w-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-slate-900 dark:text-white">{c.name}</span>
-                                    <span className="text-[10px] text-slate-500 truncate">({c.code})</span>
+                                    <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                        {useShortName ? c.currency : c.name}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 truncate">
+                                        {useShortName ? c.name : `(${c.code})`}
+                                    </span>
                                 </div>
                             </div>
                             {c.code === value && <i className="fas fa-check text-blue-500 text-xs ml-auto"></i>}
@@ -696,7 +704,7 @@ const App: React.FC = () => {
                                 type="number" 
                                 min="0"
                                 autoComplete="off"
-                                className={`w-full p-4 pl-10 pr-32 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
+                                className={`w-full h-14 pl-20 pr-32 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 ${mode === 'net' ? 'focus:ring-green-500/20' : 'focus:ring-blue-500/20'} outline-none transition-all font-extrabold text-xl tracking-tight`}
                                 value={mode === 'gross' ? inputs.grossIncome : targetNet}
                                 onChange={(e) => {
                                     const val = parseFloat(e.target.value) || 0;
@@ -754,7 +762,7 @@ const App: React.FC = () => {
                                     min="0"
                                     autoComplete="off"
                                     placeholder="0"
-                                    className="w-full p-3 pl-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-sm"
+                                    className="w-full h-14 pl-16 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-bold text-sm"
                                     value={inputs.annualBonus || ''}
                                     onChange={(e) => setInputs({...inputs, annualBonus: parseFloat(e.target.value) || 0})}
                                 />
@@ -767,7 +775,7 @@ const App: React.FC = () => {
                                 type="number" 
                                 min="15" max="99"
                                 autoComplete="off"
-                                className="w-full p-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-slate-900 dark:text-white text-sm"
+                                className="w-full h-14 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-2xl focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-center font-bold text-slate-900 dark:text-white text-sm"
                                 value={inputs.details.age}
                                 onChange={(e) => setInputs({...inputs, details: { ...inputs.details, age: parseInt(e.target.value) || 30 }})}
                             />
@@ -776,12 +784,12 @@ const App: React.FC = () => {
                         {currentRules.hasMaritalStatusOption && (
                              <div className="col-span-2">
                                 <label className="block text-[11px] font-extrabold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Marital Status</label>
-                                <div className="grid grid-cols-2 gap-2 bg-[#F2F2F7] dark:bg-[#1c1c1e] p-1 rounded-xl">
+                                <div className="grid grid-cols-2 gap-2 bg-[#F2F2F7] dark:bg-[#1c1c1e] p-1 rounded-xl h-14 items-center">
                                      {['single', 'married'].map(status => (
                                          <button
                                             key={status}
                                             onClick={() => setInputs({...inputs, details: { ...inputs.details, maritalStatus: status as any }})}
-                                            className={`py-2 rounded-lg text-xs font-extrabold uppercase tracking-wide transition-all ${
+                                            className={`h-12 rounded-lg text-xs font-extrabold uppercase tracking-wide transition-all ${
                                                 inputs.details.maritalStatus === status 
                                                 ? 'bg-white dark:bg-[#333] shadow-sm text-blue-600 dark:text-blue-400' 
                                                 : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
@@ -796,7 +804,7 @@ const App: React.FC = () => {
                     </div>
                     
                     {currentRules.hasChurchTaxOption && (
-                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl border border-transparent hover:border-blue-500/20 transition-colors cursor-pointer" onClick={() => setInputs({...inputs, details: { ...inputs.details, churchTax: !inputs.details.churchTax }})}>
+                         <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl border border-transparent hover:border-blue-500/20 transition-colors cursor-pointer h-14" onClick={() => setInputs({...inputs, details: { ...inputs.details, churchTax: !inputs.details.churchTax }})}>
                             <label className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer pointer-events-none">Apply Church Tax</label>
                             <div className={`w-10 h-6 rounded-full relative transition-colors duration-300 ${inputs.details.churchTax ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600'}`}>
                                 <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${inputs.details.churchTax ? 'translate-x-4' : ''}`}></div>
@@ -872,14 +880,14 @@ const App: React.FC = () => {
                                     )}
                                 </div>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <span className="text-slate-400 dark:text-slate-500 text-xs font-bold">{currentRules.currencySymbol}</span>
                                     </div>
                                     <input 
                                         type="number"
                                         min="0"
                                         autoComplete="off"
-                                        className="w-full p-2.5 pl-7 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
+                                        className="w-full h-14 pl-14 bg-[#F2F2F7] dark:bg-[#1c1c1e] border-none rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-2 focus:ring-red-500/20 outline-none transition-all font-bold text-sm"
                                         value={val || ''}
                                         placeholder="0"
                                         onChange={(e) => handleCostChange(field.key as any, e.target.value)}
@@ -1055,7 +1063,7 @@ const App: React.FC = () => {
                                         <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[fromCurrency].name}</span>
                                     </div>
                                      <div className="flex gap-3">
-                                        <CurrencyDropdown value={fromCurrency} onChange={setFromCurrency} />
+                                        <CurrencyDropdown value={fromCurrency} onChange={setFromCurrency} useShortName={true} />
                                         <div className="relative flex-1">
                                             <input 
                                                 type="number"
@@ -1085,7 +1093,7 @@ const App: React.FC = () => {
                                         <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[toCurrency].name}</span>
                                     </div>
                                      <div className="flex gap-3">
-                                        <CurrencyDropdown value={toCurrency} onChange={setToCurrency} />
+                                        <CurrencyDropdown value={toCurrency} onChange={setToCurrency} useShortName={true} />
                                         <div className="relative flex-1">
                                             <div className="w-full h-14 pl-4 pr-4 bg-[#2FB050]/5 border border-[#2FB050]/20 rounded-2xl flex items-center text-[#2a8f43] dark:text-[#4ade80] font-extrabold text-lg overflow-hidden shadow-sm">
                                                 {new Intl.NumberFormat('en-US', { style: 'decimal', maximumFractionDigits: 2 }).format(convertedResult)}
@@ -1390,7 +1398,7 @@ const App: React.FC = () => {
                       <p>Generated by Global Net Pay Calculator</p>
                       <p>Tax Data Sources: {currentRules.sources.map(s => s.label).join(', ')}</p>
                   </div>
-                  <p className="mt-2 italic">Disclaimer: This document is a simulation based on statutory tax rules for {currentRules.name}. It does not constitute official financial or legal advice.</p>
+                  <p className="mt-2 italic">Disclaimer: This document is simulation based on statutory tax rules for {currentRules.name}. It does not constitute official financial or legal advice.</p>
               </div>
           </div>
       )}
