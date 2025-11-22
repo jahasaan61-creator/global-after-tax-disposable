@@ -1,5 +1,4 @@
 
-
 import { CountryCode, CountryRules } from './types';
 
 // ACCURATE TAX RULES FOR 2024/2025
@@ -249,19 +248,9 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     currency: 'GBP',
     currencySymbol: '£',
     exchangeRatePerUSD: 0.79,
+    subNationalLabel: 'Region (Scotland)',
     sources: [{ label: 'GOV.UK Rates 2024/25', url: 'https://www.gov.uk/income-tax-rates', date: '2024-04-06' }],
     federalDeductibles: [
-        {
-            name: 'Income Tax',
-            description: 'Personal Allowance £12,570.',
-            type: 'progressive',
-            exemptAmount: 12570,
-            brackets: [
-                { threshold: 0, rate: 0.20 },     // Basic rate
-                { threshold: 37700, rate: 0.40 }, // Higher rate (starts at £50,270 total income)
-                { threshold: 112570, rate: 0.45 } // Additional rate (starts at £125,140 total)
-            ]
-        },
         {
             name: 'National Insurance',
             description: 'Class 1 Cut to 8% (Apr 2024).',
@@ -270,6 +259,64 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
             brackets: [
                 { threshold: 0, rate: 0.08 },     // 8% on earnings between £12,570 and £50,270
                 { threshold: 37700, rate: 0.02 }  // 2% on earnings above £50,270
+            ]
+        },
+        {
+            name: 'Income Tax',
+            description: 'Personal Allowance £12,570.',
+            type: 'progressive',
+            exemptAmount: 12570,
+            taperRule: { threshold: 100000, rate: 0.5 },
+            brackets: [
+                { threshold: 0, rate: 0.20 },     // Basic rate
+                { threshold: 37700, rate: 0.40 }, // Higher rate (starts at £50,270 total income)
+                { threshold: 112570, rate: 0.45 } // Additional rate (starts at £125,140 total)
+            ]
+        }
+    ],
+    subNationalRules: [
+        {
+            id: 'SCO',
+            name: 'Scotland',
+            deductibles: [
+                {
+                    name: 'Scottish Income Tax',
+                    description: '2024/25 Rates (Higher/Top). Replaces UK Tax.',
+                    type: 'progressive',
+                    exemptAmount: 12570,
+                    taperRule: { threshold: 100000, rate: 0.5 },
+                    brackets: [
+                        { threshold: 0, rate: 0.19 },     // Starter
+                        { threshold: 2306, rate: 0.20 },  // Basic
+                        { threshold: 13991, rate: 0.21 }, // Intermediate
+                        { threshold: 31092, rate: 0.42 }, // Higher
+                        { threshold: 62430, rate: 0.45 }, // Advanced
+                        { threshold: 112570, rate: 0.48 } // Top
+                    ],
+                    // Hack: This replaces the federal income tax in visualization conceptually, 
+                    // but in this code it adds on top.
+                    // Ideally we'd use a 'replaceFederal' flag, but for now users selecting Scotland
+                    // will see this ADDED.
+                    // CORRECT FIX: We must subtract the Federal Tax if Scotland is selected?
+                    // In this architecture, Federal runs first. 
+                    // We can use 'fixedCredits' to negative the federal tax? No.
+                    // For this specific tool update, we will assume 'Federal Deductibles' applies to rUK.
+                    // A complete override requires architectural change.
+                    // SIMPLIFICATION: We will assume the user subtracts mentally or we add a negative deduction here to offset federal?
+                    // Better: We add a negative "UK Tax Offset" deduction here.
+                },
+                {
+                   name: 'UK Tax Offset',
+                   description: 'Reverses standard UK tax for Scottish calc.',
+                   type: 'progressive',
+                   exemptAmount: 12570,
+                   taperRule: { threshold: 100000, rate: 0.5 },
+                   brackets: [
+                        { threshold: 0, rate: -0.20 },
+                        { threshold: 37700, rate: -0.40 },
+                        { threshold: 112570, rate: -0.45 }
+                   ]
+                }
             ]
         }
     ]
@@ -432,10 +479,20 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     hasChurchTaxOption: true,
     sources: [{ label: 'BMF 2025 Updates', url: 'https://www.bundesfinanzministerium.de/', date: '2024-11-01' }],
     federalDeductibles: [
+      // Order matters for reduction of taxable base
+      { name: 'Pension Ins. (RV)', description: '9.3% Employee share.', type: 'percentage', rate: 0.093, cappedBase: 90600, reducesTaxableIncome: true }, // 2025 West BBG Est
+      { name: 'Unemployment (AV)', description: '1.3% Employee share.', type: 'percentage', rate: 0.013, cappedBase: 90600, reducesTaxableIncome: true },
+      { name: 'Health Ins. (GKV)', description: '7.3% + 1.25% Add-on (2025).', type: 'percentage', rate: 0.0855, cappedBase: 66150, reducesTaxableIncome: true }, // 2025 BBG
+      { name: 'Care Ins. (PV)', description: '2.3% (Avg w/o child).', type: 'percentage', rate: 0.023, cappedBase: 66150, reducesTaxableIncome: true },
+      
+      // Reliefs (Internal)
+      { name: 'Werbungskosten', description: 'Standard Expense Allowance.', type: 'fixed', amount: 1230, reducesTaxableIncome: true, isRelief: true },
+
       {
         name: 'Income Tax (Einkommensteuer)',
         description: 'Progressive. 2025 Allowance €12,096.',
         type: 'progressive',
+        useTaxableIncome: true, // Uses Gross - Social Security
         exemptAmount: 12096, // 2025 Grundfreibetrag (Draft)
         brackets: [
           { threshold: 0, rate: 0.14 },
@@ -458,11 +515,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           type: 'percentage', 
           rate: 0.09, 
           isTaxSurcharge: true 
-      },
-      { name: 'Pension Ins. (RV)', description: '9.3% Employee share.', type: 'percentage', rate: 0.093, cappedBase: 90600 }, // 2025 West BBG Est
-      { name: 'Unemployment (AV)', description: '1.3% Employee share.', type: 'percentage', rate: 0.013, cappedBase: 90600 },
-      { name: 'Health Ins. (GKV)', description: '7.3% + 1.25% Add-on (2025).', type: 'percentage', rate: 0.0855, cappedBase: 66150 }, // 2025 BBG
-      { name: 'Care Ins. (PV)', description: '2.3% (Avg w/o child).', type: 'percentage', rate: 0.023, cappedBase: 66150 },
+      }
     ]
   },
   [CountryCode.IRL]: {
@@ -537,10 +590,10 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     sources: [{ label: 'ESTV 2024', url: 'https://swisstaxcalculator.estv.admin.ch/', date: '2024-01-01' }],
     federalDeductibles: [
       { name: 'Federal Tax', description: 'Direct Federal Tax (Progressive).', type: 'progressive', brackets: [{ threshold: 18300, rate: 0.0077 }, { threshold: 31600, rate: 0.0088 }, { threshold: 41400, rate: 0.0264 }, { threshold: 55200, rate: 0.0297 }, { threshold: 72500, rate: 0.0594 }, { threshold: 103600, rate: 0.099 }, { threshold: 134600, rate: 0.115 }] },
-      { name: 'AHV/IV/EO', description: 'OASI (5.3%).', type: 'percentage', rate: 0.053 },
-      { name: 'ALV', description: 'Unemployment (1.1%).', type: 'percentage', rate: 0.011, cappedBase: 148200 },
-      { name: 'NBU', description: 'Accident Ins (1.2% est).', type: 'percentage', rate: 0.012 },
-      { name: 'Pension (BVG)', description: 'Pension Fund (3.5% est).', type: 'percentage', rate: 0.035, exemptAmount: 25725 } 
+      { name: 'AHV/IV/EO', description: 'OASI (5.3%).', type: 'percentage', rate: 0.053, reducesTaxableIncome: true },
+      { name: 'ALV', description: 'Unemployment (1.1%).', type: 'percentage', rate: 0.011, cappedBase: 148200, reducesTaxableIncome: true },
+      { name: 'NBU', description: 'Accident Ins (1.2% est).', type: 'percentage', rate: 0.012, reducesTaxableIncome: true },
+      { name: 'Pension (BVG)', description: 'Pension Fund (3.5% est).', type: 'percentage', rate: 0.035, exemptAmount: 25725, reducesTaxableIncome: true } 
     ],
     subNationalRules: [
       { id: 'ZH', name: 'Zurich', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.10 }] },
@@ -615,19 +668,25 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         description: 'Contingencias (4.7%).',
         type: 'percentage',
         rate: 0.047,
-        cappedBase: 56646 
+        cappedBase: 56646,
+        reducesTaxableIncome: true
       },
       {
         name: 'Unemployment/FP/MEI',
         description: 'Desempleo (1.55%), MEI (0.14% 2025).',
         type: 'percentage',
         rate: 0.0179, // 1.55 + 0.1 + 0.14
-        cappedBase: 56646
+        cappedBase: 56646,
+        reducesTaxableIncome: true
       },
+      // Relief
+      { name: 'Gastos Deducibles', description: 'General Expenses Relief.', type: 'fixed', amount: 2000, reducesTaxableIncome: true, isRelief: true },
+
       {
         name: 'IRPF (Income Tax)',
         description: 'Progressive (National Avg).',
         type: 'progressive',
+        useTaxableIncome: true, // Base reduced by SS
         fixedCredits: 1054.50, // Base tax adjustment
         brackets: [
           { threshold: 0, rate: 0.19 },
@@ -693,26 +752,32 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         description: '9.15% Employee share.',
         type: 'percentage',
         rate: 0.0915,
-        cappedBase: 7920000 // 660k/mo standard monthly remuneration (approx)
+        cappedBase: 7920000,
+        reducesTaxableIncome: true
       },
       {
         name: 'Health (Shakai Hoken)',
         description: 'Health Insurance (Tokyo ~5%).', 
         type: 'percentage',
         rate: 0.0498,
-        cappedBase: 16680000
+        cappedBase: 16680000,
+        reducesTaxableIncome: true
       },
       {
         name: 'Employment Ins.',
         description: '0.6%.',
         type: 'percentage',
-        rate: 0.006
+        rate: 0.006,
+        reducesTaxableIncome: true
       },
       {
         name: 'Income Tax',
         description: 'Progressive National.',
         type: 'progressive',
-        exemptAmount: 1030000,
+        useTaxableIncome: true,
+        // 2024 Adjustment: Basic Deduction (480k) + Employment Deduction (Min 550k -> 1M+ for avg salary)
+        // We use 1.5M as a representative deduction for average earners to improve accuracy vs simplistic 1.03M
+        exemptAmount: 1500000, 
         brackets: [
           { threshold: 0, rate: 0.05 },
           { threshold: 1950000, rate: 0.10 },
@@ -728,6 +793,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
         description: '10% Flat (Local).',
         type: 'percentage',
         rate: 0.10,
+        useTaxableIncome: true,
         exemptAmount: 1000000
       }
     ]
@@ -820,6 +886,162 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
             description: 'Unemployment Ins. (AED 60-120/yr).',
             type: 'fixed',
             amount: 120 // Using the higher tier for safety/simplicity as it's negligible (max ~$32/yr)
+        }
+    ]
+  },
+  [CountryCode.FRA]: {
+    code: CountryCode.FRA,
+    name: 'France',
+    currency: 'EUR',
+    currencySymbol: '€',
+    exchangeRatePerUSD: 0.93,
+    sources: [{ label: 'Service Public 2024', url: 'https://www.service-public.fr/', date: '2024-01-01' }],
+    federalDeductibles: [
+        {
+            name: 'Social Security',
+            description: 'Health, Pension, Unemployment (~22%).',
+            type: 'percentage',
+            rate: 0.22,
+            reducesTaxableIncome: true
+        },
+        {
+            name: 'CSG/CRDS',
+            description: '9.7% on 98.25% of Gross.',
+            type: 'percentage',
+            rate: 0.095, // 9.7 * 0.9825 approx
+            // Note: Only 6.8% is deductible from income tax base, simplified here
+            reducesTaxableIncome: true 
+        },
+        // Relief
+        { name: 'Frais Professionnels', description: '10% Expense Allowance.', type: 'percentage', rate: 0.10, cap: 14171, reducesTaxableIncome: true, isRelief: true },
+
+        {
+            name: 'Income Tax (IR)',
+            description: 'Progressive 2024 Scale.',
+            type: 'progressive',
+            useTaxableIncome: true,
+            brackets: [
+                { threshold: 0, rate: 0 },
+                { threshold: 11294, rate: 0.11 },
+                { threshold: 28797, rate: 0.30 },
+                { threshold: 82341, rate: 0.41 },
+                { threshold: 177106, rate: 0.45 }
+            ]
+        }
+    ]
+  },
+  [CountryCode.ITA]: {
+    code: CountryCode.ITA,
+    name: 'Italy',
+    currency: 'EUR',
+    currencySymbol: '€',
+    exchangeRatePerUSD: 0.93,
+    sources: [{ label: 'Agenzia Entrate 2024', url: 'https://www.agenziaentrate.gov.it/', date: '2024-01-01' }],
+    federalDeductibles: [
+        {
+            name: 'INPS (Social Security)',
+            description: '9.19% (Standard Employee).',
+            type: 'percentage',
+            rate: 0.0919,
+            reducesTaxableIncome: true
+        },
+        {
+            name: 'IRPEF (Income Tax)',
+            description: 'New 2024 Brackets.',
+            type: 'progressive',
+            useTaxableIncome: true,
+            fixedCredits: 1500, // Simplified Detrazione Lavoro (Work Credit)
+            brackets: [
+                { threshold: 0, rate: 0.23 },
+                { threshold: 28000, rate: 0.35 },
+                { threshold: 50000, rate: 0.43 }
+            ]
+        },
+        {
+            name: 'Regional/Municipal Tax',
+            description: 'Add-on ~2% (Varies by region).',
+            type: 'percentage',
+            rate: 0.02,
+            useTaxableIncome: true
+        }
+    ]
+  },
+  [CountryCode.PRT]: {
+    code: CountryCode.PRT,
+    name: 'Portugal',
+    currency: 'EUR',
+    currencySymbol: '€',
+    exchangeRatePerUSD: 0.93,
+    sources: [{ label: 'Orçamento do Estado 2024', url: 'https://www.portugal.gov.pt/', date: '2024-01-01' }],
+    federalDeductibles: [
+        {
+            name: 'Social Security',
+            description: 'Segurança Social (11%).',
+            type: 'percentage',
+            rate: 0.11,
+            reducesTaxableIncome: true // Generally reduces base for IRS, or specific deduction applies
+        },
+        {
+            name: 'IRS (Income Tax)',
+            description: 'Progressive (Mainland 2024).',
+            type: 'progressive',
+            useTaxableIncome: true, 
+            exemptAmount: 4104, // Minimum existence / specific deduction
+            brackets: [
+                { threshold: 0, rate: 0.1325 },
+                { threshold: 7703, rate: 0.18 },
+                { threshold: 11623, rate: 0.23 },
+                { threshold: 16472, rate: 0.26 },
+                { threshold: 21321, rate: 0.3275 },
+                { threshold: 27146, rate: 0.37 },
+                { threshold: 39791, rate: 0.435 },
+                { threshold: 51997, rate: 0.45 },
+                { threshold: 81199, rate: 0.48 }
+            ]
+        }
+    ]
+  },
+  [CountryCode.SWE]: {
+    code: CountryCode.SWE,
+    name: 'Sweden',
+    currency: 'SEK',
+    currencySymbol: 'kr',
+    exchangeRatePerUSD: 10.8,
+    sources: [{ label: 'Skatteverket 2024', url: 'https://skatteverket.se/', date: '2024-01-01' }],
+    federalDeductibles: [
+        {
+            name: 'Municipal Tax',
+            description: 'Local Tax (~32.37% Avg).',
+            type: 'percentage',
+            rate: 0.3237,
+            exemptAmount: 16800 // Basic deduction approx
+        },
+        {
+            name: 'State Tax',
+            description: '20% over 615,300 SEK.',
+            type: 'progressive',
+            brackets: [
+                { threshold: 0, rate: 0 },
+                { threshold: 615300, rate: 0.20 }
+            ]
+        },
+        {
+            name: 'Public Pension Fee',
+            description: 'Allmän pensionsavgift (7%).',
+            type: 'percentage',
+            rate: 0.07,
+            cap: 42600, // Capped amount usually fully credited back by tax credit
+            fixedCredits: 42600 // Simplified: The fee is usually fully offset by a tax credit
+        },
+        {
+            name: 'Job Deduction',
+            description: 'Jobbskatteavdrag (Credit).',
+            type: 'credit_progressive',
+            exemptAmount: 0,
+            brackets: [
+                 { threshold: 0, rate: -0.10 } // Simplified Estimate of credit
+            ],
+            cap: 35000 // Approx cap
         }
     ]
   }

@@ -22,7 +22,8 @@ const getFlagUrl = (code: CountryCode) => {
       [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
       [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
       [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl',
-      [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae'
+      [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae', [CountryCode.FRA]: 'fr',
+      [CountryCode.ITA]: 'it', [CountryCode.PRT]: 'pt', [CountryCode.SWE]: 'se'
   };
   return `https://flagcdn.com/w40/${map[code] || 'us'}.png`;
 };
@@ -34,7 +35,8 @@ const getHDFlagUrl = (code: CountryCode) => {
       [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
       [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
       [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl',
-      [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae'
+      [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae', [CountryCode.FRA]: 'fr',
+      [CountryCode.ITA]: 'it', [CountryCode.PRT]: 'pt', [CountryCode.SWE]: 'se'
   };
   return `https://flagcdn.com/w640/${map[code] || 'us'}.png`;
 };
@@ -522,6 +524,8 @@ const App: React.FC = () => {
   const [showNetDetails, setShowNetDetails] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [highlightIncome, setHighlightIncome] = useState(false);
+  const [netPayFreq, setNetPayFreq] = useState<'monthly' | 'bi-weekly' | 'weekly'>('monthly'); // Net Pay Card Toggle
+
   const [darkMode, setDarkMode] = useState(() => {
       if (typeof window !== 'undefined') {
           const saved = localStorage.getItem('gnp_theme');
@@ -848,6 +852,15 @@ const App: React.FC = () => {
   };
 
   const normalized = getNormalizedValues();
+  
+  // Helper for Net Pay Display based on Toggle
+  const getNetPayValue = () => {
+      switch(netPayFreq) {
+          case 'weekly': return result.netWeekly;
+          case 'bi-weekly': return result.netBiWeekly;
+          default: return result.netMonthly;
+      }
+  };
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-[#050505] transition-colors duration-300 selection:bg-blue-500/30">
@@ -1040,10 +1053,26 @@ const App: React.FC = () => {
                                               <div className={`text-4xl sm:text-5xl font-black tracking-tight mb-3 ${normalized.diff >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
                                                   {normalized.diff >= 0 ? '+' : ''}{formatCurrency(normalized.diff, inputs.country)}
                                               </div>
-                                              <div className="inline-block bg-white/10 rounded-lg px-3 py-1.5 backdrop-blur-md border border-white/5">
+                                              <div className="inline-block bg-white/10 rounded-lg px-3 py-1.5 backdrop-blur-md border border-white/5 mb-6">
                                                   <p className="text-xs font-medium text-slate-300">
                                                       Scenario B pays <span className={`font-bold ${normalized.diff >= 0 ? 'text-green-400' : 'text-red-400'}`}>{Math.abs(normalized.pct).toFixed(1)}% {normalized.diff >= 0 ? 'more' : 'less'}</span>
                                                   </p>
+                                              </div>
+
+                                              {/* Visual Comparison Chart */}
+                                              <div className="w-full space-y-2 mb-4">
+                                                  <div className="flex items-center gap-2 text-[10px] font-bold text-blue-400 uppercase">
+                                                      <div className="w-8">A</div>
+                                                      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                          <div className="h-full bg-blue-500" style={{ width: '100%' }}></div>
+                                                      </div>
+                                                  </div>
+                                                  <div className="flex items-center gap-2 text-[10px] font-bold text-purple-400 uppercase">
+                                                      <div className="w-8">B</div>
+                                                      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                                          <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${Math.min((normalized.netB / normalized.netA) * 100, 100)}%` }}></div>
+                                                      </div>
+                                                  </div>
                                               </div>
                                           </>
                                       ) : (
@@ -1581,24 +1610,39 @@ const App: React.FC = () => {
                                 </div>
                                 
                                 <div className="absolute top-6 right-6 z-20">
-                                    <InfoTooltip text="The actual amount of money landing in your bank account each month after all taxes." className="text-white" />
+                                    <InfoTooltip text="The actual amount of money landing in your bank account each period after all taxes." className="text-white" />
                                 </div>
                                 
                                 <div className="relative z-10 flex flex-col h-full justify-between p-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
-                                            <i className="fas fa-wallet text-lg text-white"></i>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                                <i className="fas fa-wallet text-lg text-white"></i>
+                                            </div>
+                                            <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
+                                                <div>Net Pay</div>
+                                                <div>Result</div>
+                                            </div>
                                         </div>
-                                        <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
-                                            <div>Net Monthly</div>
-                                            <div>Pay</div>
+                                        {/* Net Pay Frequency Toggle */}
+                                        <div className="mt-2 flex p-1 bg-black/20 rounded-lg border border-white/10 self-start">
+                                            {['monthly', 'bi-weekly', 'weekly'].map((freq) => (
+                                                <button
+                                                    key={freq}
+                                                    onClick={() => setNetPayFreq(freq as any)}
+                                                    className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${netPayFreq === freq ? 'bg-white text-blue-600 shadow-sm' : 'text-white/70 hover:text-white'}`}
+                                                >
+                                                    {freq === 'bi-weekly' ? 'Bi-Wk' : freq.substring(0,2)}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
 
                                     <div className="mt-6 mb-4">
                                         <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.netMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
-                                            {formatCurrency(result.netMonthly)}
+                                            {formatCurrency(getNetPayValue())}
                                         </h3>
+                                        <p className="text-white/60 text-[10px] font-bold uppercase mt-1 tracking-wider">{netPayFreq}</p>
                                     </div>
 
                                     {/* Expanded Deduction Details */}

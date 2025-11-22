@@ -3,13 +3,13 @@ import { COUNTRY_RULES } from '../constants';
 import { CalculationResult, Deductible, DeductionResult, UserInputs, CountryCode, TaxBracket } from '../types';
 
 const calculateTaxAmount = (
-    grossIncome: number, 
+    baseAmount: number, // Can be Gross OR Taxable Income depending on 'useTaxableIncome' flag
     deductible: Deductible, 
     inputs: UserInputs, 
     accumulatedTax: number,
     fiscalIncome?: number
 ): number => {
-  let basis = grossIncome;
+  let basis = baseAmount;
   const { country, details } = inputs;
   const isMarried = details.maritalStatus === 'married';
   
@@ -62,6 +62,15 @@ const calculateTaxAmount = (
   let exempt = deductible.exemptAmount || 0;
   if (isMarried && deductible.exemptAmountMarried) {
       exempt = deductible.exemptAmountMarried;
+  }
+
+  // Tapering Logic (e.g. UK Personal Allowance reduction)
+  if (deductible.taperRule) {
+     const incomeForTaper = fiscalIncome !== undefined ? fiscalIncome : inputs.grossIncome;
+     if (incomeForTaper > deductible.taperRule.threshold) {
+         const reduction = (incomeForTaper - deductible.taperRule.threshold) * deductible.taperRule.rate;
+         exempt = Math.max(0, exempt - reduction);
+     }
   }
 
   // For progressive calculations, we subtract exempt amount first.
@@ -183,6 +192,9 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
   
   // Track Total Income Tax for Surcharges
   let totalIncomeTax = 0;
+  
+  // Track Taxable Income (reduced by social contributions in some countries)
+  let currentTaxableIncome = grossAnnual;
 
   // 1. Federal Deductions
   rules.federalDeductibles.forEach(d => {
@@ -190,8 +202,11 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
     if (inputs.country === CountryCode.CAN && inputs.subRegion === 'QC' && d.name.includes('CPP')) {
         return;
     }
+    
+    // Determine the base for this calculation
+    const calculationBase = d.useTaxableIncome ? currentTaxableIncome : grossAnnual;
 
-    const amount = calculateTaxAmount(grossAnnual, d, inputs, totalIncomeTax, fiscalIncome);
+    const amount = calculateTaxAmount(calculationBase, d, inputs, totalIncomeTax, fiscalIncome);
     
     if (d.type === 'credit_progressive') {
         // Credits reduce the tax bill. We display them as negative deductions.
@@ -203,19 +218,26 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
         });
     } else {
         // Accumulate Income Tax base for dependent taxes (like Church Tax or QC Abatement)
-        if (!d.isTaxSurcharge && (d.name.includes('Income Tax') || d.name.includes('Federal Income') || d.name.includes('PAYE') || d.name.includes('Direct Federal'))) {
+        if (!d.isTaxSurcharge && (d.name.includes('Income Tax') || d.name.includes('Federal Income') || d.name.includes('PAYE') || d.name.includes('Direct Federal') || d.name.includes('IRPF') || d.name.includes('IRPEF'))) {
             totalIncomeTax += amount;
         }
+        
+        // Reduce Taxable Income if applicable (e.g. Social Security in Germany/France or Reliefs)
+        if (d.reducesTaxableIncome && amount > 0) {
+            currentTaxableIncome = Math.max(0, currentTaxableIncome - amount);
+        }
 
-        // Allow negative amounts (Abatements) or positive amounts to be pushed
-        if (amount !== 0 || d.employerPaid) { 
-            if (amount !== 0) {
-                deductionsBreakdown.push({
-                    name: d.name,
-                    description: d.description,
-                    amount: amount,
-                    isEmployer: !!d.employerPaid
-                });
+        // Push to breakdown unless it is a "Relief" (internal tax-free allowance)
+        if (!d.isRelief) {
+            if (amount !== 0 || d.employerPaid) { 
+                if (amount !== 0) {
+                    deductionsBreakdown.push({
+                        name: d.name,
+                        description: d.description,
+                        amount: amount,
+                        isEmployer: !!d.employerPaid
+                    });
+                }
             }
         }
     }
@@ -226,8 +248,17 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
     const regionRule = rules.subNationalRules.find(r => r.id === inputs.subRegion);
     if (regionRule) {
       regionRule.deductibles.forEach(d => {
-        const amount = calculateTaxAmount(grossAnnual, d, inputs, totalIncomeTax, fiscalIncome);
-        if (amount !== 0) { // Changed from amount > 0 to allow negative abatements
+        // Sub-national rules also respect useTaxableIncome (e.g. Local taxes on net)
+        const calculationBase = d.useTaxableIncome ? currentTaxableIncome : grossAnnual;
+        
+        const amount = calculateTaxAmount(calculationBase, d, inputs, totalIncomeTax, fiscalIncome);
+        
+        // Reduce Taxable Income if sub-national tax/relief reduces it
+        if (d.reducesTaxableIncome && amount > 0) {
+            currentTaxableIncome = Math.max(0, currentTaxableIncome - amount);
+        }
+
+        if (!d.isRelief && amount !== 0) { 
           deductionsBreakdown.push({
             name: `${regionRule.name} - ${d.name}`,
             description: d.description,
@@ -269,6 +300,9 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
   let incomeTaxPlus = 0;
   let fiscalPlus = grossPlus;
   
+  // For marginal, we must replicate the taxable income chain
+  let taxableIncomePlus = grossPlus;
+  
   if (inputs.country === CountryCode.NLD && inputs.details.isExpat) fiscalPlus = grossPlus * 0.7;
   
   rules.federalDeductibles.forEach(d => {
@@ -277,19 +311,30 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
         return;
       }
 
-      const amt = calculateTaxAmount(grossPlus, d, inputs, incomeTaxPlus, fiscalPlus);
+      const base = d.useTaxableIncome ? taxableIncomePlus : grossPlus;
+      const amt = calculateTaxAmount(base, d, inputs, incomeTaxPlus, fiscalPlus);
+      
+      if (d.reducesTaxableIncome) {
+          taxableIncomePlus = Math.max(0, taxableIncomePlus - amt);
+      }
+
       if (d.type === 'credit_progressive') {
           taxPlus -= amt;
       } else {
-          if (!d.isTaxSurcharge && (d.name.includes('Income Tax') || d.name.includes('PAYE'))) incomeTaxPlus += amt;
-          if (!d.employerPaid) taxPlus += amt;
+          if (!d.isRelief) {
+              if (!d.isTaxSurcharge && (d.name.includes('Income Tax') || d.name.includes('PAYE'))) incomeTaxPlus += amt;
+              if (!d.employerPaid) taxPlus += amt;
+          }
       }
   });
-
+  
+  // Simplified marginal for sub-national (ignoring deep chaining for performance/complexity)
   if (inputs.subRegion && rules.subNationalRules) {
       const rr = rules.subNationalRules.find(r => r.id === inputs.subRegion);
       if(rr) rr.deductibles.forEach(d => {
-           if(!d.employerPaid) taxPlus += calculateTaxAmount(grossPlus, d, inputs, incomeTaxPlus, fiscalPlus);
+           const base = d.useTaxableIncome ? taxableIncomePlus : grossPlus;
+           const amt = calculateTaxAmount(base, d, inputs, incomeTaxPlus, fiscalPlus);
+           if(!d.employerPaid && !d.isRelief) taxPlus += amt;
       });
   }
   
@@ -303,6 +348,8 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
     grossAnnual,
     netMonthly,
     netAnnual,
+    netWeekly: netAnnual / 52,
+    netBiWeekly: netAnnual / 26,
     totalDeductionsMonthly: totalEmployeeDeductionsAnnual / 12,
     deductionsBreakdown,
     disposableMonthly: netMonthly - personalCostsMonthly,
@@ -317,26 +364,26 @@ export const calculateGrossFromNet = (targetNet: number, baseInputs: UserInputs)
   const targetAnnualNet = isMonthly ? targetNet * 12 : targetNet;
 
   let low = targetAnnualNet;
-  let high = targetAnnualNet * 3;
+  let high = targetAnnualNet * 2.5; 
   
   let safety = 0;
-  while (safety < 25) {
+  while (safety < 20) {
       const res = calculateNetPay({ ...baseInputs, grossIncome: high, frequency: 'annual' }); 
       if (res.netAnnual >= targetAnnualNet) break;
       low = high;
-      high *= 2;
+      high *= 1.5;
       safety++;
   }
 
   let iterations = 0;
   let bestGross = high;
   
-  while (low <= high && iterations < 50) {
+  while (low <= high && iterations < 40) {
       const mid = (low + high) / 2;
       const res = calculateNetPay({ ...baseInputs, grossIncome: mid, frequency: 'annual' });
       const diff = res.netAnnual - targetAnnualNet;
 
-      if (Math.abs(diff) < 1) {
+      if (Math.abs(diff) < 2) { // Relaxed tolerance slightly
           bestGross = mid;
           break;
       }

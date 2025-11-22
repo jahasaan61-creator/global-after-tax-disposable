@@ -17,6 +17,10 @@ export enum CountryCode {
   NLD = 'NLD', // Netherlands
   SAU = 'SAU', // Saudi Arabia
   ARE = 'ARE', // United Arab Emirates
+  FRA = 'FRA', // France
+  ITA = 'ITA', // Italy
+  PRT = 'PRT', // Portugal
+  SWE = 'SWE', // Sweden
 }
 
 export interface TaxBracket {
@@ -50,6 +54,17 @@ export interface Deductible {
   isTaxSurcharge?: boolean; // Applies to the calculated Tax amount (e.g. Soli, Church) NOT Gross Income
   surchargeThreshold?: number; // Only apply if base tax amount > this
   
+  // Tax Base Interactions
+  reducesTaxableIncome?: boolean; // If true, this deduction amount is subtracted from the taxable base for SUBSEQUENT deductions
+  useTaxableIncome?: boolean; // If true, uses the running taxable base (Gross - prev deductions) instead of Gross
+  isRelief?: boolean; // If true, this is a tax-free allowance (not a cost). It reduces taxable income but is NOT listed in the deduction breakdown.
+
+  // Tapering Logic (e.g. UK Personal Allowance reduction)
+  taperRule?: {
+      threshold: number; // Income level where tapering starts
+      rate: number;      // Amount to reduce exemptAmount per unit of income (e.g. 0.5 means £1 lost for every £2 earned)
+  };
+
   // Dynamic Rates
   ratesByAge?: { minAge: number; maxAge: number; rate: number }[];
   
@@ -91,6 +106,8 @@ export interface CalculationResult {
   grossAnnual: number;
   netMonthly: number;
   netAnnual: number;
+  netWeekly: number;
+  netBiWeekly: number;
   totalDeductionsMonthly: number;
   deductionsBreakdown: DeductionResult[];
   disposableMonthly: number;
