@@ -519,6 +519,7 @@ const App: React.FC = () => {
   const [mode, setMode] = useState<CalcMode>('gross');
   const [targetNet, setTargetNet] = useState<number>(40000);
   const [showSources, setShowSources] = useState(false);
+  const [showNetDetails, setShowNetDetails] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [highlightIncome, setHighlightIncome] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
@@ -1106,13 +1107,6 @@ const App: React.FC = () => {
                               <div className="space-y-5">
                                    <div className="space-y-1">
                                        <div className="flex items-center gap-1 mb-1">
-                                          <label className="text-[11px] font-bold text-slate-400 uppercase">Location</label>
-                                          <InfoTooltip text="The new country or scenario you are comparing against." />
-                                       </div>
-                                       <CurrencyDropdown value={inputsB.country} onChange={(v) => setInputsB({...inputsB, country: v})} className="w-full" />
-                                   </div>
-                                   <div className="space-y-1">
-                                       <div className="flex items-center gap-1 mb-1">
                                           <label className="text-[11px] font-bold text-slate-400 uppercase">Annual Gross</label>
                                           <InfoTooltip text="Target salary in that country's local currency." />
                                        </div>
@@ -1578,7 +1572,7 @@ const App: React.FC = () => {
                         {/* Key Metrics Row */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[240px]">
                             {/* Net Pay Card */}
-                            <div className="relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50">
+                            <div className={`relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50 ${showNetDetails ? 'row-span-2' : ''}`}>
                                 {/* Clipped Background */}
                                 <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#007AFF] to-[#0055ff] dark:from-[#0055ff] dark:to-[#0033cc]">
                                     <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
@@ -1607,12 +1601,40 @@ const App: React.FC = () => {
                                         </h3>
                                     </div>
 
-                                    <div className="pt-4 border-t border-white/20 flex justify-between items-end">
+                                    {/* Expanded Deduction Details */}
+                                    {showNetDetails && (
+                                        <div className="my-4 py-3 border-y border-white/10 space-y-2 text-sm animate-in slide-in-from-top-2 fade-in duration-200 bg-white/5 rounded-lg px-2">
+                                            <div className="flex justify-between text-white/60 text-xs uppercase font-bold mb-2">
+                                                <span>Deduction (Monthly)</span>
+                                                <span>Amount</span>
+                                            </div>
+                                            {employeeDeductions.length > 0 ? employeeDeductions.map((d, i) => (
+                                                <div key={i} className="flex justify-between items-center group/item">
+                                                    <span className="text-white/90 font-medium truncate pr-4 text-xs" title={d.name}>{d.name}</span>
+                                                    <span className="text-white font-bold whitespace-nowrap text-xs">-{formatCompact(d.amount/12)}</span>
+                                                </div>
+                                            )) : (
+                                                <div className="text-white/60 text-xs italic text-center py-2">No deductions applied</div>
+                                            )}
+                                             <div className="flex justify-between items-center pt-2 mt-2 border-t border-white/10">
+                                                <span className="text-white/90 font-bold text-xs">Total Deducted</span>
+                                                <span className="text-white font-bold whitespace-nowrap text-xs">-{formatCompact(result.totalDeductionsMonthly)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="pt-4 border-t border-white/20 flex justify-between items-center">
                                         <div>
                                             <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Net</p>
                                             <p className="text-white font-extrabold text-xl">{formatCurrency(result.netAnnual)}</p>
                                         </div>
-                                        <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setShowNetDetails(!showNetDetails); }}
+                                            className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-[10px] font-bold transition-colors backdrop-blur-md border border-white/10 shadow-sm flex items-center gap-1 active:scale-95"
+                                        >
+                                            {showNetDetails ? 'Hide' : 'View Details'}
+                                            {!showNetDetails && <i className="fas fa-chevron-down text-[8px] ml-0.5"></i>}
+                                        </button>
                                     </div>
                                 </div>
                             </div>

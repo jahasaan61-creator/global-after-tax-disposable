@@ -186,6 +186,11 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
 
   // 1. Federal Deductions
   rules.federalDeductibles.forEach(d => {
+    // Canada QC Exception: Skip CPP, apply QPP later in subnational
+    if (inputs.country === CountryCode.CAN && inputs.subRegion === 'QC' && d.name.includes('CPP')) {
+        return;
+    }
+
     const amount = calculateTaxAmount(grossAnnual, d, inputs, totalIncomeTax, fiscalIncome);
     
     if (d.type === 'credit_progressive') {
@@ -197,13 +202,14 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
             isEmployer: false
         });
     } else {
-        // Accumulate Income Tax base for dependent taxes (like Church Tax)
+        // Accumulate Income Tax base for dependent taxes (like Church Tax or QC Abatement)
         if (!d.isTaxSurcharge && (d.name.includes('Income Tax') || d.name.includes('Federal Income') || d.name.includes('PAYE') || d.name.includes('Direct Federal'))) {
             totalIncomeTax += amount;
         }
 
-        if (amount > 0 || d.employerPaid) { 
-            if (amount > 0) {
+        // Allow negative amounts (Abatements) or positive amounts to be pushed
+        if (amount !== 0 || d.employerPaid) { 
+            if (amount !== 0) {
                 deductionsBreakdown.push({
                     name: d.name,
                     description: d.description,
@@ -221,7 +227,7 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
     if (regionRule) {
       regionRule.deductibles.forEach(d => {
         const amount = calculateTaxAmount(grossAnnual, d, inputs, totalIncomeTax, fiscalIncome);
-        if (amount > 0) {
+        if (amount !== 0) { // Changed from amount > 0 to allow negative abatements
           deductionsBreakdown.push({
             name: `${regionRule.name} - ${d.name}`,
             description: d.description,
@@ -266,6 +272,11 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
   if (inputs.country === CountryCode.NLD && inputs.details.isExpat) fiscalPlus = grossPlus * 0.7;
   
   rules.federalDeductibles.forEach(d => {
+      // Canada QC Exception for Marginal Calc
+      if (inputs.country === CountryCode.CAN && inputs.subRegion === 'QC' && d.name.includes('CPP')) {
+        return;
+      }
+
       const amt = calculateTaxAmount(grossPlus, d, inputs, incomeTaxPlus, fiscalPlus);
       if (d.type === 'credit_progressive') {
           taxPlus -= amt;

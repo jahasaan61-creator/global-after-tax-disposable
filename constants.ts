@@ -1,4 +1,5 @@
 
+
 import { CountryCode, CountryRules } from './types';
 
 // ACCURATE TAX RULES FOR 2024/2025
@@ -130,6 +131,84 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           deductibles: [
               { name: 'IL State Tax', description: 'Flat Rate 4.95%.', type: 'percentage', rate: 0.0495, exemptAmount: 2775 }
           ]
+      },
+      {
+        id: 'PA',
+        name: 'Pennsylvania',
+        deductibles: [
+           { name: 'PA Income Tax', description: 'Flat Rate 3.07%.', type: 'percentage', rate: 0.0307 }
+        ]
+      },
+      {
+        id: 'WA',
+        name: 'Washington',
+        deductibles: [
+           { name: 'WA Cares Fund', description: 'Long-Term Care Ins.', type: 'percentage', rate: 0.0058 }
+        ]
+      },
+      {
+        id: 'MA',
+        name: 'Massachusetts',
+        deductibles: [
+           { name: 'MA Income Tax', description: 'Flat Rate 5%.', type: 'percentage', rate: 0.05, exemptAmount: 4400 }, // $4400 personal exemption
+           { name: 'MA Millionaires Tax', description: '4% Surtax > $1M.', type: 'progressive', brackets: [{threshold: 0, rate: 0}, {threshold: 1000000, rate: 0.04}] },
+           { name: 'PFML (Medical/Family)', description: 'Paid Leave (~0.46%).', type: 'percentage', rate: 0.0046, cappedBase: 176100 }
+        ]
+      },
+      {
+        id: 'NJ',
+        name: 'New Jersey',
+        deductibles: [
+           { 
+             name: 'NJ Income Tax', 
+             description: 'Progressive.', 
+             type: 'progressive', 
+             exemptAmount: 1000,
+             brackets: [
+               { threshold: 0, rate: 0.014 },
+               { threshold: 20000, rate: 0.0175 },
+               { threshold: 35000, rate: 0.035 },
+               { threshold: 40000, rate: 0.05525 },
+               { threshold: 75000, rate: 0.0637 },
+               { threshold: 500000, rate: 0.0897 },
+               { threshold: 1000000, rate: 0.1075 }
+             ] 
+           },
+           { name: 'NJ UI', description: 'Unemployment (0.425%).', type: 'percentage', rate: 0.00425, cappedBase: 42300 },
+           { name: 'NJ FLI', description: 'Family Leave (0.09%).', type: 'percentage', rate: 0.0009, cappedBase: 161400 }
+        ]
+      },
+      {
+        id: 'VA',
+        name: 'Virginia',
+        deductibles: [
+           { 
+             name: 'VA Income Tax', 
+             description: 'Progressive.', 
+             type: 'progressive', 
+             exemptAmount: 8000, // Standard Deduction Single
+             brackets: [
+               { threshold: 0, rate: 0.02 },
+               { threshold: 3000, rate: 0.03 },
+               { threshold: 5000, rate: 0.05 },
+               { threshold: 17000, rate: 0.0575 }
+             ] 
+           }
+        ]
+      },
+      {
+          id: 'NC',
+          name: 'North Carolina',
+          deductibles: [
+              { name: 'NC Income Tax', description: 'Flat Rate 4.25% (2025).', type: 'percentage', rate: 0.0425, exemptAmount: 12750 }
+          ]
+      },
+      {
+          id: 'GA',
+          name: 'Georgia',
+          deductibles: [
+              { name: 'GA Income Tax', description: 'Flat Rate 5.39% (2025).', type: 'percentage', rate: 0.0539, exemptAmount: 12000 }
+          ]
       }
     ]
   },
@@ -219,7 +298,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       },
       { 
           name: 'CPP (Base)', 
-          description: 'Pension Plan (Tier 1).', 
+          description: 'Pension Plan (Tier 1). QC pays QPP.', 
           type: 'percentage', 
           rate: 0.0595, 
           exemptAmount: 3500, 
@@ -227,7 +306,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       },
       {
           name: 'CPP (Enhancement)',
-          description: 'Tier 2 (4% on excess).',
+          description: 'Tier 2 (4% on excess). QC pays QPP.',
           type: 'progressive',
           brackets: [
               { threshold: 0, rate: 0 },
@@ -247,6 +326,48 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       {
         id: 'BC', name: 'British Columbia', deductibles: [
            { name: 'BC Tax', description: 'BC Tax.', type: 'progressive', exemptAmount: 12580, brackets: [{ threshold: 0, rate: 0.0506 }, { threshold: 47937, rate: 0.077 }, { threshold: 95875, rate: 0.105 }, { threshold: 110076, rate: 0.1229 }, { threshold: 133664, rate: 0.147 }, { threshold: 181232, rate: 0.168 }] }
+        ]
+      },
+      {
+        id: 'AB', name: 'Alberta', deductibles: [
+           { name: 'AB Tax', description: 'Alberta Tax.', type: 'progressive', exemptAmount: 21885, brackets: [{ threshold: 0, rate: 0.10 }, { threshold: 148269, rate: 0.12 }, { threshold: 177922, rate: 0.13 }, { threshold: 237230, rate: 0.14 }, { threshold: 355845, rate: 0.15 }] }
+        ]
+      },
+      {
+        id: 'QC', name: 'Quebec', deductibles: [
+           { 
+             name: 'QC Tax', 
+             description: 'Quebec Provincial Tax.', 
+             type: 'progressive', 
+             exemptAmount: 18056, 
+             brackets: [
+               { threshold: 0, rate: 0.14 }, 
+               { threshold: 51780, rate: 0.19 }, 
+               { threshold: 103545, rate: 0.24 }, 
+               { threshold: 126000, rate: 0.2575 }
+             ] 
+           },
+           { 
+             name: 'QPP (Pension)', 
+             description: 'Quebec Pension Plan (Replaces CPP).', 
+             type: 'percentage', 
+             rate: 0.064, // 2024 Rate
+             exemptAmount: 3500,
+             cappedBase: 68500 
+           },
+           { name: 'QPIP', description: 'Parental Insurance.', type: 'percentage', rate: 0.00494, cappedBase: 94000 },
+           {
+             name: 'Federal Abatement',
+             description: '16.5% Reduction of Federal Tax.',
+             type: 'percentage',
+             isTaxSurcharge: true, // Applies to Federal Tax
+             rate: -0.165 // Negative rate creates a credit (deduction reduction)
+           }
+        ]
+      },
+      {
+        id: 'NS', name: 'Nova Scotia', deductibles: [
+           { name: 'NS Tax', description: 'Nova Scotia Tax.', type: 'progressive', exemptAmount: 11481, brackets: [{ threshold: 0, rate: 0.0879 }, { threshold: 29590, rate: 0.1495 }, { threshold: 59180, rate: 0.1667 }, { threshold: 93000, rate: 0.175 }, { threshold: 150000, rate: 0.21 }] }
         ]
       }
     ]
