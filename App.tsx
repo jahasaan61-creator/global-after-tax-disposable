@@ -21,7 +21,8 @@ const getFlagUrl = (code: CountryCode) => {
       [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
       [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
       [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
-      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl'
+      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl',
+      [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae'
   };
   return `https://flagcdn.com/w40/${map[code] || 'us'}.png`;
 };
@@ -32,7 +33,8 @@ const getHDFlagUrl = (code: CountryCode) => {
       [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
       [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
       [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
-      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl'
+      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl',
+      [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae'
   };
   return `https://flagcdn.com/w640/${map[code] || 'us'}.png`;
 };
@@ -188,11 +190,11 @@ const InfoTooltip = ({ text, className = "text-current", direction = 'top', alig
     : 'bottom-full border-b-slate-900 dark:border-b-white';
 
   return (
-    <div className={`relative group/info z-50 inline-flex ml-2 ${className}`}>
-      <button className="w-5 h-5 rounded-full border border-current opacity-50 hover:opacity-100 flex items-center justify-center transition-all hover:scale-110 hover:bg-white/10 cursor-help">
-         <i className="fas fa-info text-[9px] font-bold"></i>
+    <div className={`relative group/info z-50 inline-flex ml-1.5 ${className}`}>
+      <button className="w-4 h-4 rounded-full border border-current opacity-40 hover:opacity-100 flex items-center justify-center transition-all hover:scale-110 hover:bg-white/10 cursor-help">
+         <i className="fas fa-info text-[8px] font-bold"></i>
       </button>
-      <div className={`absolute ${alignClasses} ${verticalClasses} w-48 p-3 bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] leading-snug font-medium rounded-xl shadow-2xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 pointer-events-none text-center z-[100]`}>
+      <div className={`absolute ${alignClasses} ${verticalClasses} w-56 p-3 bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] leading-relaxed font-medium rounded-xl shadow-2xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 pointer-events-none text-center z-[200]`}>
          {text}
          {/* Arrow */}
          <div className={`absolute ${arrowAlignClasses} ${arrowDirectionClasses} border-4 border-transparent`}></div>
@@ -634,6 +636,12 @@ const App: React.FC = () => {
   const syncAtoB = () => {
       setInputsB({ ...inputs, grossIncome: inputs.grossIncome });
   };
+  
+  const swapScenarios = () => {
+      const temp = { ...inputs };
+      setInputs({ ...inputsB, country: inputsB.country });
+      setInputsB({ ...temp, country: temp.country });
+  };
 
   // Derived values for Breakdown
   const employeeDeductions = result ? result.deductionsBreakdown.filter(d => !d.isEmployer) : [];
@@ -909,385 +917,333 @@ const App: React.FC = () => {
 
         {/* CONDITIONAL RENDERING FOR COMPARISON MODE */}
         {isComparison ? (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6 pb-20">
                 
-                {/* Improved Comparison Header */}
-                <div className="bg-white dark:bg-[#101012] p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-[#333] flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <h2 className="text-lg font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                        <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center text-xs font-extrabold">VS</div>
-                        <span className="hidden sm:inline">Side-by-Side</span> Comparison
-                    </h2>
-                    
-                    <div className="flex items-center bg-slate-100 dark:bg-[#1c1c1e] p-1 rounded-xl">
-                         <button 
-                            onClick={() => setComparisonCurrencyMode('native')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${comparisonCurrencyMode === 'native' ? 'bg-white dark:bg-[#333] shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-                         >
-                            Native Currencies
-                         </button>
-                         <button 
-                            onClick={() => setComparisonCurrencyMode('base')}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${comparisonCurrencyMode === 'base' ? 'bg-white dark:bg-[#333] shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}
-                         >
-                            Convert to {currentRules.currency}
-                         </button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-11 gap-6 items-start">
-                    {/* COMPARISON COLUMN A */}
-                    <div className="lg:col-span-5 bg-white dark:bg-[#101012] rounded-[32px] shadow-lg border border-gray-200 dark:border-[#333] overflow-hidden flex flex-col">
-                        {/* Gradient Header A */}
-                        <div className="h-24 bg-gradient-to-r from-blue-600 to-blue-500 relative p-6 flex items-center justify-between">
-                            <div className="flex items-center gap-3 z-10">
-                                <div className="w-10 h-10 rounded-full bg-white/20 border border-white/20 flex items-center justify-center text-white font-bold backdrop-blur-md shadow-lg">A</div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-white leading-tight">Scenario A</h3>
-                                    <p className="text-[10px] text-blue-100 font-semibold uppercase">Base Scenario</p>
-                                </div>
-                            </div>
-                            <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                {/* Comparison Header / Controls */}
+                <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-[#101012] p-5 rounded-[24px] border border-slate-200 dark:border-[#333] shadow-sm gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+                            <i className="fas fa-balance-scale-right text-xl"></i>
                         </div>
-
-                        <div className="p-6 space-y-4 -mt-2 bg-white dark:bg-[#101012] rounded-t-[24px] relative z-10 flex-grow">
-                            <CurrencyDropdown value={inputs.country} onChange={(v) => setInputs({...inputs, country: v})} className="w-full" />
-                            <SmartNumberInput 
-                                value={inputs.grossIncome} 
-                                onChangeValue={(v) => setInputs({...inputs, grossIncome: v})}
-                                prefix={currentRules.currencySymbol}
-                                inputClassName="w-full h-12 pl-10 pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold text-slate-900 dark:text-white"
-                            />
-                             <div className="grid grid-cols-2 gap-3">
-                                <div className="col-span-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Bonus</label>
-                                    <SmartNumberInput 
-                                        value={inputs.annualBonus || 0}
-                                        onChangeValue={(val) => setInputs({...inputs, annualBonus: val})}
-                                        step={100}
-                                        prefix={currentRules.currencySymbol}
-                                        inputClassName="w-full h-10 pl-8 pr-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-xs text-slate-900 dark:text-white"
-                                    />
-                                </div>
-                                <div className="col-span-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Age</label>
-                                    <SmartNumberInput value={inputs.details.age} onChangeValue={(v) => setInputs({...inputs, details: {...inputs.details, age: v}})} inputClassName="w-full h-10 pl-2 text-center bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-slate-900 dark:text-white" />
-                                </div>
-                                {currentRules.hasMaritalStatusOption && (
-                                    <div className="col-span-2">
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Status</label>
-                                        <select 
-                                            value={inputs.details.maritalStatus}
-                                            onChange={(e) => setInputs({...inputs, details: {...inputs.details, maritalStatus: e.target.value as any}})}
-                                            className="w-full h-10 px-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-xs outline-none text-slate-900 dark:text-white"
-                                        >
-                                            <option value="single">Single</option>
-                                            <option value="married">Married</option>
-                                        </select>
-                                    </div>
-                                )}
-                                {currentRules.hasExpatOption && (
-                                    <div className="col-span-2 flex items-center justify-between p-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg cursor-pointer" onClick={() => setInputs({...inputs, details: { ...inputs.details, isExpat: !inputs.details.isExpat }})}>
-                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">30% Ruling (Expat)</span>
-                                        <div className={`w-8 h-4 rounded-full relative transition-colors ${inputs.details.isExpat ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600'}`}>
-                                            <div className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform ${inputs.details.isExpat ? 'translate-x-4' : ''}`}></div>
-                                        </div>
-                                    </div>
-                                )}
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h2 className="font-extrabold text-slate-900 dark:text-white leading-none text-lg">Salary Comparison</h2>
+                                <InfoTooltip text="Compare two tax scenarios side-by-side. Great for analyzing job offers in different countries." />
                             </div>
-                            
-                            {/* Enhanced Result Card A */}
-                            <div className="mt-6 relative rounded-2xl overflow-hidden shadow-lg group bg-gradient-to-br from-blue-600 to-blue-500 p-5 text-white">
-                                <div className="absolute right-0 bottom-0 opacity-10 text-6xl -mr-2 -mb-2 rotate-12"><i className="fas fa-wallet"></i></div>
-                                <p className="text-[10px] font-bold uppercase text-blue-100 tracking-wider mb-1">Net Annual Pay</p>
-                                <h3 className="text-3xl font-extrabold tracking-tight">{formatCurrency(result.netAnnual, inputs.country)}</h3>
-                                <div className="flex justify-between items-end mt-3 border-t border-white/20 pt-2">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-blue-100 uppercase">Monthly</p>
-                                        <p className="font-bold">{formatCurrency(result.netMonthly, inputs.country)}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-bold text-blue-100 uppercase">Effective Tax</p>
-                                        <p className="font-bold">{((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1)}%</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-1">Analyze net pay differences across borders</p>
                         </div>
                     </div>
                     
-                    {/* SYNC ACTION COLUMN */}
-                    <div className="lg:col-span-1 flex lg:flex-col items-center justify-center h-full py-2 gap-2">
-                        <div className="h-px w-full bg-gray-200 dark:bg-[#333] lg:hidden"></div>
-                        <button 
-                            onClick={syncAtoB}
-                            title="Copy A settings to B"
-                            className="w-12 h-12 rounded-full bg-white dark:bg-[#2c2c2e] border border-gray-100 dark:border-[#444] text-slate-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:scale-110 transition-all shadow-lg flex items-center justify-center active:scale-90 z-10"
-                        >
-                             <i className="fas fa-arrow-right hidden lg:block text-lg"></i>
-                             <i className="fas fa-arrow-down lg:hidden text-lg"></i>
-                        </button>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden lg:block rotate-90 whitespace-nowrap mt-2">Sync to B</div>
-                        <div className="h-px w-full bg-gray-200 dark:bg-[#333] lg:hidden"></div>
-                    </div>
-
-                    {/* COMPARISON COLUMN B */}
-                    <div className="lg:col-span-5 bg-white dark:bg-[#101012] rounded-[32px] shadow-lg border border-gray-200 dark:border-[#333] overflow-hidden flex flex-col">
-                        {/* Gradient Header B */}
-                        <div className="h-24 bg-gradient-to-r from-purple-600 to-indigo-600 relative p-6 flex items-center justify-between">
-                            <div className="flex items-center gap-3 z-10">
-                                <div className="w-10 h-10 rounded-full bg-white/20 border border-white/20 flex items-center justify-center text-white font-bold backdrop-blur-md shadow-lg">B</div>
-                                <div>
-                                    <h3 className="font-bold text-lg text-white leading-tight">Scenario B</h3>
-                                    <p className="text-[10px] text-purple-100 font-semibold uppercase">Comparison Target</p>
-                                </div>
-                            </div>
-                            <div className="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                        </div>
-
-                        <div className="p-6 space-y-4 -mt-2 bg-white dark:bg-[#101012] rounded-t-[24px] relative z-10 flex-grow">
-                            <CurrencyDropdown value={inputsB.country} onChange={(v) => setInputsB({...inputsB, country: v})} className="w-full" />
-                            <SmartNumberInput 
-                                value={inputsB.grossIncome} 
-                                onChangeValue={(v) => setInputsB({...inputsB, grossIncome: v})}
-                                prefix={rulesB.currencySymbol}
-                                inputClassName="w-full h-12 pl-10 pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold text-slate-900 dark:text-white"
-                            />
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="col-span-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Bonus</label>
-                                    <SmartNumberInput 
-                                        value={inputsB.annualBonus || 0}
-                                        onChangeValue={(val) => setInputsB({...inputsB, annualBonus: val})}
-                                        step={100}
-                                        prefix={rulesB.currencySymbol}
-                                        inputClassName="w-full h-10 pl-8 pr-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-xs text-slate-900 dark:text-white"
-                                    />
-                                </div>
-                                <div className="col-span-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Age</label>
-                                    <SmartNumberInput value={inputsB.details.age} onChangeValue={(v) => setInputsB({...inputsB, details: {...inputsB.details, age: v}})} inputClassName="w-full h-10 pl-2 text-center bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-slate-900 dark:text-white" />
-                                </div>
-                                {rulesB.hasMaritalStatusOption && (
-                                    <div className="col-span-2">
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Status</label>
-                                        <select 
-                                            value={inputsB.details.maritalStatus}
-                                            onChange={(e) => setInputsB({...inputsB, details: {...inputsB.details, maritalStatus: e.target.value as any}})}
-                                            className="w-full h-10 px-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-xs outline-none text-slate-900 dark:text-white"
-                                        >
-                                            <option value="single">Single</option>
-                                            <option value="married">Married</option>
-                                        </select>
-                                    </div>
-                                )}
-                                {rulesB.hasExpatOption && (
-                                    <div className="col-span-2 flex items-center justify-between p-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg cursor-pointer" onClick={() => setInputsB({...inputsB, details: { ...inputsB.details, isExpat: !inputsB.details.isExpat }})}>
-                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">30% Ruling (Expat)</span>
-                                        <div className={`w-8 h-4 rounded-full relative transition-colors ${inputsB.details.isExpat ? 'bg-purple-500' : 'bg-gray-300 dark:bg-slate-600'}`}>
-                                            <div className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform ${inputsB.details.isExpat ? 'translate-x-4' : ''}`}></div>
-                                        </div>
-                                    </div>
-                                )}
-                                {rulesB.hasChurchTaxOption && (
-                                    <div className="col-span-2 flex items-center justify-between p-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg cursor-pointer" onClick={() => setInputsB({...inputsB, details: { ...inputsB.details, churchTax: !inputsB.details.churchTax }})}>
-                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Church Tax</span>
-                                        <div className={`w-8 h-4 rounded-full relative transition-colors ${inputsB.details.churchTax ? 'bg-purple-500' : 'bg-gray-300 dark:bg-slate-600'}`}>
-                                            <div className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform ${inputsB.details.churchTax ? 'translate-x-4' : ''}`}></div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            
-                            {/* New: Cost of Living Adjustment Input */}
-                            <div className="bg-gray-50 dark:bg-[#1c1c1e] rounded-xl p-3 border border-gray-100 dark:border-[#333]">
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="text-[10px] font-bold text-gray-400 uppercase">Relative Cost of Living</label>
-                                    <span className={`text-xs font-extrabold ${colDiff > 0 ? 'text-red-500' : colDiff < 0 ? 'text-green-500' : 'text-slate-500'}`}>
-                                        {colDiff > 0 ? '+' : ''}{colDiff}%
-                                    </span>
-                                </div>
-                                <input 
-                                    type="range" 
-                                    min="-50" max="100" step="5"
-                                    value={colDiff}
-                                    onChange={(e) => setColDiff(parseInt(e.target.value))}
-                                    className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-purple-600"
-                                />
-                                <p className="text-[10px] text-gray-400 mt-1 text-center">Is {rulesB.name} cheaper or more expensive?</p>
-                            </div>
-                            
-                             {/* Enhanced Result Card B */}
-                             {resultB && (
-                                <div className="mt-6 relative rounded-2xl overflow-hidden shadow-lg group bg-gradient-to-br from-purple-600 to-indigo-600 p-5 text-white">
-                                    <div className="absolute right-0 bottom-0 opacity-10 text-6xl -mr-2 -mb-2 rotate-12"><i className="fas fa-piggy-bank"></i></div>
-                                    <p className="text-[10px] font-bold uppercase text-purple-100 tracking-wider mb-1">Net Annual Pay</p>
-                                    <h3 className="text-3xl font-extrabold tracking-tight">
-                                        {comparisonCurrencyMode === 'base' ? '≈ ' : ''}
-                                        {formatCurrency(comparisonCurrencyMode === 'base' ? normalized.netB : resultB.netAnnual, comparisonCurrencyMode === 'base' ? inputs.country : inputsB.country)}
-                                    </h3>
-                                    <div className="flex justify-between items-end mt-3 border-t border-white/20 pt-2">
-                                        <div>
-                                            <p className="text-[10px] font-bold text-purple-100 uppercase">Monthly</p>
-                                            <p className="font-bold">
-                                                {comparisonCurrencyMode === 'base' ? '≈ ' : ''}
-                                                {formatCurrency(comparisonCurrencyMode === 'base' ? normalized.netB/12 : resultB.netMonthly, comparisonCurrencyMode === 'base' ? inputs.country : inputsB.country)}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-bold text-purple-100 uppercase">Effective Tax</p>
-                                            <p className="font-bold">{((1 - resultB.netAnnual/resultB.grossAnnual)*100).toFixed(1)}%</p>
-                                        </div>
-                                    </div>
-                                </div>
-                             )}
-                        </div>
+                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-[#1c1c1e] p-1.5 rounded-2xl">
+                         <SegmentedControl 
+                            options={[{label: 'Native', value: 'native'}, {label: `Convert to ${currentRules.currency}`, value: 'base'}]}
+                            value={comparisonCurrencyMode}
+                            onChange={(v) => setComparisonCurrencyMode(v)}
+                            dark={darkMode}
+                         />
+                         <InfoTooltip text="Native: Shows raw values (e.g. 50k GBP vs 50k USD). Convert: Translates Scenario B into Base currency for direct comparison." align="end" />
                     </div>
                 </div>
 
-                {/* Comparison Analysis / Charts */}
-                {result && resultB && (
-                    <div className="bg-white dark:bg-[#101012] rounded-[32px] p-8 border border-gray-200 dark:border-[#333] shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500"></div>
-                        <h2 className="text-2xl font-extrabold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
-                            <i className="fas fa-chart-bar text-slate-400"></i> Analysis
-                        </h2>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            {comparisonCurrencyMode === 'base' && (
-                                <div className={`p-6 rounded-2xl border ${normalized.diff >= 0 ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30' : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30'} flex items-center gap-5`}>
-                                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shrink-0 shadow-md ${normalized.diff >= 0 ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
-                                        {normalized.diff >= 0 ? <i className="fas fa-arrow-trend-up"></i> : <i className="fas fa-arrow-trend-down"></i>}
-                                    </div>
-                                    <div>
-                                        <h3 className={`text-lg font-extrabold ${normalized.diff >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                                            Scenario B pays {Math.abs(normalized.pct).toFixed(1)}% {normalized.diff >= 0 ? 'more' : 'less'}
-                                        </h3>
-                                        <p className="text-sm opacity-80 mt-1 font-medium text-slate-700 dark:text-slate-300">
-                                            That's a difference of <span className="font-bold">{formatCurrency(Math.abs(normalized.diff), inputs.country)}</span> per year.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                            
-                            {/* Purchasing Power Analysis Card */}
-                            {comparisonCurrencyMode === 'base' && colDiff !== 0 && (
-                                <div className={`p-6 rounded-2xl border ${normalized.purchasingPowerDiff >= 0 ? 'bg-teal-50 dark:bg-teal-900/10 border-teal-100 dark:border-teal-900/30' : 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30'} flex items-center gap-5`}>
-                                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shrink-0 shadow-md ${normalized.purchasingPowerDiff >= 0 ? 'bg-teal-500 text-white' : 'bg-orange-500 text-white'}`}>
-                                        <i className="fas fa-shopping-cart"></i>
-                                    </div>
-                                    <div>
-                                        <h3 className={`text-lg font-extrabold ${normalized.purchasingPowerDiff >= 0 ? 'text-teal-700 dark:text-teal-400' : 'text-orange-700 dark:text-orange-400'}`}>
-                                            Real Purchasing Power
-                                        </h3>
-                                        <p className="text-sm opacity-80 mt-1 font-medium text-slate-700 dark:text-slate-300">
-                                            After adjusting for {colDiff}% cost of living difference, Scenario B is effectively <span className="font-bold">{formatCurrency(Math.abs(normalized.purchasingPowerDiff), inputs.country)}</span> {normalized.purchasingPowerDiff >= 0 ? 'better' : 'worse'} off.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="space-y-10">
-                             {/* Stacked Tax vs Net Chart */}
-                             <div>
-                                 <div className="flex justify-between text-sm font-bold mb-4 text-slate-900 dark:text-white">
-                                     <span>Income Breakdown (Gross)</span>
-                                 </div>
-                                 
-                                 {/* Bar A */}
-                                 <div className="mb-4">
-                                     <div className="flex justify-between text-xs font-bold mb-1 text-slate-500">
-                                         <span>Scenario A</span>
-                                         <span>{formatCurrency(result.grossAnnual, inputs.country)}</span>
-                                     </div>
-                                     <div className="h-10 w-full bg-slate-100 dark:bg-[#1c1c1e] rounded-lg overflow-hidden flex shadow-inner">
-                                         {/* Tax Part */}
-                                         <div className="h-full bg-red-500 flex items-center justify-center text-white text-[10px] font-bold" style={{width: `${(1 - result.netAnnual/result.grossAnnual)*100}%`}}>
-                                             Tax
-                                         </div>
-                                         {/* Net Part */}
-                                         <div className="h-full bg-blue-500 flex items-center justify-center text-white text-[10px] font-bold" style={{width: `${(result.netAnnual/result.grossAnnual)*100}%`}}>
-                                             Net Pay
-                                         </div>
-                                     </div>
-                                 </div>
-                                 
-                                 {/* Bar B */}
-                                 <div>
-                                     <div className="flex justify-between text-xs font-bold mb-1 text-slate-500">
-                                         <span>Scenario B</span>
-                                         <span>{formatCurrency(resultB.grossAnnual, inputsB.country)}</span>
-                                     </div>
-                                     <div className="h-10 w-full bg-slate-100 dark:bg-[#1c1c1e] rounded-lg overflow-hidden flex shadow-inner">
-                                         {/* Tax Part */}
-                                         <div className="h-full bg-red-500 flex items-center justify-center text-white text-[10px] font-bold" style={{width: `${(1 - resultB.netAnnual/resultB.grossAnnual)*100}%`}}>
-                                             Tax
-                                         </div>
-                                         {/* Net Part */}
-                                         <div className="h-full bg-purple-500 flex items-center justify-center text-white text-[10px] font-bold" style={{width: `${(resultB.netAnnual/resultB.grossAnnual)*100}%`}}>
-                                             Net Pay
-                                         </div>
-                                     </div>
-                                 </div>
-                             </div>
-
-                             {/* Detailed Comparison Table */}
-                             <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#333]">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="text-xs text-slate-500 uppercase font-bold bg-slate-50 dark:bg-[#1c1c1e]">
-                                        <tr>
-                                            <th className="px-6 py-3">Metric</th>
-                                            <th className="px-6 py-3 text-right text-blue-600 dark:text-blue-400">Scenario A ({inputs.country})</th>
-                                            <th className="px-6 py-3 text-right text-purple-600 dark:text-purple-400">Scenario B ({inputsB.country})</th>
-                                            {comparisonCurrencyMode === 'base' && <th className="px-6 py-3 text-right">Diff (in {inputs.country})</th>}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-[#333] bg-white dark:bg-[#101012]">
-                                        <tr>
-                                            <td className="px-6 py-4 font-bold">Gross Income</td>
-                                            <td className="px-6 py-4 text-right">{formatCurrency(result.grossAnnual, inputs.country)}</td>
-                                            <td className="px-6 py-4 text-right">{formatCurrency(resultB.grossAnnual, inputsB.country)}</td>
-                                            {comparisonCurrencyMode === 'base' && <td className="px-6 py-4 text-right font-medium">-</td>}
-                                        </tr>
-                                        <tr>
-                                            <td className="px-6 py-4 font-bold">Effective Tax Rate</td>
-                                            <td className="px-6 py-4 text-right">{((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1)}%</td>
-                                            <td className="px-6 py-4 text-right">{((1 - resultB.netAnnual/resultB.grossAnnual)*100).toFixed(1)}%</td>
-                                            {comparisonCurrencyMode === 'base' && <td className="px-6 py-4 text-right font-medium">
-                                                {(((1 - resultB.netAnnual/resultB.grossAnnual)*100) - ((1 - result.netAnnual/result.grossAnnual)*100)).toFixed(1)}%
-                                            </td>}
-                                        </tr>
-                                        <tr className="bg-slate-50/50 dark:bg-[#18181b]">
-                                            <td className="px-6 py-4 font-extrabold">Net Annual Pay</td>
-                                            <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.netAnnual, inputs.country)}</td>
-                                            <td className="px-6 py-4 text-right font-bold">{formatCurrency(resultB.netAnnual, inputsB.country)}</td>
-                                            {comparisonCurrencyMode === 'base' && <td className={`px-6 py-4 text-right font-bold ${normalized.diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {normalized.diff > 0 ? '+' : ''}{formatCurrency(normalized.diff, inputs.country)}
-                                            </td>}
-                                        </tr>
-                                        <tr className="bg-slate-50/50 dark:bg-[#18181b]">
-                                            <td className="px-6 py-4 font-extrabold">Net Monthly Pay</td>
-                                            <td className="px-6 py-4 text-right font-bold">{formatCurrency(result.netMonthly, inputs.country)}</td>
-                                            <td className="px-6 py-4 text-right font-bold">{formatCurrency(resultB.netMonthly, inputsB.country)}</td>
-                                            {comparisonCurrencyMode === 'base' && <td className={`px-6 py-4 text-right font-bold ${normalized.diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {normalized.diff > 0 ? '+' : ''}{formatCurrency(normalized.diff / 12, inputs.country)}
-                                            </td>}
-                                        </tr>
-                                        {colDiff !== 0 && comparisonCurrencyMode === 'base' && (
-                                            <tr className="bg-orange-50/30 dark:bg-orange-900/10 border-t-2 border-orange-100 dark:border-orange-900/20">
-                                                <td className="px-6 py-4 font-extrabold text-orange-700 dark:text-orange-400">COLA Adjusted Net</td>
-                                                <td className="px-6 py-4 text-right font-medium text-slate-500">-</td>
-                                                <td className="px-6 py-4 text-right font-bold text-orange-600 dark:text-orange-400">
-                                                    ≈ {formatCurrency(normalized.adjustedNetB, inputs.country)}
-                                                </td>
-                                                <td className={`px-6 py-4 text-right font-bold ${normalized.purchasingPowerDiff > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {normalized.purchasingPowerDiff > 0 ? '+' : ''}{formatCurrency(normalized.purchasingPowerDiff, inputs.country)}
-                                                </td>
-                                            </tr>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 relative items-start">
+                    
+                    {/* SCENARIO A (LEFT) */}
+                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 hover:z-50 transition-all duration-300">
+                         {/* Input Card A */}
+                         <div className="bg-white dark:bg-[#101012] rounded-[28px] border border-slate-200 dark:border-[#333] shadow-sm p-6 relative group hover:shadow-xl hover:border-blue-200 dark:hover:border-blue-900/50 transition-all">
+                              <div className="absolute top-6 left-0 w-1.5 h-12 bg-blue-500 rounded-r-md"></div>
+                              <div className="mb-6 flex justify-between items-center pl-2">
+                                   <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wide">Base Scenario (A)</span>
+                                   <div className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wide border border-blue-100 dark:border-blue-900/30">Original</div>
+                              </div>
+                              
+                              <div className="space-y-5">
+                                   <div className="space-y-1">
+                                       <div className="flex items-center gap-1 mb-1">
+                                          <label className="text-[11px] font-bold text-slate-400 uppercase">Location</label>
+                                          <InfoTooltip text="The country you are currently in or using as your baseline." />
+                                       </div>
+                                       <CurrencyDropdown value={inputs.country} onChange={(v) => setInputs({...inputs, country: v})} className="w-full" />
+                                   </div>
+                                   <div className="space-y-1">
+                                       <div className="flex items-center gap-1 mb-1">
+                                          <label className="text-[11px] font-bold text-slate-400 uppercase">Annual Gross</label>
+                                          <InfoTooltip text="Total annual salary before tax in the local currency." />
+                                       </div>
+                                       <SmartNumberInput 
+                                            value={inputs.grossIncome} 
+                                            onChangeValue={(v) => setInputs({...inputs, grossIncome: v})}
+                                            prefix={currentRules.currencySymbol}
+                                            inputClassName="w-full h-12 pl-10 pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold text-slate-900 dark:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all"
+                                        />
+                                   </div>
+                                   <div className="grid grid-cols-2 gap-3">
+                                        <div className="col-span-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Age</label>
+                                            <SmartNumberInput value={inputs.details.age} onChangeValue={(v) => setInputs({...inputs, details: {...inputs.details, age: v}})} inputClassName="w-full h-10 pl-2 text-center bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-slate-900 dark:text-white text-sm" />
+                                        </div>
+                                        {currentRules.hasMaritalStatusOption && (
+                                            <div className="col-span-1">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Status</label>
+                                                <select 
+                                                    value={inputs.details.maritalStatus}
+                                                    onChange={(e) => setInputs({...inputs, details: {...inputs.details, maritalStatus: e.target.value as any}})}
+                                                    className="w-full h-10 px-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-xs outline-none text-slate-900 dark:text-white"
+                                                >
+                                                    <option value="single">Single</option>
+                                                    <option value="married">Married</option>
+                                                </select>
+                                            </div>
                                         )}
-                                    </tbody>
-                                </table>
+                                   </div>
+                              </div>
+                         </div>
+
+                         {/* Result Preview A */}
+                         {result && (
+                            <div className="p-5 rounded-[24px] bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border border-blue-100 dark:border-blue-900/30 flex justify-between items-center">
+                                <div>
+                                    <div className="flex items-center gap-1 mb-0.5">
+                                        <p className="text-[10px] font-bold text-blue-400 uppercase">Net Monthly A</p>
+                                    </div>
+                                    <p className="text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tight">{formatCurrency(result.netMonthly, inputs.country)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Effective Tax</p>
+                                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1)}%</p>
+                                </div>
+                            </div>
+                         )}
+                    </div>
+
+                    {/* MIDDLE COLUMN (ANALYSIS & CONTROLS) */}
+                    <div className="xl:col-span-1 flex flex-col gap-6 relative z-20">
+                         {/* The VS Badge */}
+                         <div className="hidden xl:flex mx-auto w-14 h-14 bg-white dark:bg-[#1c1c1e] rounded-full border-[3px] border-slate-100 dark:border-[#333] items-center justify-center shadow-sm text-lg font-black text-slate-300 dark:text-slate-600 z-30 -mb-8 -mt-2">
+                             VS
+                         </div>
+
+                         {/* Analysis Card */}
+                         {result && resultB && (
+                             <div className="bg-slate-900 dark:bg-black text-white rounded-[28px] shadow-2xl p-8 text-center border border-slate-800 dark:border-[#222] relative flex-grow flex flex-col justify-center overflow-hidden group">
+                                  {/* Background FX */}
+                                  <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                                  <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-blue-500/30 transition-all duration-700"></div>
+                                  <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none group-hover:bg-purple-500/30 transition-all duration-700"></div>
+                                  
+                                  {/* Dynamic Feedback based on diff */}
+                                  <div className="relative z-10">
+                                      {comparisonCurrencyMode === 'base' ? (
+                                          <>
+                                              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">Net Annual Difference</p>
+                                              <div className={`text-4xl sm:text-5xl font-black tracking-tight mb-3 ${normalized.diff >= 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
+                                                  {normalized.diff >= 0 ? '+' : ''}{formatCurrency(normalized.diff, inputs.country)}
+                                              </div>
+                                              <div className="inline-block bg-white/10 rounded-lg px-3 py-1.5 backdrop-blur-md border border-white/5">
+                                                  <p className="text-xs font-medium text-slate-300">
+                                                      Scenario B pays <span className={`font-bold ${normalized.diff >= 0 ? 'text-green-400' : 'text-red-400'}`}>{Math.abs(normalized.pct).toFixed(1)}% {normalized.diff >= 0 ? 'more' : 'less'}</span>
+                                                  </p>
+                                              </div>
+                                          </>
+                                      ) : (
+                                          <>
+                                               <div className="w-12 h-12 mx-auto bg-white/10 rounded-2xl flex items-center justify-center mb-4 border border-white/10">
+                                                   <i className="fas fa-info text-white/50"></i>
+                                               </div>
+                                               <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Raw Comparison Mode</p>
+                                               <div className="text-xl font-bold text-white mb-2 leading-tight">Comparing Native Currencies</div>
+                                               <p className="text-xs text-slate-400 px-2 mt-2 leading-relaxed">
+                                                   You are viewing raw values (e.g. {formatCompact(result.netAnnual)} vs {formatCompact(resultB.netAnnual)}). 
+                                                   <br/>Switch to <span className="text-white font-bold border-b border-white/30">"Convert"</span> above to see the real purchasing difference.
+                                               </p>
+                                          </>
+                                      )}
+                                      
+                                      {/* Purchasing Power Insight */}
+                                      {comparisonCurrencyMode === 'base' && colDiff !== 0 && (
+                                          <div className="mt-6 pt-6 border-t border-white/10">
+                                              <div className="flex items-center justify-center gap-1 mb-2">
+                                                 <p className="text-[10px] text-slate-400 font-bold uppercase">Purchasing Power Impact</p>
+                                                 <InfoTooltip text="This takes the cost of living difference into account. If you earn more but costs are doubled, your real power might be lower." className="text-slate-400" />
+                                              </div>
+                                              <div className={`text-lg font-bold flex items-center justify-center gap-2 ${normalized.purchasingPowerDiff >= 0 ? 'text-teal-400' : 'text-orange-400'}`}>
+                                                  {normalized.purchasingPowerDiff >= 0 ? <i className="fas fa-arrow-trend-up"></i> : <i className="fas fa-arrow-trend-down"></i>}
+                                                  {normalized.purchasingPowerDiff >= 0 ? 'Gains' : 'Loses'} {formatCurrency(Math.abs(normalized.purchasingPowerDiff), inputs.country)} value
+                                              </div>
+                                          </div>
+                                      )}
+                                  </div>
+
+                                  {/* Swap Button */}
+                                  <div className="mt-8 flex justify-center relative z-10">
+                                    <button onClick={swapScenarios} className="group/swap flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all active:scale-95">
+                                        <i className="fas fa-exchange-alt text-xs text-slate-400 group-hover/swap:text-white transition-colors"></i>
+                                        <span className="text-[10px] font-bold text-slate-400 group-hover/swap:text-white transition-colors">Swap Scenarios</span>
+                                    </button>
+                                  </div>
                              </div>
-                        </div>
+                         )}
+
+                         {/* Sync Button */}
+                         <button 
+                            onClick={syncAtoB} 
+                            className="w-full py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors flex items-center justify-center gap-2 hover:border-blue-400 dark:hover:border-blue-600 hover:text-blue-500 dark:hover:text-blue-400"
+                         >
+                             <i className="fas fa-copy"></i> Copy Base Gross to Target
+                         </button>
+                    </div>
+
+                    {/* SCENARIO B (RIGHT) */}
+                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 hover:z-50 transition-all duration-300">
+                         {/* Input Card B */}
+                         <div className="bg-white dark:bg-[#101012] rounded-[28px] border border-slate-200 dark:border-[#333] shadow-sm p-6 relative group hover:shadow-xl hover:border-purple-200 dark:hover:border-purple-900/50 transition-all">
+                              <div className="absolute top-6 right-0 w-1.5 h-12 bg-purple-500 rounded-l-md"></div>
+                              <div className="mb-6 flex justify-between items-center pr-2">
+                                   <div className="px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 text-[10px] font-bold uppercase tracking-wide border border-purple-100 dark:border-purple-900/30">Target</div>
+                                   <span className="text-xs font-extrabold text-slate-900 dark:text-white uppercase tracking-wide">Scenario (B)</span>
+                              </div>
+                              
+                              <div className="space-y-5">
+                                   <div className="space-y-1">
+                                       <div className="flex items-center gap-1 mb-1">
+                                          <label className="text-[11px] font-bold text-slate-400 uppercase">Location</label>
+                                          <InfoTooltip text="The new country or scenario you are comparing against." />
+                                       </div>
+                                       <CurrencyDropdown value={inputsB.country} onChange={(v) => setInputsB({...inputsB, country: v})} className="w-full" />
+                                   </div>
+                                   <div className="space-y-1">
+                                       <div className="flex items-center gap-1 mb-1">
+                                          <label className="text-[11px] font-bold text-slate-400 uppercase">Annual Gross</label>
+                                          <InfoTooltip text="Target salary in that country's local currency." />
+                                       </div>
+                                       <SmartNumberInput 
+                                            value={inputsB.grossIncome} 
+                                            onChangeValue={(v) => setInputsB({...inputsB, grossIncome: v})}
+                                            prefix={rulesB.currencySymbol}
+                                            inputClassName="w-full h-12 pl-10 pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold text-slate-900 dark:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all"
+                                        />
+                                   </div>
+
+                                   {/* COLA Slider */}
+                                   <div className="bg-slate-50 dark:bg-[#1c1c1e] rounded-xl p-4 border border-slate-100 dark:border-[#333]">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div className="flex items-center gap-1">
+                                                <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Cost of Living Adj.</label>
+                                                <InfoTooltip text="Use this to approximate real value. If moving to a city that is 20% more expensive (e.g. Austin to NY), set to +20%. Check sites like Numbeo for data." />
+                                            </div>
+                                            <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${colDiff > 0 ? 'bg-red-100 text-red-600' : colDiff < 0 ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-500'}`}>
+                                                {colDiff > 0 ? '+' : ''}{colDiff}%
+                                            </span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="-50" max="100" step="5"
+                                            value={colDiff}
+                                            onChange={(e) => setColDiff(parseInt(e.target.value))}
+                                            className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-purple-600 hover:accent-purple-500"
+                                        />
+                                        <div className="flex justify-between mt-1 text-[9px] text-slate-400 font-bold">
+                                            <span>Cheaper</span>
+                                            <span>More Expensive</span>
+                                        </div>
+                                   </div>
+
+                                   <div className="grid grid-cols-2 gap-3">
+                                        <div className="col-span-1">
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Age</label>
+                                            <SmartNumberInput value={inputsB.details.age} onChangeValue={(v) => setInputsB({...inputsB, details: {...inputsB.details, age: v}})} inputClassName="w-full h-10 pl-2 text-center bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-slate-900 dark:text-white text-sm" />
+                                        </div>
+                                        {rulesB.hasMaritalStatusOption && (
+                                            <div className="col-span-1">
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Status</label>
+                                                <select 
+                                                    value={inputsB.details.maritalStatus}
+                                                    onChange={(e) => setInputsB({...inputsB, details: {...inputsB.details, maritalStatus: e.target.value as any}})}
+                                                    className="w-full h-10 px-2 bg-gray-50 dark:bg-[#1c1c1e] rounded-lg font-bold text-xs outline-none text-slate-900 dark:text-white"
+                                                >
+                                                    <option value="single">Single</option>
+                                                    <option value="married">Married</option>
+                                                </select>
+                                            </div>
+                                        )}
+                                   </div>
+                              </div>
+                         </div>
+                         
+                         {/* Result Preview B */}
+                         {resultB && (
+                            <div className="p-5 rounded-[24px] bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 border border-purple-100 dark:border-purple-900/30 flex justify-between items-center">
+                                <div>
+                                    <div className="flex items-center gap-1 mb-0.5">
+                                        <p className="text-[10px] font-bold text-purple-400 uppercase">Net Monthly B</p>
+                                        {comparisonCurrencyMode === 'base' && <span className="text-[9px] font-bold text-slate-400 bg-white dark:bg-black px-1 rounded border border-slate-100 dark:border-[#333]">Conv.</span>}
+                                    </div>
+                                    <p className="text-2xl font-black text-purple-600 dark:text-purple-400 tracking-tight">
+                                        {comparisonCurrencyMode === 'base' ? '≈ ' : ''}
+                                        {formatCurrency(comparisonCurrencyMode === 'base' ? normalized.netB/12 : resultB.netMonthly, comparisonCurrencyMode === 'base' ? inputs.country : inputsB.country)}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Effective Tax</p>
+                                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{((1 - resultB.netAnnual/resultB.grossAnnual)*100).toFixed(1)}%</p>
+                                </div>
+                            </div>
+                         )}
+                    </div>
+                </div>
+                
+                {/* Detailed Comparison Table */}
+                {result && resultB && (
+                    <div className="overflow-x-auto rounded-[24px] border border-slate-200 dark:border-[#333] shadow-sm mt-4 bg-white dark:bg-[#101012]">
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-xs text-slate-500 uppercase font-bold bg-slate-50 dark:bg-[#1c1c1e]">
+                                <tr>
+                                    <th className="px-6 py-4">Metric</th>
+                                    <th className="px-6 py-4 text-right text-blue-600 dark:text-blue-400">Scenario A ({inputs.country})</th>
+                                    <th className="px-6 py-4 text-right text-purple-600 dark:text-purple-400">Scenario B ({inputsB.country})</th>
+                                    {comparisonCurrencyMode === 'base' && <th className="px-6 py-4 text-right">Diff (in {inputs.country})</th>}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-[#333]">
+                                <tr>
+                                    <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">Gross Income</td>
+                                    <td className="px-6 py-4 text-right font-medium">{formatCurrency(result.grossAnnual, inputs.country)}</td>
+                                    <td className="px-6 py-4 text-right font-medium">{formatCurrency(resultB.grossAnnual, inputsB.country)}</td>
+                                    {comparisonCurrencyMode === 'base' && <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>}
+                                </tr>
+                                <tr>
+                                    <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">Effective Tax Rate</td>
+                                    <td className="px-6 py-4 text-right font-medium">{((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1)}%</td>
+                                    <td className="px-6 py-4 text-right font-medium">{((1 - resultB.netAnnual/resultB.grossAnnual)*100).toFixed(1)}%</td>
+                                    {comparisonCurrencyMode === 'base' && <td className="px-6 py-4 text-right font-medium">
+                                        {(((1 - resultB.netAnnual/resultB.grossAnnual)*100) - ((1 - result.netAnnual/result.grossAnnual)*100)).toFixed(1)}%
+                                    </td>}
+                                </tr>
+                                <tr className="bg-slate-50/50 dark:bg-[#18181b]">
+                                    <td className="px-6 py-4 font-extrabold text-slate-900 dark:text-white">Net Annual Pay</td>
+                                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{formatCurrency(result.netAnnual, inputs.country)}</td>
+                                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{formatCurrency(resultB.netAnnual, inputsB.country)}</td>
+                                    {comparisonCurrencyMode === 'base' && <td className={`px-6 py-4 text-right font-bold ${normalized.diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {normalized.diff > 0 ? '+' : ''}{formatCurrency(normalized.diff, inputs.country)}
+                                    </td>}
+                                </tr>
+                                {colDiff !== 0 && comparisonCurrencyMode === 'base' && (
+                                    <tr className="bg-orange-50/30 dark:bg-orange-900/10 border-t-2 border-orange-100 dark:border-orange-900/20">
+                                        <td className="px-6 py-4 font-extrabold text-orange-700 dark:text-orange-400 flex items-center gap-2">
+                                            COLA Adjusted Net
+                                            <InfoTooltip text="Net pay adjusted for local purchasing power" />
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-medium text-slate-500">-</td>
+                                        <td className="px-6 py-4 text-right font-bold text-orange-600 dark:text-orange-400">
+                                            ≈ {formatCurrency(normalized.adjustedNetB, inputs.country)}
+                                        </td>
+                                        <td className={`px-6 py-4 text-right font-bold ${normalized.purchasingPowerDiff > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {normalized.purchasingPowerDiff > 0 ? '+' : ''}{formatCurrency(normalized.purchasingPowerDiff, inputs.country)}
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>
@@ -1465,10 +1421,15 @@ const App: React.FC = () => {
                             </div>
                         )}
 
-                        {/* NLD 30% Ruling Option */}
+                        {/* NLD 30% Ruling or SAU/ARE Expat Option */}
                         {currentRules.hasExpatOption && (
                             <div className="flex items-center justify-between p-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] rounded-2xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer h-14 group" onClick={() => setInputs({...inputs, details: { ...inputs.details, isExpat: !inputs.details.isExpat }})}>
-                                <label className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer pointer-events-none">30% Ruling (Expat)</label>
+                                <label className="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer pointer-events-none">
+                                    {inputs.country === CountryCode.NLD ? '30% Ruling (Expat)' : 
+                                     inputs.country === CountryCode.SAU ? 'Non-Saudi (Expat)' :
+                                     inputs.country === CountryCode.ARE ? 'Non-Emirati (Expat)' :
+                                     'Expat (Non-National)'}
+                                </label>
                                 <div className={`w-10 h-6 rounded-full relative transition-colors duration-300 ${inputs.details.isExpat ? 'bg-blue-500' : 'bg-gray-300 dark:bg-slate-600 group-hover:bg-gray-400 dark:group-hover:bg-slate-500'}`}>
                                     <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${inputs.details.isExpat ? 'translate-x-4' : ''}`}></div>
                                 </div>

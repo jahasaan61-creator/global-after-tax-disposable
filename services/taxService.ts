@@ -19,6 +19,11 @@ const calculateTaxAmount = (
       basis = basis * 0.70;
   }
 
+  // Saudi Arabia & UAE Expat Logic (No GOSI/GPSSA)
+  if ((country === CountryCode.SAU || country === CountryCode.ARE) && details.isExpat && (deductible.name.includes('GOSI') || deductible.name.includes('GPSSA'))) {
+      return 0;
+  }
+
   // --- SURCHARGE LOGIC (Church Tax, Soli, etc) ---
   // These are calculated based on the 'accumulatedTax' (usually Income Tax), not the Gross Income.
   if (deductible.isTaxSurcharge) {
@@ -69,7 +74,10 @@ const calculateTaxAmount = (
 
   if (deductible.type === 'percentage' && effectiveRate !== undefined) {
     computedAmount = basis * effectiveRate;
-  } 
+  }
+  else if (deductible.type === 'fixed' && deductible.amount) {
+    computedAmount = deductible.amount;
+  }
   else if ((deductible.type === 'progressive' || deductible.type === 'credit_progressive') && (deductible.brackets || deductible.bracketsMarried)) {
     
     // --- SPECIAL LOGIC: Germany Income Splitting ---

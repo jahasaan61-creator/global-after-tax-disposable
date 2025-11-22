@@ -15,6 +15,8 @@ export enum CountryCode {
   JPN = 'JPN', // Japan
   AUS = 'AUS', // Australia
   NLD = 'NLD', // Netherlands
+  SAU = 'SAU', // Saudi Arabia
+  ARE = 'ARE', // United Arab Emirates
 }
 
 export interface TaxBracket {
@@ -74,7 +76,7 @@ export interface CountryRules {
   // Context Flags
   hasMaritalStatusOption?: boolean;
   hasChurchTaxOption?: boolean;
-  hasExpatOption?: boolean; // For 30% ruling
+  hasExpatOption?: boolean; // For 30% ruling or GOSI/GPSSA exemption
 }
 
 export interface DeductionResult {

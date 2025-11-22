@@ -653,5 +653,53 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
             cap: 5608 
         }
     ]
+  },
+  [CountryCode.SAU]: {
+    code: CountryCode.SAU,
+    name: 'Saudi Arabia',
+    currency: 'SAR',
+    currencySymbol: '﷼',
+    exchangeRatePerUSD: 3.75,
+    hasExpatOption: true, // Used to toggle GOSI for Expats
+    sources: [
+        { label: 'GOSI Rates', url: 'https://www.gosi.gov.sa/en/Calculators', date: '2024-01-01' },
+        { label: 'ZATCA (No Income Tax)', url: 'https://zatca.gov.sa/', date: '2024-01-01' }
+    ],
+    federalDeductibles: [
+        {
+            name: 'GOSI (Pension & Saned)',
+            description: '9.75% for Nationals. 0% for Expats.',
+            type: 'percentage',
+            rate: 0.0975, // 9% Annuities + 0.75% Unemployment
+            cappedBase: 540000 // 45,000 SAR/month wage cap
+        }
+    ]
+  },
+  [CountryCode.ARE]: {
+    code: CountryCode.ARE,
+    name: 'United Arab Emirates',
+    currency: 'AED',
+    currencySymbol: 'د.إ',
+    exchangeRatePerUSD: 3.67,
+    hasExpatOption: true, // Toggle GPSSA for Expats
+    sources: [
+        { label: 'U.A.E. Gov Portal', url: 'https://u.ae/en/information-and-services/finance-and-investment/taxation', date: '2024-01-01' },
+        { label: 'ILOE', url: 'https://www.iloe.ae/', date: '2023-01-01' }
+    ],
+    federalDeductibles: [
+        {
+            name: 'GPSSA Pension',
+            description: '5% for UAE Nationals (Capped at 50k/mo). 0% for Expats.',
+            type: 'percentage',
+            rate: 0.05,
+            cappedBase: 600000 // 50k * 12
+        },
+        {
+            name: 'ILOE Insurance',
+            description: 'Unemployment Ins. (AED 60-120/yr).',
+            type: 'fixed',
+            amount: 120 // Using the higher tier for safety/simplicity as it's negligible (max ~$32/yr)
+        }
+    ]
   }
 };
