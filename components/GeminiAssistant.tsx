@@ -17,9 +17,10 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', text: `Hello! I'm your AI Tax Assistant. I can look up the very latest 2025 tax changes or specific deductions for ${countryName} using Google Search. Ask me anything!` }
+    { role: 'ai', text: `Hello! I'm your AI Tax Assistant. I can look up the very latest 2025 tax changes, specific deductions, or nearby tax offices for ${countryName}. Ask me anything!` }
   ]);
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | undefined>(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -30,9 +31,26 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
     if (isOpen) scrollToBottom();
   }, [messages, isOpen]);
 
+  // Request location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setLocation({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                });
+            },
+            (error) => {
+                console.log("Location access denied or error:", error);
+            }
+        );
+    }
+  }, []);
+
   // Reset chat when country changes
   useEffect(() => {
-    setMessages([{ role: 'ai', text: `Hello! I'm your AI Tax Assistant. I can look up the very latest 2025 tax changes or specific deductions for ${countryName}.` }]);
+    setMessages([{ role: 'ai', text: `Hello! I'm your AI Tax Assistant. I can look up the very latest 2025 tax changes, specific deductions, or nearby tax offices for ${countryName}.` }]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [country]);
 
@@ -44,7 +62,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
     setMessages(prev => [...prev, { role: 'user', text: textToSend }]);
     setLoading(true);
 
-    const response = await queryGemini(textToSend, countryName);
+    const response = await queryGemini(textToSend, countryName, location);
 
     setMessages(prev => [...prev, { role: 'ai', text: response }]);
     setLoading(false);
@@ -53,7 +71,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
   const quickPrompts = [
     "How can I reduce my tax?",
     "Explain the main deductions",
-    "Are there new 2025 tax credits?",
+    "Find nearest tax office",
   ];
 
   // Simple function to render text with markdown-style links
@@ -154,7 +172,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask about deductibles..."
+                placeholder="Ask about taxes or locations..."
                 className="w-full pl-4 pr-10 py-2 rounded-full border border-slate-300 dark:border-[#333] bg-white dark:bg-[#1c1c1e] text-slate-900 dark:text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-medium placeholder-slate-400 dark:placeholder-slate-500"
               />
               <button 
@@ -166,7 +184,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
               </button>
             </div>
             <div className="text-[10px] text-center text-slate-400 dark:text-slate-500 mt-2 font-semibold">
-              AI uses Google Search for verification. Double check sources.
+              AI uses Google Search & Maps. Double check sources.
             </div>
           </div>
         </div>
