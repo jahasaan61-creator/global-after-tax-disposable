@@ -122,6 +122,15 @@ export interface UserDetails {
   isExpat?: boolean; 
 }
 
+export interface TaxReliefs {
+  pensionContribution: number; // 401k, Pillar 2, Super
+  privateHealth: number;
+  charitableDonations: number;
+  mortgageInterest: number;
+  workExpenses: number;
+  other: number;
+}
+
 export interface UserInputs {
   grossIncome: number;
   frequency: 'monthly' | 'annual';
@@ -139,6 +148,7 @@ export interface UserInputs {
   };
   details: UserDetails;
   annualBonus: number;
+  taxReliefs: TaxReliefs;
 }
 
 export interface ChatMessage {

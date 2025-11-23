@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { CountryCode, UserInputs, CalculationResult } from './types';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { CountryCode, UserInputs, CalculationResult, TaxReliefs, CountryRules, DeductionResult } from './types';
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
 import { GeminiAssistant } from './components/GeminiAssistant';
@@ -57,7 +57,7 @@ interface SmartNumberInputProps extends React.InputHTMLAttributes<HTMLInputEleme
     highlight?: boolean;
 }
 
-const SmartNumberInput = ({ 
+const SmartNumberInput = React.memo(({ 
     value, 
     onChangeValue, 
     step = 1, 
@@ -78,7 +78,7 @@ const SmartNumberInput = ({
         valueRef.current = value;
     }, [value]);
 
-    const updateValue = (direction: 1 | -1) => {
+    const updateValue = useCallback((direction: 1 | -1) => {
         const current = valueRef.current;
         let next = (Number(current) || 0) + (step * direction);
         if (min !== undefined && next < min) next = min;
@@ -86,9 +86,9 @@ const SmartNumberInput = ({
         
         onChangeValue(next);
         valueRef.current = next;
-    };
+    }, [onChangeValue, step, min, max]);
 
-    const handleMouseDown = (direction: 1 | -1) => {
+    const handleMouseDown = useCallback((direction: 1 | -1) => {
         updateValue(direction); // Immediate update
         // Delay before rapid fire
         timeoutRef.current = setTimeout(() => {
@@ -96,17 +96,17 @@ const SmartNumberInput = ({
                 updateValue(direction);
             }, 50); // Rapid speed (50ms)
         }, 400); // Wait 400ms before rapid starts
-    };
+    }, [updateValue]);
 
-    const handleStop = () => {
+    const handleStop = useCallback(() => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    }, []);
 
     // Cleanup on unmount
     useEffect(() => {
         return () => handleStop();
-    }, []);
+    }, [handleStop]);
 
     return (
         <div className={`relative group ${containerClassName} ${highlight ? 'ring-4 ring-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.5)] rounded-2xl' : ''}`}>
@@ -118,8 +118,11 @@ const SmartNumberInput = ({
             
             <input
                 type="number"
-                value={value || ''}
-                onChange={(e) => onChangeValue(parseFloat(e.target.value))}
+                value={Number.isNaN(value) ? '' : value}
+                onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    onChangeValue(isNaN(val) ? 0 : val);
+                }}
                 className={`${inputClassName} appearance-none`} // appearance-none handled by global CSS too, but good for safety
                 min={min}
                 max={max}
@@ -159,7 +162,7 @@ const SmartNumberInput = ({
             )}
         </div>
     );
-}
+});
 
 // Info Tooltip Component
 interface InfoTooltipProps {
@@ -169,7 +172,7 @@ interface InfoTooltipProps {
   align?: 'start' | 'center' | 'end';
 }
 
-const InfoTooltip = ({ text, className = "text-current", direction = 'top', align = 'center' }: InfoTooltipProps) => {
+const InfoTooltip = React.memo(({ text, className = "text-current", direction = 'top', align = 'center' }: InfoTooltipProps) => {
   let posClasses = '';
   let animClasses = '';
   let arrowClasses = '';
@@ -223,10 +226,10 @@ const InfoTooltip = ({ text, className = "text-current", direction = 'top', alig
       </div>
     </div>
   );
-};
+});
 
 // Enhanced Searchable Dropdown
-const CurrencyDropdown = ({ value, onChange, className, useShortName }: { value: CountryCode, onChange: (v: CountryCode) => void, className?: string, useShortName?: boolean }) => {
+const CurrencyDropdown = React.memo(({ value, onChange, className, useShortName }: { value: CountryCode, onChange: (v: CountryCode) => void, className?: string, useShortName?: boolean }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -324,10 +327,10 @@ const CurrencyDropdown = ({ value, onChange, className, useShortName }: { value:
           )}
       </div>
   );
-};
+});
 
 // Region (State/Province) Dropdown
-const RegionDropdown = ({ country, value, onChange }: { country: CountryCode, value: string, onChange: (v: string) => void }) => {
+const RegionDropdown = React.memo(({ country, value, onChange }: { country: CountryCode, value: string, onChange: (v: string) => void }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -429,7 +432,7 @@ const RegionDropdown = ({ country, value, onChange }: { country: CountryCode, va
           )}
       </div>
   );
-};
+});
 
 // Custom Hook for Debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -445,7 +448,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
+const DonutChart: React.FC<{ result: CalculationResult }> = React.memo(({ result }) => {
     const gross = result.grossAnnual;
     const safeGross = gross > 0 ? gross : 1; // Prevent division by zero
 
@@ -504,12 +507,12 @@ const DonutChart: React.FC<{ result: CalculationResult }> = ({ result }) => {
             </div>
         </div>
     );
-};
+});
 
 type CalcMode = 'gross' | 'net';
 
 // Reusable iOS-style Segmented Control
-const SegmentedControl = ({ options, value, onChange, dark }: { options: {label: string, value: string}[], value: string, onChange: (v: any) => void, dark?: boolean }) => (
+const SegmentedControl = React.memo(({ options, value, onChange, dark }: { options: {label: string, value: string}[], value: string, onChange: (v: any) => void, dark?: boolean }) => (
 <div className={`${dark ? 'bg-black/30' : 'bg-slate-200/80 dark:bg-[#1c1c1e]'} p-1 rounded-[14px] flex relative select-none cursor-pointer shadow-inner border border-transparent dark:border-[#333]`}>
     {options.map((opt) => (
         <button 
@@ -525,15 +528,21 @@ const SegmentedControl = ({ options, value, onChange, dark }: { options: {label:
         </button>
     ))}
 </div>
-);
+));
 
-// Simple Markdown Renderer for AI Analysis
-const MarkdownRenderer = ({ content }: { content: string }) => {
+// Improved Markdown Renderer for AI Analysis
+const MarkdownRenderer = React.memo(({ content }: { content: string }) => {
   if (!content) return null;
   return (
     <div className="space-y-1.5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
       {content.split('\n').map((line, i) => {
         if (!line.trim()) return <div key={i} className="h-2" />;
+        
+        // Handle Headers
+        if (line.trim().startsWith('###')) {
+            return <h5 key={i} className="text-base font-extrabold text-slate-900 dark:text-white mt-2 mb-1">{line.replace(/^###\s/, '')}</h5>;
+        }
+
         const isListItem = line.trim().startsWith('-') || line.trim().startsWith('* ') || /^\d+\./.test(line.trim());
         const cleanLine = line.replace(/^[\-\*]\s/, '').replace(/^\d+\.\s/, '');
         
@@ -556,7 +565,570 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
       })}
     </div>
   );
-};
+});
+
+// MEMOIZED RESULTS SECTION TO PREVENT RE-RENDERS ON INPUT
+const ResultsSection = React.memo(({ 
+    result, 
+    inputs, // Expecting DEBOUNCED inputs here
+    mode, 
+    currentRules,
+    analyzing,
+    aiAnalysis,
+    handleAnalyze,
+    setAiAnalysis,
+    convertAmount,
+    setConvertAmount,
+    fromCurrency,
+    setFromCurrency,
+    toCurrency,
+    setToCurrency,
+    convertedResult,
+    applyToCalculator,
+    getRateDisplay,
+    showNetDetails,
+    setShowNetDetails,
+    netPayFreq,
+    setNetPayFreq,
+    downloadCSV,
+    downloadPDF,
+    formatCurrency,
+    formatCompact,
+    employeeDeductions,
+    employerDeductions
+}: any) => {
+
+    // State for Expandable Rows
+    const [expandedRow, setExpandedRow] = useState<number | null>(null);
+
+    const toggleRow = (idx: number) => {
+        if (expandedRow === idx) setExpandedRow(null);
+        else setExpandedRow(idx);
+    };
+
+    return (
+        <div className="lg:col-span-8 space-y-6" id="results-panel">
+                {result && (
+                    <>
+                        {/* Hero Card (Gross) */}
+                        <div 
+                            className="relative rounded-[32px] shadow-2xl group border border-white/10 transition-all duration-500 hover:shadow-[0_25px_60px_rgba(0,0,0,0.5)] h-auto min-h-[200px] perspective-1000 bg-black hover:z-50"
+                            style={{ perspective: '1000px' }}
+                        >
+                            {/* Clipped Background Layer */}
+                            <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 transform-style-3d transition-transform duration-700 group-hover:rotate-x-2 group-hover:rotate-y-2 group-hover:scale-105 origin-center">
+                                <img 
+                                    src={getHDFlagUrl(inputs.country)} 
+                                    alt="Country Flag" 
+                                    className="w-full h-full object-cover contrast-125 saturate-[1.1] brightness-75 dark:brightness-50"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 mix-blend-multiply"></div>
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
+                            </div>
+
+                            {/* Content Layer */}
+                            <div className="relative z-10 p-6 md:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
+                                <div className="flex-1 min-w-0 w-full">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
+                                            <i className="fas fa-briefcase text-xl text-white drop-shadow-md"></i>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-white/90 text-base md:text-lg font-bold uppercase tracking-wider shadow-black drop-shadow-md">
+                                                {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
+                                            </p>
+                                            <InfoTooltip text="This is the total yearly salary before any taxes or deductions are taken out." className="text-white" direction="bottom" />
+                                        </div>
+                                    </div>
+                                    <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl mt-2 leading-none break-words">
+                                        {formatCurrency(result.grossAnnual)}
+                                    </h2>
+                                </div>
+                                
+                                {/* Enlarged Monthly Button */}
+                                <div className="flex flex-col items-start lg:items-end gap-2 pb-1 w-full lg:w-auto">
+                                    <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 hover:bg-white/20 group-hover:translate-x-0 lg:group-hover:translate-x-[-5px] w-full lg:w-auto justify-between lg:justify-start">
+                                        <span className="text-white/90 text-xs font-extrabold uppercase tracking-wide drop-shadow-sm whitespace-nowrap">Monthly</span>
+                                        <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white drop-shadow-md break-all">{formatCurrency(result.grossMonthly)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Key Metrics Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[240px]">
+                            {/* Net Pay Card */}
+                            <div className={`relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50 ${showNetDetails ? 'row-span-2' : ''}`}>
+                                {/* Clipped Background */}
+                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#007AFF] to-[#0055ff] dark:from-[#0055ff] dark:to-[#0033cc]">
+                                    <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                        <i className="fas fa-money-bill-wave"></i>
+                                    </div>
+                                </div>
+                                
+                                <div className="absolute top-6 right-6 z-20">
+                                    <InfoTooltip text="The actual amount of money landing in your bank account each period after all taxes." className="text-white" />
+                                </div>
+                                
+                                <div className="relative z-10 flex flex-col h-full justify-between p-6">
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                                <i className="fas fa-wallet text-lg text-white"></i>
+                                            </div>
+                                            <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
+                                                <div>Net Pay</div>
+                                                <div>Result</div>
+                                            </div>
+                                        </div>
+                                        {/* Net Pay Frequency Toggle */}
+                                        <div className="mt-2 flex p-1 bg-black/20 rounded-lg border border-white/10 self-start">
+                                            {['monthly', 'bi-weekly', 'weekly'].map((freq) => (
+                                                <button
+                                                    key={freq}
+                                                    onClick={() => setNetPayFreq(freq as any)}
+                                                    className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${netPayFreq === freq ? 'bg-white text-blue-600 shadow-sm' : 'text-white/70 hover:text-white'}`}
+                                                >
+                                                    {freq === 'bi-weekly' ? 'Bi-Wk' : freq.substring(0,2)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 mb-4">
+                                        <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.netMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
+                                            {formatCurrency(netPayFreq === 'weekly' ? result.netWeekly : netPayFreq === 'bi-weekly' ? result.netBiWeekly : result.netMonthly)}
+                                        </h3>
+                                        <p className="text-white/60 text-[10px] font-bold uppercase mt-1 tracking-wider">{netPayFreq}</p>
+                                    </div>
+
+                                    {/* Expanded Deduction Details */}
+                                    {showNetDetails && (
+                                        <div className="my-4 py-3 border-y border-white/10 space-y-2 text-sm animate-in slide-in-from-top-2 fade-in duration-200 bg-white/5 rounded-lg px-2">
+                                            <div className="flex justify-between text-white/60 text-xs uppercase font-bold mb-2">
+                                                <span>Deduction (Monthly)</span>
+                                                <span>Amount</span>
+                                            </div>
+                                            {employeeDeductions.length > 0 ? employeeDeductions.map((d: DeductionResult, i: number) => (
+                                                <div key={i} className="flex justify-between items-center group/item">
+                                                    <span className="text-white/90 font-medium truncate pr-4 text-xs" title={d.name}>{d.name}</span>
+                                                    <span className="text-white font-bold whitespace-nowrap text-xs">-{formatCompact(d.amount/12)}</span>
+                                                </div>
+                                            )) : (
+                                                <div className="text-white/60 text-xs italic text-center py-2">No deductions applied</div>
+                                            )}
+                                             <div className="flex justify-between items-center pt-2 mt-2 border-t border-white/10">
+                                                <span className="text-white/90 font-bold text-xs">Total Deducted</span>
+                                                <span className="text-white font-bold whitespace-nowrap text-xs">-{formatCompact(result.totalDeductionsMonthly)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="pt-4 border-t border-white/20 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Net</p>
+                                            <p className="text-white font-extrabold text-xl">{formatCurrency(result.netAnnual)}</p>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setShowNetDetails(!showNetDetails); }}
+                                            className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-[10px] font-bold transition-colors backdrop-blur-md border border-white/10 shadow-sm flex items-center gap-1 active:scale-95"
+                                        >
+                                            {showNetDetails ? 'Hide' : 'View Details'}
+                                            {!showNetDetails && <i className="fas fa-chevron-down text-[8px] ml-0.5"></i>}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Disposable Card */}
+                            <div className="relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50">
+                                {/* Clipped Background */}
+                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#34C759] to-[#2a9d48] dark:from-[#1b8a3b] dark:to-[#146c2e]">
+                                    <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                        <i className="fas fa-star"></i>
+                                    </div>
+                                </div>
+
+                                <div className="absolute top-6 right-6 z-20">
+                                    <InfoTooltip text="The amount you have left after paying taxes AND your monthly living costs (rent, bills, etc)." className="text-white" />
+                                </div>
+                                
+                                <div className="relative z-10 flex flex-col h-full justify-between p-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
+                                            <i className="fas fa-smile-beam text-lg text-white"></i>
+                                        </div>
+                                        <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
+                                            <div>Disposable</div>
+                                            <div>Monthly</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-6 mb-4">
+                                        <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.disposableMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
+                                            {formatCurrency(result.disposableMonthly)}
+                                        </h3>
+                                    </div>
+
+                                    <div className="pt-4 border-t border-white/20 flex justify-between items-end">
+                                        <div>
+                                            <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Disposable</p>
+                                            <p className="text-white font-extrabold text-xl">{formatCurrency(result.disposableMonthly * 12)}</p>
+                                        </div>
+                                        <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Chart Card */}
+                            <div className="relative rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] text-slate-900 dark:text-white group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl hover:z-50">
+                                {/* Clipped Background */}
+                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-white dark:bg-[#101012]">
+                                    <div className="absolute -right-8 -bottom-8 text-slate-50 dark:text-[#18181b] text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+                                        <i className="fas fa-chart-pie"></i>
+                                    </div>
+                                </div>
+
+                                <div className="relative z-10 w-full h-full flex flex-col p-6">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-[#1c1c1e] flex items-center justify-center border border-slate-50 dark:border-[#333]">
+                                            <i className="fas fa-chart-pie text-lg text-slate-900 dark:text-white"></i>
+                                        </div>
+                                        <p className="text-slate-500 dark:text-slate-400 text-[13px] font-bold uppercase tracking-wider">Tax / Cost Ratio</p>
+                                        <InfoTooltip text="Visual breakdown of where your money goes: Taxes (Red), Living Costs (Blue), and Savings (Green)." className="text-slate-400" />
+                                    </div>
+                                    <div className="flex-grow flex items-center justify-center mt-2">
+                                        <DonutChart result={result} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Quick Convert Horizontal Card */}
+                        <div className="rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl group/converter relative z-30 bg-white dark:bg-[#101012] hover:z-50">
+                            
+                            {/* Clipped Header Background */}
+                            <div className="absolute top-0 left-0 right-0 h-[96px] rounded-t-[32px] overflow-hidden z-0">
+                                <div className="absolute inset-0 bg-gradient-to-r from-[#2FB050] to-[#A0E870]"></div>
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-32 pointer-events-none"></div>
+                                <i className="fas fa-coins text-white/20 text-6xl absolute -right-4 -bottom-8 rotate-12"></i>
+                            </div>
+
+                            {/* Header Content (Raised to Z-30) */}
+                            <div className="p-5 relative z-30 flex items-center justify-between text-white">
+                                <div className="flex items-center gap-3 relative z-10">
+                                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                        <i className="fas fa-exchange-alt text-white"></i>
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-extrabold text-lg tracking-tight text-white leading-none">Quick Convert</h3>
+                                            <InfoTooltip text="Estimate how much this salary is worth in another currency or country." className="text-white" direction="bottom" />
+                                        </div>
+                                        <p className="text-white/80 text-xs font-medium mt-1">{getRateDisplay()}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Body Content (Z-20) */}
+                            <div className="p-6 relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012]">
+                                <div className="flex flex-col md:flex-row items-end gap-4 relative">
+                                    
+                                    {/* FROM */}
+                                    <div className="flex-1 w-full space-y-2">
+                                        <div className="flex justify-between px-1">
+                                            <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">From</label>
+                                            <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[fromCurrency].name}</span>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <CurrencyDropdown value={fromCurrency} onChange={setFromCurrency} useShortName={true} />
+                                            <div className="relative flex-1">
+                                                <SmartNumberInput 
+                                                    value={convertAmount}
+                                                    onChangeValue={setConvertAmount}
+                                                    step={100}
+                                                    min={0}
+                                                    inputClassName="w-full h-14 pl-4 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-extrabold text-lg outline-none focus:bg-white dark:focus:bg-[#252528] focus:ring-4 focus:ring-[#2FB050]/10 transition-all duration-200 shadow-inner"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SWAP BUTTON */}
+                                    <button 
+                                        onClick={() => {
+                                            setFromCurrency(toCurrency);
+                                            setToCurrency(fromCurrency);
+                                        }}
+                                        className="absolute left-1/2 -translate-x-1/2 bottom-[22px] md:static md:translate-x-0 md:mb-2 w-10 h-10 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500 hover:bg-[#2FB050] hover:text-white transition-all active:scale-90 shadow-md hover:shadow-lg z-10"
+                                    >
+                                        <i className="fas fa-exchange-alt"></i>
+                                    </button>
+
+                                    {/* TO */}
+                                    <div className="flex-1 w-full space-y-2">
+                                        <div className="flex justify-between px-1">
+                                            <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">To</label>
+                                            <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[toCurrency].name}</span>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <CurrencyDropdown value={toCurrency} onChange={setToCurrency} useShortName={true} />
+                                            <div className="relative flex-1">
+                                                <div className="w-full h-14 pl-4 pr-4 bg-[#2FB050]/5 border border-[#2FB050]/20 rounded-2xl flex items-center text-[#2a8f43] dark:text-[#4ade80] font-extrabold text-lg overflow-hidden shadow-sm">
+                                                    {new Intl.NumberFormat('en-US', { style: 'decimal', maximumFractionDigits: 2 }).format(convertedResult)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Footer Actions */}
+                                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-[#222] flex flex-col sm:flex-row justify-between items-center gap-3">
+                                    <p className="text-[10px] text-slate-400 font-semibold text-center sm:text-left">
+                                        <i className="fas fa-clock mr-1"></i> 
+                                        Real-time estimate. Rates update daily.
+                                    </p>
+                                    <button 
+                                        onClick={applyToCalculator}
+                                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
+                                    >
+                                        <span>Use this Salary</span>
+                                        <i className="fas fa-arrow-up transform rotate-45"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Detailed Breakdown Table */}
+                        <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl relative z-10 hover:z-50 min-h-[600px] flex flex-col">
+                            {/* Clipped Header Background */}
+                            <div className="absolute top-0 left-0 right-0 h-[88px] rounded-t-[32px] overflow-hidden z-0">
+                                <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900"></div>
+                                <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                            </div>
+
+                            {/* Header Content (Raised to Z-30) */}
+                            <div className="p-6 flex justify-between items-center relative z-30 shrink-0">
+                                <div className="relative z-10 flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                        <i className="fas fa-list-alt text-white"></i>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-extrabold text-lg text-white tracking-tight">Payslip Breakdown</h3>
+                                        <div className="flex items-center gap-2 text-white/60 text-[10px] uppercase font-bold tracking-wider">
+                                            <span>Detailed View</span>
+                                            <span className="w-1 h-1 bg-white/40 rounded-full"></span>
+                                            <span>{inputs.frequency}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center">
+                                    <button 
+                                        onClick={handleAnalyze} 
+                                        disabled={analyzing}
+                                        className="relative z-10 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-200/20 text-indigo-100 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150 mr-2 disabled:opacity-50"
+                                    >
+                                        {analyzing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>}
+                                        {analyzing ? 'Analyzing...' : 'AI Analysis'}
+                                    </button>
+                                    <button onClick={downloadCSV} className="relative z-10 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-200/20 text-emerald-100 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150 mr-2">
+                                        <i className="fas fa-file-csv"></i> Get CSV
+                                    </button>
+                                    <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
+                                        <i className="fas fa-arrow-down-to-line"></i> Get PDF
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* AI Report Display */}
+                            {aiAnalysis && (
+                                <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-900/30 relative z-20 animate-in fade-in slide-in-from-top-4 shrink-0">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 mt-1">
+                                            <i className="fas fa-robot text-indigo-600 dark:text-indigo-400"></i>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-100 mb-2">AI Tax Insights</h4>
+                                            <MarkdownRenderer content={aiAnalysis} />
+                                        </div>
+                                        <button onClick={() => setAiAnalysis(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                            <i className="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Body Content (Z-20) */}
+                            <div className="flex-grow overflow-x-auto relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012] flex flex-col">
+                                <table className="w-full text-sm text-left min-w-[600px] h-full">
+                                    <thead className="text-xs text-[#86868b] dark:text-slate-400 uppercase font-bold bg-[#F5F5F7] dark:bg-[#18181b] border-b border-gray-100 dark:border-[#333] sticky top-0 z-30 shadow-sm">
+                                        <tr>
+                                            <th className="px-6 py-4 pl-8">Description</th>
+                                            <th className="px-6 py-4 text-right">Annual</th>
+                                            <th className="px-6 py-4 text-right">Monthly</th>
+                                            <th className="px-6 py-4 text-right w-32">% of Gross</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 dark:divide-[#222]">
+                                        {/* Earnings Section */}
+                                        <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                            <td colSpan={4} className="px-6 py-3 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Earnings</td>
+                                        </tr>
+                                        <tr className="text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors group">
+                                            <td className="px-6 py-5 pl-8 font-bold flex items-center gap-4">
+                                                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm group-hover:scale-110 transition-transform"><i className="fas fa-briefcase text-xs"></i></div>
+                                                <span className="text-base">Base Salary</span>
+                                            </td>
+                                            <td className="px-6 py-5 text-right font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap text-base">{formatCurrency(result.grossAnnual)}</td>
+                                            <td className="px-6 py-5 text-right font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap text-base">{formatCurrency(result.grossMonthly)}</td>
+                                            <td className="px-6 py-5 text-right text-slate-400 dark:text-slate-500 font-semibold">
+                                                 <div className="flex flex-col items-end gap-1">
+                                                    <span>100%</span>
+                                                    <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-blue-500 rounded-full w-full"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {inputs.annualBonus > 0 && (
+                                            <tr className="text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors group">
+                                                <td className="px-6 py-5 pl-8 font-bold flex items-center gap-4">
+                                                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm group-hover:scale-110 transition-transform"><i className="fas fa-gift text-xs"></i></div>
+                                                    <span className="text-base">Annual Bonus</span>
+                                                </td>
+                                                <td className="px-6 py-5 text-right font-bold whitespace-nowrap text-base">{formatCurrency(inputs.annualBonus)}</td>
+                                                <td className="px-6 py-5 text-right font-medium text-slate-400">-</td>
+                                                <td className="px-6 py-5 text-right font-medium text-slate-400">-</td>
+                                            </tr>
+                                        )}
+
+                                        {/* Deductions Section */}
+                                        <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                            <td colSpan={4} className="px-6 py-3 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-2">Deductions</td>
+                                        </tr>
+                                        {employeeDeductions.length > 0 ? (
+                                            employeeDeductions.map((d: DeductionResult, idx: number) => {
+                                            const pct = (Math.abs(d.amount) / (result.grossAnnual || 1) * 100);
+                                            const impactOfTotalDeductions = (Math.abs(d.amount) / (result.totalDeductionsMonthly * 12 || 1) * 100);
+                                            const isExpanded = expandedRow === idx;
+                                            
+                                            return (
+                                            <React.Fragment key={idx}>
+                                            <tr 
+                                                onClick={() => toggleRow(idx)}
+                                                className={`cursor-pointer transition-all duration-200 text-[#FF3B30] dark:text-red-400 group border-l-4 ${isExpanded ? 'bg-slate-50 dark:bg-[#1c1c1e] border-l-red-500' : 'hover:bg-gray-50 dark:hover:bg-[#1c1c1e] border-l-transparent'}`}
+                                            >
+                                                <td className="px-6 py-5 pl-7 flex items-center font-bold relative">
+                                                    <span className={`w-8 h-8 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 mr-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
+                                                        {isExpanded ? <i className="fas fa-chevron-right text-xs"></i> : <i className="fas fa-minus text-xs"></i>}
+                                                    </span>
+                                                    <span className="text-base">{d.name}</span>
+                                                </td>
+                                                <td className="px-6 py-5 text-right font-medium whitespace-nowrap text-base">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount))}</td>
+                                                <td className="px-6 py-5 text-right font-medium whitespace-nowrap text-base">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount / 12))}</td>
+                                                <td className="px-6 py-5 text-right text-slate-400 dark:text-slate-500 font-medium">
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <span>{pct.toFixed(1)}%</span>
+                                                        <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                                                            <div className="h-full bg-red-500 rounded-full transition-all duration-1000" style={{width: `${Math.min(pct, 100)}%`}}></div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {/* Expandable Details Row */}
+                                            {isExpanded && (
+                                                <tr className="bg-slate-50/50 dark:bg-[#1c1c1e] border-l-4 border-l-red-500 animate-in fade-in slide-in-from-top-1">
+                                                    <td colSpan={4} className="px-8 py-4 pb-6">
+                                                        <div className="flex flex-col md:flex-row gap-6">
+                                                            <div className="flex-1">
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Description</p>
+                                                                <p className="text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                                                                    {d.description || `Standard deduction for ${d.name} in ${currentRules.name}.`}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Impact on Total Tax Bill</p>
+                                                                <div className="bg-white dark:bg-black rounded-lg p-3 border border-gray-100 dark:border-white/10 shadow-sm">
+                                                                    <div className="flex justify-between items-end mb-1">
+                                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Share of deductions</span>
+                                                                        <span className="text-sm font-extrabold text-red-500">{impactOfTotalDeductions.toFixed(1)}%</span>
+                                                                    </div>
+                                                                    <div className="w-full h-2 bg-gray-100 dark:bg-[#333] rounded-full overflow-hidden">
+                                                                        <div className="h-full bg-red-500 rounded-full" style={{width: `${Math.min(impactOfTotalDeductions, 100)}%`}}></div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            </React.Fragment>
+                                        ))) : (
+                                            <tr>
+                                                <td colSpan={4} className="px-6 py-8 text-center text-slate-400 text-sm italic">No employee deductions found for this salary.</td>
+                                            </tr>
+                                        )}
+                                        
+                                        {/* Total Deductions Footer Row */}
+                                        <tr className="bg-gray-50/80 dark:bg-[#222] font-bold border-t border-gray-200 dark:border-[#333]">
+                                            <td className="px-6 py-4 pl-8 text-slate-600 dark:text-slate-400 text-sm uppercase tracking-wide">Total Deductions</td>
+                                            <td className="px-6 py-4 text-right text-red-500 dark:text-red-400 whitespace-nowrap">-{formatCurrency(result.totalDeductionsMonthly * 12)}</td>
+                                            <td className="px-6 py-4 text-right text-red-500 dark:text-red-400 whitespace-nowrap">-{formatCurrency(result.totalDeductionsMonthly)}</td>
+                                            <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400">
+                                                {((result.totalDeductionsMonthly * 12) / (result.grossAnnual || 1) * 100).toFixed(1)}%
+                                            </td>
+                                        </tr>
+
+                                        {/* Net Pay Row */}
+                                        <tr className="bg-blue-50/50 dark:bg-[#007AFF]/10 text-slate-900 dark:text-white border-t-2 border-blue-100 dark:border-blue-900">
+                                            <td className="px-6 py-6 pl-8 font-extrabold flex items-center gap-4 text-blue-700 dark:text-blue-400">
+                                                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md"><i className="fas fa-check text-xs"></i></div>
+                                                <span className="text-lg">Net Pay</span>
+                                            </td>
+                                            <td className="px-6 py-6 text-right font-extrabold text-blue-700 dark:text-blue-400 whitespace-nowrap text-lg">{formatCurrency(result.netAnnual)}</td>
+                                            <td className="px-6 py-6 text-right font-extrabold text-blue-700 dark:text-blue-400 whitespace-nowrap text-lg">{formatCurrency(result.netMonthly)}</td>
+                                            <td className="px-6 py-6 text-right text-blue-600 dark:text-blue-400 font-bold">
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span>{(result.netAnnual / (result.grossAnnual || 1) * 100).toFixed(1)}%</span>
+                                                    <div className="w-full h-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-blue-600 dark:bg-blue-400 rounded-full w-full"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+
+                                        {/* Employer Section */}
+                                        {employerDeductions.length > 0 && (
+                                            <>
+                                                <tr className="bg-slate-50/50 dark:bg-[#151517]">
+                                                    <td colSpan={4} className="px-6 py-3 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-4">Employer Contributions (Informational)</td>
+                                                </tr>
+                                                {employerDeductions.map((d: DeductionResult, idx: number) => (
+                                                    <tr key={`emp-${idx}`} className="text-slate-400 dark:text-slate-500 italic hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
+                                                        <td className="px-6 py-4 pl-8 flex items-center gap-4">
+                                                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500"><i className="fas fa-building text-xs"></i></div>
+                                                            <span className="text-sm">{d.name}</span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right whitespace-nowrap text-sm">{formatCurrency(d.amount)}</td>
+                                                        <td className="px-6 py-4 text-right whitespace-nowrap text-sm">{formatCurrency(d.amount / 12)}</td>
+                                                        <td className="px-6 py-4 text-right text-sm">-</td>
+                                                    </tr>
+                                                ))}
+                                            </>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div className="text-center pt-4 pb-8">
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold">Calculations are estimates based on {currentRules.name} tax laws.</p>
+                        </div>
+                    </>
+                )}
+        </div>
+    );
+});
 
 const App: React.FC = () => {
   const [inputs, setInputs] = useState<UserInputs>({
@@ -565,7 +1137,8 @@ const App: React.FC = () => {
     country: CountryCode.USA,
     costs: { rent: 0, groceries: 0, utilities: 0, transport: 0, insurance: 0, emergencyFund: 0, debt: 0, freedomFund: 0 },
     details: { age: 30, maritalStatus: 'single', churchTax: false, isExpat: false },
-    annualBonus: 0
+    annualBonus: 0,
+    taxReliefs: { pensionContribution: 0, privateHealth: 0, charitableDonations: 0, mortgageInterest: 0, workExpenses: 0, other: 0 }
   });
   
   // Comparison State
@@ -604,7 +1177,7 @@ const App: React.FC = () => {
       return false;
   });
 
-  // Debounce inputs to improve performance - Reduced delay for snappier UI
+  // Debounce inputs to improve performance
   const debouncedInputs = useDebounce(inputs, 250);
   const debouncedInputsB = useDebounce(inputsB, 250);
   const debouncedTargetNet = useDebounce(targetNet, 250);
@@ -672,7 +1245,8 @@ const App: React.FC = () => {
                     ...prev, 
                     ...parsed,
                     costs: { ...prev.costs, ...(parsed.costs || {}) },
-                    details: { ...prev.details, ...(parsed.details || {}) }
+                    details: { ...prev.details, ...(parsed.details || {}) },
+                    taxReliefs: { ...prev.taxReliefs, ...(parsed.taxReliefs || {}) }
                 }));
             } catch (e) {}
         }
@@ -755,7 +1329,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = useCallback(async () => {
     if (!result) return;
     setAnalyzing(true);
     setAiAnalysis(null);
@@ -769,7 +1343,7 @@ const App: React.FC = () => {
     );
     setAiAnalysis(report);
     setAnalyzing(false);
-  };
+  }, [result, currentRules]);
 
   const handleAutoFillCosts = async () => {
       setIsAutoFilling(true);
@@ -805,17 +1379,17 @@ const App: React.FC = () => {
   };
 
   // Derived values for Breakdown
-  const employeeDeductions = result ? result.deductionsBreakdown.filter(d => !d.isEmployer) : [];
-  const employerDeductions = result ? result.deductionsBreakdown.filter(d => d.isEmployer) : [];
+  const employeeDeductions = useMemo(() => result ? result.deductionsBreakdown.filter(d => !d.isEmployer) : [], [result]);
+  const employerDeductions = useMemo(() => result ? result.deductionsBreakdown.filter(d => d.isEmployer) : [], [result]);
 
-  const getRateDisplay = () => {
+  const getRateDisplay = useCallback(() => {
     const from = COUNTRY_RULES[fromCurrency];
     const to = COUNTRY_RULES[toCurrency];
     const rate = to.exchangeRatePerUSD / from.exchangeRatePerUSD;
     return `1 ${from.currency} ≈ ${rate.toFixed(4)} ${to.currency}`;
-  };
+  }, [fromCurrency, toCurrency]);
 
-  const applyToCalculator = () => {
+  const applyToCalculator = useCallback(() => {
     setInputs(prev => ({
         ...prev,
         country: toCurrency, // Switch main calculator to target country
@@ -828,12 +1402,19 @@ const App: React.FC = () => {
     // Trigger Highlight Animation
     setHighlightIncome(true);
     setTimeout(() => setHighlightIncome(false), 1500);
-  };
+  }, [toCurrency, convertedResult]);
 
   const handleCostChange = (key: keyof UserInputs['costs'], val: number) => {
     setInputs(prev => ({
       ...prev,
       costs: { ...prev.costs, [key]: val }
+    }));
+  };
+
+  const handleReliefChange = (key: keyof TaxReliefs, val: number) => {
+    setInputs(prev => ({
+        ...prev,
+        taxReliefs: { ...(prev.taxReliefs || {}), [key]: val }
     }));
   };
 
@@ -857,25 +1438,25 @@ const App: React.FC = () => {
     setMode(newMode);
   };
 
-  const formatCurrency = (amount: number, code?: CountryCode) => {
+  const formatCurrency = useCallback((amount: number, code?: CountryCode) => {
     const rules = code ? COUNTRY_RULES[code] : currentRules;
     return new Intl.NumberFormat('en-US', { 
       style: 'currency', 
       currency: rules.currency,
       maximumFractionDigits: 0 
     }).format(amount);
-  };
+  }, [currentRules]);
   
-  const formatCompact = (amount: number) => {
+  const formatCompact = useCallback((amount: number) => {
      return new Intl.NumberFormat('en-US', { 
         style: 'currency', 
         currency: currentRules.currency,
         notation: 'compact',
         maximumFractionDigits: 0
      }).format(amount);
-  };
+  }, [currentRules]);
 
-  const downloadPDF = async () => {
+  const downloadPDF = useCallback(async () => {
     const element = document.getElementById('pdf-invoice-template');
     if (!element || !window.jspdf || !window.html2canvas) {
         alert("PDF library loading... please try again in a second.");
@@ -915,9 +1496,9 @@ const App: React.FC = () => {
         alert("Failed to generate PDF");
         document.body.style.cursor = 'default';
     }
-  };
+  }, [inputs]);
 
-  const downloadCSV = () => {
+  const downloadCSV = useCallback(() => {
     if (!result) return;
     
     // Create CSV Data Rows
@@ -957,7 +1538,7 @@ const App: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, [result, inputs]);
 
   const shareLink = () => {
       const baseUrl = window.location.origin + window.location.pathname;
@@ -989,6 +1570,15 @@ const App: React.FC = () => {
     { key: 'debt', label: 'Debt / Loans' },
     { key: 'emergencyFund', label: 'Emergency Fund' },
     { key: 'freedomFund', label: 'Freedom/Runway Fund' }
+  ];
+
+  const reliefFields = [
+      { key: 'pensionContribution', label: 'Pension / 401k', tooltip: 'Pre-tax contributions to retirement funds (e.g. 401k, Superannuation, Pillar 2).' },
+      { key: 'privateHealth', label: 'Health Insurance', tooltip: 'Private medical insurance premiums if tax deductible in your country.' },
+      { key: 'mortgageInterest', label: 'Mortgage Interest', tooltip: 'Interest paid on your home loan (common deduction in US, Switzerland, etc.).' },
+      { key: 'charitableDonations', label: 'Charity', tooltip: 'Donations to registered charities.' },
+      { key: 'workExpenses', label: 'Work Expenses', tooltip: 'Unreimbursed business expenses, home office costs, or education.' },
+      { key: 'other', label: 'Other Reliefs', tooltip: 'Any other tax-free allowances or deductions applicable.' }
   ];
   
   // Dynamic Income Presets
@@ -1131,7 +1721,6 @@ const App: React.FC = () => {
         {/* CONDITIONAL RENDERING FOR COMPARISON MODE */}
         {isComparison ? (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6 pb-20">
-                
                 {/* Comparison Header / Controls */}
                 <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-[#101012] p-5 rounded-[24px] border border-slate-200 dark:border-[#333] shadow-sm gap-4 relative z-40">
                     <div className="flex items-center gap-4">
@@ -1159,7 +1748,6 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 relative items-start">
-                    
                     {/* SCENARIO A (LEFT) */}
                     <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 focus-within:z-[60] transition-all duration-300">
                          {/* Input Card A */}
@@ -1251,7 +1839,7 @@ const App: React.FC = () => {
                          {/* Analysis Card */}
                          {result && resultB && (
                              <div className="bg-slate-900 dark:bg-black text-white rounded-[28px] shadow-2xl p-8 text-center border border-slate-800 dark:border-[#222] relative flex-grow flex flex-col justify-center group isolate">
-                                  {/* Background FX - Wrapped in absolute container to allow clipping while parent has visible overflow for tooltips */}
+                                  {/* Background FX */}
                                   <div className="absolute inset-0 overflow-hidden rounded-[28px] z-0">
                                       <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                                       <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-blue-500/30 transition-all duration-700"></div>
@@ -1457,61 +2045,6 @@ const App: React.FC = () => {
                          )}
                     </div>
                 </div>
-                
-                {/* Detailed Comparison Table */}
-                {result && resultB && (
-                    <div className="overflow-x-auto rounded-[24px] border border-slate-200 dark:border-[#333] shadow-sm mt-4 bg-white dark:bg-[#101012]">
-                        <table className="w-full text-sm text-left">
-                            <thead className="text-xs text-slate-500 uppercase font-bold bg-slate-50 dark:bg-[#1c1c1e]">
-                                <tr>
-                                    <th className="px-6 py-4">Metric</th>
-                                    <th className="px-6 py-4 text-right text-blue-600 dark:text-blue-400">Scenario A ({inputs.country})</th>
-                                    <th className="px-6 py-4 text-right text-purple-600 dark:text-purple-400">Scenario B ({inputsB.country})</th>
-                                    {comparisonCurrencyMode === 'base' && <th className="px-6 py-4 text-right">Diff (in {inputs.country})</th>}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-[#333]">
-                                <tr>
-                                    <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">Gross Income</td>
-                                    <td className="px-6 py-4 text-right font-medium">{formatCurrency(result.grossAnnual, inputs.country)}</td>
-                                    <td className="px-6 py-4 text-right font-medium">{formatCurrency(resultB.grossAnnual, inputsB.country)}</td>
-                                    {comparisonCurrencyMode === 'base' && <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>}
-                                </tr>
-                                <tr>
-                                    <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">Effective Tax Rate</td>
-                                    <td className="px-6 py-4 text-right font-medium">{((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1)}%</td>
-                                    <td className="px-6 py-4 text-right font-medium">{((1 - resultB.netAnnual/resultB.grossAnnual)*100).toFixed(1)}%</td>
-                                    {comparisonCurrencyMode === 'base' && <td className="px-6 py-4 text-right font-medium">
-                                        {(((1 - resultB.netAnnual/resultB.grossAnnual)*100) - ((1 - result.netAnnual/result.grossAnnual)*100)).toFixed(1)}%
-                                    </td>}
-                                </tr>
-                                <tr className="bg-slate-50/50 dark:bg-[#18181b]">
-                                    <td className="px-6 py-4 font-extrabold text-slate-900 dark:text-white">Net Annual Pay</td>
-                                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{formatCurrency(result.netAnnual, inputs.country)}</td>
-                                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">{formatCurrency(resultB.netAnnual, inputsB.country)}</td>
-                                    {comparisonCurrencyMode === 'base' && <td className={`px-6 py-4 text-right font-bold ${normalized.diff > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {normalized.diff > 0 ? '+' : ''}{formatCurrency(normalized.diff, inputs.country)}
-                                    </td>}
-                                </tr>
-                                {colDiff !== 0 && comparisonCurrencyMode === 'base' && (
-                                    <tr className="bg-orange-50/30 dark:bg-orange-900/10 border-t-2 border-orange-100 dark:border-orange-900/20">
-                                        <td className="px-6 py-4 font-extrabold text-orange-700 dark:text-orange-400 flex items-center gap-2">
-                                            COLA Adjusted Net
-                                            <InfoTooltip text="Net pay adjusted for local purchasing power" />
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-medium text-slate-500">-</td>
-                                        <td className="px-6 py-4 text-right font-bold text-orange-600 dark:text-orange-400">
-                                            ≈ {formatCurrency(normalized.adjustedNetB, inputs.country)}
-                                        </td>
-                                        <td className={`px-6 py-4 text-right font-bold ${normalized.purchasingPowerDiff > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {normalized.purchasingPowerDiff > 0 ? '+' : ''}{formatCurrency(normalized.purchasingPowerDiff, inputs.country)}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
             </div>
         ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 animate-in fade-in zoom-in-95 duration-300">
@@ -1797,469 +2330,85 @@ const App: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
+                {/* Tax Reliefs Card */}
+                <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl flex flex-col relative hover:z-50">
+                    <div className="absolute top-0 left-0 right-0 h-[100px] rounded-t-[32px] overflow-hidden z-0">
+                        <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-purple-600"></div>
+                        <div className="absolute top-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -ml-10 -mt-10 pointer-events-none"></div>
+                    </div>
+                    <div className="p-6 md:p-8 pb-10 relative z-30 text-white shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                <i className="fas fa-hand-holding-usd text-white"></i>
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-extrabold tracking-tight">Tax Reliefs</h2>
+                                <p className="text-[10px] font-bold opacity-80 uppercase tracking-wide">Allowances & Deductions</p>
+                            </div>
+                            <InfoTooltip text="Enter amounts that are deductible from your taxable income (e.g. 401k, Charity). Values should match your selected frequency (Annual/Monthly)." className="text-white ml-auto" direction="bottom" align="end" />
+                        </div>
+                    </div>
+                    <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-t-[32px] rounded-b-[32px] relative z-20 flex-grow flex flex-col gap-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            {reliefFields.map((field) => {
+                                const val = (inputs.taxReliefs as any)?.[field.key] || 0;
+                                return (
+                                <div key={field.key} className="col-span-2 sm:col-span-1">
+                                    <div className="flex items-center gap-1.5 mb-1.5 ml-1">
+                                        <label className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">{field.label}</label>
+                                        <InfoTooltip text={field.tooltip} direction="top" className="text-slate-300" />
+                                    </div>
+                                    <SmartNumberInput
+                                        value={val}
+                                        onChangeValue={(v) => handleReliefChange(field.key as any, v)}
+                                        step={50}
+                                        min={0}
+                                        prefix={currentRules.currencySymbol}
+                                        inputClassName="w-full h-12 pl-12 pr-4 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-[#2c2c2e] focus:ring-4 focus:ring-violet-500/10 outline-none transition-all duration-200 font-bold text-sm"
+                                    />
+                                </div>
+                            )})}
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Right Column: Results */}
-            <div className="lg:col-span-8 space-y-6" id="results-panel">
-                {result && (
-                    <>
-                        {/* Hero Card (Gross) */}
-                        <div 
-                            className="relative rounded-[32px] shadow-2xl group border border-white/10 transition-all duration-500 hover:shadow-[0_25px_60px_rgba(0,0,0,0.5)] h-auto min-h-[200px] perspective-1000 bg-black hover:z-50"
-                            style={{ perspective: '1000px' }}
-                        >
-                            {/* Clipped Background Layer */}
-                            <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 transform-style-3d transition-transform duration-700 group-hover:rotate-x-2 group-hover:rotate-y-2 group-hover:scale-105 origin-center">
-                                <img 
-                                    src={getHDFlagUrl(inputs.country)} 
-                                    alt="Country Flag" 
-                                    className="w-full h-full object-cover contrast-125 saturate-[1.1] brightness-75 dark:brightness-50"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/20 mix-blend-multiply"></div>
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none"></div>
-                            </div>
+            {/* Right Column: Results - Extracted to Memoized Component */}
+            <ResultsSection 
+                result={result}
+                inputs={debouncedInputs} // Passing Debounced Inputs Here prevents re-renders while typing!
+                mode={mode}
+                currentRules={currentRules}
+                analyzing={analyzing}
+                aiAnalysis={aiAnalysis}
+                handleAnalyze={handleAnalyze}
+                setAiAnalysis={setAiAnalysis}
+                convertAmount={convertAmount}
+                setConvertAmount={setConvertAmount}
+                fromCurrency={fromCurrency}
+                setFromCurrency={setFromCurrency}
+                toCurrency={toCurrency}
+                setToCurrency={setToCurrency}
+                convertedResult={convertedResult}
+                applyToCalculator={applyToCalculator}
+                getRateDisplay={getRateDisplay}
+                showNetDetails={showNetDetails}
+                setShowNetDetails={setShowNetDetails}
+                netPayFreq={netPayFreq}
+                setNetPayFreq={setNetPayFreq}
+                downloadCSV={downloadCSV}
+                downloadPDF={downloadPDF}
+                formatCurrency={formatCurrency}
+                formatCompact={formatCompact}
+                employeeDeductions={employeeDeductions}
+                employerDeductions={employerDeductions}
+            />
 
-                            {/* Content Layer */}
-                            <div className="relative z-10 p-6 md:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
-                                <div className="flex-1 min-w-0 w-full">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/30 shadow-lg transition-transform duration-300 group-hover:scale-110 flex-shrink-0">
-                                            <i className="fas fa-briefcase text-xl text-white drop-shadow-md"></i>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-white/90 text-base md:text-lg font-bold uppercase tracking-wider shadow-black drop-shadow-md">
-                                                {mode === 'net' ? 'Required Gross Annual' : 'Gross Annual Income'}
-                                            </p>
-                                            <InfoTooltip text="This is the total yearly salary before any taxes or deductions are taken out." className="text-white" direction="bottom" />
-                                        </div>
-                                    </div>
-                                    <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white drop-shadow-2xl mt-2 leading-none break-words">
-                                        {formatCurrency(result.grossAnnual)}
-                                    </h2>
-                                </div>
-                                
-                                {/* Enlarged Monthly Button */}
-                                <div className="flex flex-col items-start lg:items-end gap-2 pb-1 w-full lg:w-auto">
-                                    <div className="flex items-center gap-3 bg-white/10 px-5 py-3 rounded-xl backdrop-blur-md border border-white/20 shadow-xl transition-all duration-300 hover:bg-white/20 group-hover:translate-x-0 lg:group-hover:translate-x-[-5px] w-full lg:w-auto justify-between lg:justify-start">
-                                        <span className="text-white/90 text-xs font-extrabold uppercase tracking-wide drop-shadow-sm whitespace-nowrap">Monthly</span>
-                                        <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-white drop-shadow-md break-all">{formatCurrency(result.grossMonthly)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Key Metrics Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[240px]">
-                            {/* Net Pay Card */}
-                            <div className={`relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50 ${showNetDetails ? 'row-span-2' : ''}`}>
-                                {/* Clipped Background */}
-                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#007AFF] to-[#0055ff] dark:from-[#0055ff] dark:to-[#0033cc]">
-                                    <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                                        <i className="fas fa-money-bill-wave"></i>
-                                    </div>
-                                </div>
-                                
-                                <div className="absolute top-6 right-6 z-20">
-                                    <InfoTooltip text="The actual amount of money landing in your bank account each period after all taxes." className="text-white" />
-                                </div>
-                                
-                                <div className="relative z-10 flex flex-col h-full justify-between p-6">
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
-                                                <i className="fas fa-wallet text-lg text-white"></i>
-                                            </div>
-                                            <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
-                                                <div>Net Pay</div>
-                                                <div>Result</div>
-                                            </div>
-                                        </div>
-                                        {/* Net Pay Frequency Toggle */}
-                                        <div className="mt-2 flex p-1 bg-black/20 rounded-lg border border-white/10 self-start">
-                                            {['monthly', 'bi-weekly', 'weekly'].map((freq) => (
-                                                <button
-                                                    key={freq}
-                                                    onClick={() => setNetPayFreq(freq as any)}
-                                                    className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase transition-all ${netPayFreq === freq ? 'bg-white text-blue-600 shadow-sm' : 'text-white/70 hover:text-white'}`}
-                                                >
-                                                    {freq === 'bi-weekly' ? 'Bi-Wk' : freq.substring(0,2)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-6 mb-4">
-                                        <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.netMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
-                                            {formatCurrency(getNetPayValue())}
-                                        </h3>
-                                        <p className="text-white/60 text-[10px] font-bold uppercase mt-1 tracking-wider">{netPayFreq}</p>
-                                    </div>
-
-                                    {/* Expanded Deduction Details */}
-                                    {showNetDetails && (
-                                        <div className="my-4 py-3 border-y border-white/10 space-y-2 text-sm animate-in slide-in-from-top-2 fade-in duration-200 bg-white/5 rounded-lg px-2">
-                                            <div className="flex justify-between text-white/60 text-xs uppercase font-bold mb-2">
-                                                <span>Deduction (Monthly)</span>
-                                                <span>Amount</span>
-                                            </div>
-                                            {employeeDeductions.length > 0 ? employeeDeductions.map((d, i) => (
-                                                <div key={i} className="flex justify-between items-center group/item">
-                                                    <span className="text-white/90 font-medium truncate pr-4 text-xs" title={d.name}>{d.name}</span>
-                                                    <span className="text-white font-bold whitespace-nowrap text-xs">-{formatCompact(d.amount/12)}</span>
-                                                </div>
-                                            )) : (
-                                                <div className="text-white/60 text-xs italic text-center py-2">No deductions applied</div>
-                                            )}
-                                             <div className="flex justify-between items-center pt-2 mt-2 border-t border-white/10">
-                                                <span className="text-white/90 font-bold text-xs">Total Deducted</span>
-                                                <span className="text-white font-bold whitespace-nowrap text-xs">-{formatCompact(result.totalDeductionsMonthly)}</span>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="pt-4 border-t border-white/20 flex justify-between items-center">
-                                        <div>
-                                            <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Net</p>
-                                            <p className="text-white font-extrabold text-xl">{formatCurrency(result.netAnnual)}</p>
-                                        </div>
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); setShowNetDetails(!showNetDetails); }}
-                                            className="px-3 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-[10px] font-bold transition-colors backdrop-blur-md border border-white/10 shadow-sm flex items-center gap-1 active:scale-95"
-                                        >
-                                            {showNetDetails ? 'Hide' : 'View Details'}
-                                            {!showNetDetails && <i className="fas fa-chevron-down text-[8px] ml-0.5"></i>}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Disposable Card */}
-                            <div className="relative rounded-[32px] shadow-lg text-white group border border-white/10 flex flex-col justify-between transition-all duration-300 hover:shadow-2xl hover:z-50">
-                                {/* Clipped Background */}
-                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-gradient-to-br from-[#34C759] to-[#2a9d48] dark:from-[#1b8a3b] dark:to-[#146c2e]">
-                                    <div className="absolute -right-6 -bottom-6 text-white/10 text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                                        <i className="fas fa-star"></i>
-                                    </div>
-                                </div>
-
-                                <div className="absolute top-6 right-6 z-20">
-                                    <InfoTooltip text="The amount you have left after paying taxes AND your monthly living costs (rent, bills, etc)." className="text-white" />
-                                </div>
-                                
-                                <div className="relative z-10 flex flex-col h-full justify-between p-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md border border-white/10">
-                                            <i className="fas fa-smile-beam text-lg text-white"></i>
-                                        </div>
-                                        <div className="text-white/90 text-[13px] font-bold uppercase tracking-wider leading-tight">
-                                            <div>Disposable</div>
-                                            <div>Monthly</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-6 mb-4">
-                                        <h3 className={`font-extrabold text-white tracking-tight leading-none break-words ${currentRules.currency.length > 3 || result.disposableMonthly > 99999 ? 'text-3xl' : 'text-4xl'}`}>
-                                            {formatCurrency(result.disposableMonthly)}
-                                        </h3>
-                                    </div>
-
-                                    <div className="pt-4 border-t border-white/20 flex justify-between items-end">
-                                        <div>
-                                            <p className="text-white/70 text-[11px] uppercase font-bold mb-1">Annual Disposable</p>
-                                            <p className="text-white font-extrabold text-xl">{formatCurrency(result.disposableMonthly * 12)}</p>
-                                        </div>
-                                        <i className="fas fa-arrow-right text-white/50 text-sm group-hover:text-white group-hover:translate-x-1 transition-all mb-1"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Chart Card */}
-                            <div className="relative rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] text-slate-900 dark:text-white group flex flex-col justify-between h-full transition-all duration-300 hover:shadow-2xl hover:z-50">
-                                {/* Clipped Background */}
-                                <div className="absolute inset-0 rounded-[32px] overflow-hidden z-0 bg-white dark:bg-[#101012]">
-                                    <div className="absolute -right-8 -bottom-8 text-slate-50 dark:text-[#18181b] text-9xl rotate-12 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                                        <i className="fas fa-chart-pie"></i>
-                                    </div>
-                                </div>
-
-                                <div className="relative z-10 w-full h-full flex flex-col p-6">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-[#1c1c1e] flex items-center justify-center border border-slate-50 dark:border-[#333]">
-                                            <i className="fas fa-chart-pie text-lg text-slate-900 dark:text-white"></i>
-                                        </div>
-                                        <p className="text-slate-500 dark:text-slate-400 text-[13px] font-bold uppercase tracking-wider">Tax / Cost Ratio</p>
-                                        <InfoTooltip text="Visual breakdown of where your money goes: Taxes (Red), Living Costs (Blue), and Savings (Green)." className="text-slate-400" />
-                                    </div>
-                                    <div className="flex-grow flex items-center justify-center mt-2">
-                                        <DonutChart result={result} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Quick Convert Horizontal Card */}
-                        <div className="rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl group/converter relative z-30 bg-white dark:bg-[#101012] hover:z-50">
-                            
-                            {/* Clipped Header Background */}
-                            <div className="absolute top-0 left-0 right-0 h-[96px] rounded-t-[32px] overflow-hidden z-0">
-                                <div className="absolute inset-0 bg-gradient-to-r from-[#2FB050] to-[#A0E870]"></div>
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-32 pointer-events-none"></div>
-                                <i className="fas fa-coins text-white/20 text-6xl absolute -right-4 -bottom-8 rotate-12"></i>
-                            </div>
-
-                            {/* Header Content (Raised to Z-30) */}
-                            <div className="p-5 relative z-30 flex items-center justify-between text-white">
-                                <div className="flex items-center gap-3 relative z-10">
-                                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
-                                        <i className="fas fa-exchange-alt text-white"></i>
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-extrabold text-lg tracking-tight text-white leading-none">Quick Convert</h3>
-                                            <InfoTooltip text="Estimate how much this salary is worth in another currency or country." className="text-white" direction="bottom" />
-                                        </div>
-                                        <p className="text-white/80 text-xs font-medium mt-1">{getRateDisplay()}</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Body Content (Z-20) */}
-                            <div className="p-6 relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012]">
-                                <div className="flex flex-col md:flex-row items-end gap-4 relative">
-                                    
-                                    {/* FROM */}
-                                    <div className="flex-1 w-full space-y-2">
-                                        <div className="flex justify-between px-1">
-                                            <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">From</label>
-                                            <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[fromCurrency].name}</span>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <CurrencyDropdown value={fromCurrency} onChange={setFromCurrency} useShortName={true} />
-                                            <div className="relative flex-1">
-                                                <SmartNumberInput 
-                                                    value={convertAmount}
-                                                    onChangeValue={setConvertAmount}
-                                                    step={100}
-                                                    min={0}
-                                                    inputClassName="w-full h-14 pl-4 pr-8 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl text-slate-900 dark:text-white font-extrabold text-lg outline-none focus:bg-white dark:focus:bg-[#252528] focus:ring-4 focus:ring-[#2FB050]/10 transition-all duration-200 shadow-inner"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* SWAP BUTTON */}
-                                    <button 
-                                        onClick={() => {
-                                            setFromCurrency(toCurrency);
-                                            setToCurrency(fromCurrency);
-                                        }}
-                                        className="absolute left-1/2 -translate-x-1/2 bottom-[22px] md:static md:translate-x-0 md:mb-2 w-10 h-10 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500 hover:bg-[#2FB050] hover:text-white transition-all active:scale-90 shadow-md hover:shadow-lg z-10"
-                                    >
-                                        <i className="fas fa-exchange-alt"></i>
-                                    </button>
-
-                                    {/* TO */}
-                                    <div className="flex-1 w-full space-y-2">
-                                        <div className="flex justify-between px-1">
-                                            <label className="text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">To</label>
-                                            <span className="text-[10px] font-bold text-slate-400">{COUNTRY_RULES[toCurrency].name}</span>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <CurrencyDropdown value={toCurrency} onChange={setToCurrency} useShortName={true} />
-                                            <div className="relative flex-1">
-                                                <div className="w-full h-14 pl-4 pr-4 bg-[#2FB050]/5 border border-[#2FB050]/20 rounded-2xl flex items-center text-[#2a8f43] dark:text-[#4ade80] font-extrabold text-lg overflow-hidden shadow-sm">
-                                                    {new Intl.NumberFormat('en-US', { style: 'decimal', maximumFractionDigits: 2 }).format(convertedResult)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Footer Actions */}
-                                <div className="mt-6 pt-4 border-t border-slate-100 dark:border-[#222] flex flex-col sm:flex-row justify-between items-center gap-3">
-                                    <p className="text-[10px] text-slate-400 font-semibold text-center sm:text-left">
-                                        <i className="fas fa-clock mr-1"></i> 
-                                        Real-time estimate. Rates update daily.
-                                    </p>
-                                    <button 
-                                        onClick={applyToCalculator}
-                                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black rounded-xl text-xs font-bold hover:scale-105 active:scale-95 transition-all duration-200 shadow-lg hover:shadow-xl"
-                                    >
-                                        <span>Use this Salary</span>
-                                        <i className="fas fa-arrow-up transform rotate-45"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Detailed Breakdown Table */}
-                        <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl relative z-10 hover:z-50">
-                            {/* Clipped Header Background */}
-                            <div className="absolute top-0 left-0 right-0 h-[88px] rounded-t-[32px] overflow-hidden z-0">
-                                <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-800 dark:from-slate-800 dark:to-slate-900"></div>
-                                <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-                            </div>
-
-                            {/* Header Content (Raised to Z-30) */}
-                            <div className="p-6 flex justify-between items-center relative z-30">
-                                <div className="relative z-10 flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
-                                        <i className="fas fa-list-alt text-white"></i>
-                                    </div>
-                                    <h3 className="font-extrabold text-lg text-white tracking-tight">Payslip Breakdown</h3>
-                                    <InfoTooltip text="A line-by-line explanation of every tax and deduction taken from your salary." className="text-white" direction="bottom" />
-                                </div>
-                                <div className="flex items-center">
-                                    <button 
-                                        onClick={handleAnalyze} 
-                                        disabled={analyzing}
-                                        className="relative z-10 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-200/20 text-indigo-100 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150 mr-2 disabled:opacity-50"
-                                    >
-                                        {analyzing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>}
-                                        {analyzing ? 'Analyzing...' : 'AI Analysis'}
-                                    </button>
-                                    <button onClick={downloadCSV} className="relative z-10 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-200/20 text-emerald-100 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150 mr-2">
-                                        <i className="fas fa-file-csv"></i> Get CSV
-                                    </button>
-                                    <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
-                                        <i className="fas fa-arrow-down-to-line"></i> Get PDF
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* AI Report Display */}
-                            {aiAnalysis && (
-                                <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-900/30 relative z-20 animate-in fade-in slide-in-from-top-4">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 mt-1">
-                                            <i className="fas fa-robot text-indigo-600 dark:text-indigo-400"></i>
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-100 mb-2">AI Tax Insights</h4>
-                                            <MarkdownRenderer content={aiAnalysis} />
-                                        </div>
-                                        <button onClick={() => setAiAnalysis(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                                            <i className="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Body Content (Z-20) */}
-                            <div className="p-0 overflow-x-auto relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012]">
-                                <table className="w-full text-sm text-left min-w-[600px]">
-                                    <thead className="text-xs text-[#86868b] dark:text-slate-400 uppercase font-bold bg-[#F5F5F7] dark:bg-[#18181b] border-b border-gray-100 dark:border-[#333]">
-                                        <tr>
-                                            <th className="px-6 py-4 pl-8">Description</th>
-                                            <th className="px-6 py-4 text-right">Annual</th>
-                                            <th className="px-6 py-4 text-right">Monthly</th>
-                                            <th className="px-6 py-4 text-right w-24">%</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50 dark:divide-[#222]">
-                                        {/* Earnings Section */}
-                                        <tr className="bg-slate-50/50 dark:bg-[#151517]">
-                                            <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Earnings</td>
-                                        </tr>
-                                        <tr className="text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
-                                            <td className="px-6 py-4 pl-8 font-bold flex items-center gap-3">
-                                                <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400"><i className="fas fa-briefcase text-[10px]"></i></div>
-                                                Base Salary
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.grossAnnual)}</td>
-                                            <td className="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.grossMonthly)}</td>
-                                            <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">100%</td>
-                                        </tr>
-                                        {inputs.annualBonus > 0 && (
-                                            <tr className="text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
-                                                <td className="px-6 py-4 pl-8 font-bold flex items-center gap-3">
-                                                    <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><i className="fas fa-gift text-[10px]"></i></div>
-                                                    Annual Bonus
-                                                </td>
-                                                <td className="px-6 py-4 text-right font-bold whitespace-nowrap">{formatCurrency(inputs.annualBonus)}</td>
-                                                <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>
-                                                <td className="px-6 py-4 text-right font-medium text-slate-400">-</td>
-                                            </tr>
-                                        )}
-
-                                        {/* Deductions Section */}
-                                        <tr className="bg-slate-50/50 dark:bg-[#151517]">
-                                            <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-2">Deductions</td>
-                                        </tr>
-                                        {employeeDeductions.length > 0 ? (
-                                            employeeDeductions.map((d, idx) => (
-                                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-[#1c1c1e] transition-colors text-[#FF3B30] dark:text-red-400">
-                                                <td className="px-6 py-4 pl-8 flex items-center group font-bold">
-                                                    <span className="w-6 h-6 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 mr-3"><i className="fas fa-minus text-[10px]"></i></span>
-                                                    {d.name}
-                                                    {d.description && (
-                                                        <div className="relative ml-2">
-                                                            <i className="fas fa-info-circle text-gray-300 dark:text-slate-600 hover:text-blue-400 cursor-help transition-colors"></i>
-                                                            <div className="absolute left-0 bottom-6 w-64 bg-[#1d1d1f] dark:bg-black text-white text-xs p-3 rounded-xl shadow-xl hidden group-hover:block z-20 leading-relaxed opacity-0 group-hover:opacity-100 transition-opacity duration-200 font-medium border border-gray-700">
-                                                                {d.description}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-right font-medium whitespace-nowrap">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount))}</td>
-                                                <td className="px-6 py-4 text-right font-medium whitespace-nowrap">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount / 12))}</td>
-                                                <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-medium">
-                                                    {(d.amount / (result.grossAnnual || 1) * 100).toFixed(1)}%
-                                                </td>
-                                            </tr>
-                                        ))) : (
-                                            <tr>
-                                                <td colSpan={4} className="px-6 py-4 text-center text-slate-400 text-sm italic">No employee deductions found.</td>
-                                            </tr>
-                                        )}
-                                        
-                                        {/* Net Pay Row */}
-                                        <tr className="bg-blue-50/50 dark:bg-[#007AFF]/10 text-slate-900 dark:text-white border-t-2 border-blue-100 dark:border-blue-900">
-                                            <td className="px-6 py-4 pl-8 font-extrabold flex items-center gap-3 text-blue-700 dark:text-blue-400">
-                                                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md"><i className="fas fa-check text-[10px]"></i></div>
-                                                Net Pay
-                                            </td>
-                                            <td className="px-6 py-4 text-right font-extrabold text-blue-700 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.netAnnual)}</td>
-                                            <td className="px-6 py-4 text-right font-extrabold text-blue-700 dark:text-blue-400 whitespace-nowrap">{formatCurrency(result.netMonthly)}</td>
-                                            <td className="px-6 py-4 text-right text-blue-600 dark:text-blue-400 font-bold">
-                                                {(result.netAnnual / (result.grossAnnual || 1) * 100).toFixed(1)}%
-                                            </td>
-                                        </tr>
-
-                                        {/* Employer Section */}
-                                        {employerDeductions.length > 0 && (
-                                            <>
-                                                <tr className="bg-slate-50/50 dark:bg-[#151517]">
-                                                    <td colSpan={4} className="px-6 py-2 pl-8 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Employer Contributions (Informational)</td>
-                                                </tr>
-                                                {employerDeductions.map((d, idx) => (
-                                                    <tr key={`emp-${idx}`} className="text-slate-400 dark:text-slate-500 italic hover:bg-slate-50 dark:hover:bg-[#1c1c1e] transition-colors">
-                                                        <td className="px-6 py-3 pl-8 flex items-center gap-3">
-                                                            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-500"><i className="fas fa-building text-[10px]"></i></div>
-                                                            {d.name}
-                                                        </td>
-                                                        <td className="px-6 py-3 text-right whitespace-nowrap">{formatCurrency(d.amount)}</td>
-                                                        <td className="px-6 py-3 text-right whitespace-nowrap">{formatCurrency(d.amount / 12)}</td>
-                                                        <td className="px-6 py-3 text-right">-</td>
-                                                    </tr>
-                                                ))}
-                                            </>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div className="text-center pt-4 pb-8">
-                            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold">Calculations are estimates based on {currentRules.name} tax laws.</p>
-                        </div>
-                    </>
-                )}
-            </div>
             </div>
         )}
       </main>
-      {/* Hidden Invoice Template for PDF Generation */}
+      {/* Hidden Invoice Template for PDF Generation - USES DEBOUNCED INPUTS */}
       <div id="pdf-invoice-template" className="fixed top-0 left-0 -z-50 bg-white text-slate-900 p-12 w-[210mm] min-h-[297mm]" style={{ fontFamily: 'sans-serif' }}>
             {/* Header */}
             <div className="flex justify-between items-start mb-12 border-b border-gray-200 pb-8">
@@ -2275,7 +2424,7 @@ const App: React.FC = () => {
                 <div className="text-right">
                     <h2 className="text-xl font-bold text-slate-800 uppercase tracking-widest mb-2">INVOICE / STATEMENT</h2>
                     <p className="text-sm font-bold text-gray-500">Date: {new Date().toLocaleDateString()}</p>
-                    <p className="text-sm font-bold text-gray-500">Ref: {inputs.country}-{new Date().getFullYear()}</p>
+                    <p className="text-sm font-bold text-gray-500">Ref: {debouncedInputs.country}-{new Date().getFullYear()}</p>
                 </div>
             </div>
 
@@ -2287,9 +2436,9 @@ const App: React.FC = () => {
                         <span className="font-bold text-slate-700">Country:</span>
                         <span className="font-medium">{currentRules.name}</span>
                         <span className="font-bold text-slate-700">Age:</span>
-                        <span className="font-medium">{inputs.details.age}</span>
+                        <span className="font-medium">{debouncedInputs.details.age}</span>
                         <span className="font-bold text-slate-700">Status:</span>
-                        <span className="font-medium capitalize">{inputs.details.maritalStatus}</span>
+                        <span className="font-medium capitalize">{debouncedInputs.details.maritalStatus}</span>
                     </div>
                 </div>
                 <div className="text-right">
@@ -2320,17 +2469,17 @@ const App: React.FC = () => {
                         </tr>
                         
                         {/* Bonus */}
-                        {inputs.annualBonus > 0 && (
+                        {debouncedInputs.annualBonus > 0 && (
                             <tr className="border-b border-gray-100">
                                 <td className="py-3 px-4 pl-8 text-slate-600 italic">Included Bonus</td>
-                                <td className="py-3 px-4 text-right text-slate-600">{formatCurrency(inputs.annualBonus)}</td>
+                                <td className="py-3 px-4 text-right text-slate-600">{formatCurrency(debouncedInputs.annualBonus)}</td>
                                 <td className="py-3 px-4 text-right text-slate-600">-</td>
                                 <td className="py-3 px-4 text-right text-slate-600">-</td>
                             </tr>
                         )}
 
                         {/* Deductions */}
-                        {employeeDeductions.map((d, i) => (
+                        {employeeDeductions.map((d: DeductionResult, i: number) => (
                             <tr key={i} className="border-b border-gray-50 text-red-600">
                                 <td className="py-3 px-4">{d.name}</td>
                                 <td className="py-3 px-4 text-right">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount))}</td>
@@ -2356,7 +2505,7 @@ const App: React.FC = () => {
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Monthly Living Costs Breakdown</h3>
                     <div className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm">
                          {costFields.map(field => {
-                             const val = (inputs.costs as any)[field.key];
+                             const val = (debouncedInputs.costs as any)[field.key];
                              if (!val) return null;
                              return (
                                  <div key={field.key} className="flex justify-between">

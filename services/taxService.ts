@@ -181,6 +181,12 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
 
   if (grossAnnual < 0) grossAnnual = 0;
 
+  // Calculate User Defined Reliefs (Annualized)
+  const userReliefsTotal = Object.values(inputs.taxReliefs || {}).reduce((acc, val) => {
+      const annualVal = inputs.frequency === 'monthly' ? val * 12 : val;
+      return acc + (annualVal || 0);
+  }, 0);
+
   // --- PRE-CALCULATION FOR SPECIFIC COUNTRIES ---
   let fiscalIncome = grossAnnual;
   // NLD 30% Ruling: Taxable income is 70% of gross
@@ -195,6 +201,13 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
   
   // Track Taxable Income (reduced by social contributions in some countries)
   let currentTaxableIncome = grossAnnual;
+  
+  // Apply User Reliefs to the starting Taxable Income base
+  // We do this carefully: some taxes (like Social Security) often ignore these reliefs and use Gross.
+  // Our system supports this via the 'useTaxableIncome' flag on the deductible.
+  // If a deductible uses 'Taxable Income', it will now be lower by the relief amount.
+  // If it uses 'Gross', it remains unaffected.
+  currentTaxableIncome = Math.max(0, currentTaxableIncome - userReliefsTotal);
 
   // 1. Federal Deductions
   rules.federalDeductibles.forEach(d => {
@@ -302,6 +315,8 @@ export const calculateNetPay = (inputs: UserInputs): CalculationResult => {
   
   // For marginal, we must replicate the taxable income chain
   let taxableIncomePlus = grossPlus;
+  // Apply user reliefs to marginal base too
+  taxableIncomePlus = Math.max(0, taxableIncomePlus - userReliefsTotal);
   
   if (inputs.country === CountryCode.NLD && inputs.details.isExpat) fiscalPlus = grossPlus * 0.7;
   

@@ -75,7 +75,7 @@ export const queryGemini = async (prompt: string, country: string, location?: { 
     return text || "I couldn't verify that information. Please try again.";
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return "Sorry, I encountered an error verifying the data. Please check your connection and try again.";
+    return "Sorry, I encountered an error verifying the data. Please check your API key or connection.";
   }
 };
 
@@ -98,11 +98,12 @@ export const getTaxReport = async (
 
       Please provide a concise, easy-to-understand summary (around 150 words).
       1. Explain clearly where the biggest chunk of money is going.
-      2. Mention if the effective tax rate (${((1 - net/gross)*100).toFixed(1)}%) seems standard for this income level in ${country}.
+      2. Mention if the effective tax rate (${gross > 0 ? ((1 - net/gross)*100).toFixed(1) : 0}%) seems standard for this income level in ${country}.
       3. Provide one actionable tip or insight regarding these specific deductions.
       
       Formatting rules:
       - Use **bold** for key terms and numbers.
+      - Use ### for Section Headings.
       - Use bullet points for lists.
       - Keep it professional but encouraging.
     `;
@@ -133,17 +134,19 @@ export const estimateLivingCosts = async (
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const location = region ? `${region}, ${country}` : country;
     
-    // Construct a profile-based prompt
+    // Construct a profile-based prompt with strict output controls
     const prompt = `
-      Estimate realistic monthly living costs in ${location} (${currency}) for a person with this profile:
+      Estimate realistic MONTHLY living costs in ${location} (${currency}) for a person with this profile:
       - Status: ${profile.maritalStatus}
       - Age: ${profile.age}
       - Annual Income Level: ${currency} ${profile.income}
       
       Instructions:
-      1. Tailor the 'Rent' based on the income level. If high income, assume a nice apartment in a good area. If low income, assume budget accommodation.
-      2. If 'Married', increase Groceries and Utilities for a 2-person household.
-      3. Provide realistic estimates for:
+      1. All values MUST be for ONE MONTH only. Do not provide annual figures.
+      2. Values MUST be in ${currency}.
+      3. Tailor the 'Rent' based on the income level. If high income, assume a nice apartment in a good area. If low income, assume budget accommodation.
+      4. If 'Married', increase Groceries and Utilities for a 2-person household.
+      5. Provide realistic estimates for:
          - Rent (Housing)
          - Groceries (Food/Household items)
          - Utilities (Electricity, Water, Internet, Phone)
@@ -161,11 +164,11 @@ export const estimateLivingCosts = async (
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            rent: { type: Type.NUMBER },
-            groceries: { type: Type.NUMBER },
-            utilities: { type: Type.NUMBER },
-            transport: { type: Type.NUMBER },
-            insurance: { type: Type.NUMBER },
+            rent: { type: Type.NUMBER, description: "Monthly rent cost" },
+            groceries: { type: Type.NUMBER, description: "Monthly groceries cost" },
+            utilities: { type: Type.NUMBER, description: "Monthly utilities cost" },
+            transport: { type: Type.NUMBER, description: "Monthly transport cost" },
+            insurance: { type: Type.NUMBER, description: "Monthly insurance cost" },
           },
           required: ["rent", "groceries", "utilities", "transport", "insurance"],
         },
