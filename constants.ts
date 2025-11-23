@@ -1,4 +1,5 @@
 
+
 import { CountryCode, CountryRules } from './types';
 
 // ACCURATE TAX RULES FOR 2024/2025
@@ -208,6 +209,43 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
           deductibles: [
               { name: 'GA Income Tax', description: 'Flat Rate 5.39% (2025).', type: 'percentage', rate: 0.0539, exemptAmount: 12000 }
           ]
+      },
+      {
+          id: 'OH',
+          name: 'Ohio',
+          deductibles: [
+              { 
+                name: 'OH Income Tax', 
+                description: 'Progressive (2024).', 
+                type: 'progressive', 
+                exemptAmount: 26050,
+                brackets: [
+                  { threshold: 0, rate: 0.0275 },
+                  { threshold: 73950, rate: 0.035 }
+                ]
+              }
+          ]
+      },
+      {
+          id: 'MI',
+          name: 'Michigan',
+          deductibles: [
+              { name: 'MI Income Tax', description: 'Flat Rate 4.25%.', type: 'percentage', rate: 0.0425, exemptAmount: 5600 }
+          ]
+      },
+      {
+          id: 'CO',
+          name: 'Colorado',
+          deductibles: [
+              { name: 'CO Income Tax', description: 'Flat Rate 4.4%.', type: 'percentage', rate: 0.044 }
+          ]
+      },
+      {
+          id: 'AZ',
+          name: 'Arizona',
+          deductibles: [
+              { name: 'AZ Income Tax', description: 'Flat Rate 2.5%.', type: 'percentage', rate: 0.025, exemptAmount: 14600 }
+          ]
       }
     ]
   },
@@ -248,7 +286,7 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     currency: 'GBP',
     currencySymbol: '£',
     exchangeRatePerUSD: 0.79,
-    subNationalLabel: 'Region (Scotland)',
+    subNationalLabel: 'Nation',
     sources: [{ label: 'GOV.UK Rates 2024/25', url: 'https://www.gov.uk/income-tax-rates', date: '2024-04-06' }],
     federalDeductibles: [
         {
@@ -276,6 +314,21 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     ],
     subNationalRules: [
         {
+            id: 'ENG',
+            name: 'England',
+            deductibles: [] 
+        },
+        {
+            id: 'WAL',
+            name: 'Wales',
+            deductibles: [] // Welsh rates currently mirror UK rates
+        },
+        {
+            id: 'NIR',
+            name: 'Northern Ireland',
+            deductibles: [] 
+        },
+        {
             id: 'SCO',
             name: 'Scotland',
             deductibles: [
@@ -293,17 +346,6 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
                         { threshold: 62430, rate: 0.45 }, // Advanced
                         { threshold: 112570, rate: 0.48 } // Top
                     ],
-                    // Hack: This replaces the federal income tax in visualization conceptually, 
-                    // but in this code it adds on top.
-                    // Ideally we'd use a 'replaceFederal' flag, but for now users selecting Scotland
-                    // will see this ADDED.
-                    // CORRECT FIX: We must subtract the Federal Tax if Scotland is selected?
-                    // In this architecture, Federal runs first. 
-                    // We can use 'fixedCredits' to negative the federal tax? No.
-                    // For this specific tool update, we will assume 'Federal Deductibles' applies to rUK.
-                    // A complete override requires architectural change.
-                    // SIMPLIFICATION: We will assume the user subtracts mentally or we add a negative deduction here to offset federal?
-                    // Better: We add a negative "UK Tax Offset" deduction here.
                 },
                 {
                    name: 'UK Tax Offset',
@@ -415,6 +457,31 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       {
         id: 'NS', name: 'Nova Scotia', deductibles: [
            { name: 'NS Tax', description: 'Nova Scotia Tax.', type: 'progressive', exemptAmount: 11481, brackets: [{ threshold: 0, rate: 0.0879 }, { threshold: 29590, rate: 0.1495 }, { threshold: 59180, rate: 0.1667 }, { threshold: 93000, rate: 0.175 }, { threshold: 150000, rate: 0.21 }] }
+        ]
+      },
+      {
+        id: 'MB', name: 'Manitoba', deductibles: [
+           { name: 'MB Tax', description: 'Manitoba Tax.', type: 'progressive', exemptAmount: 15780, brackets: [{ threshold: 0, rate: 0.108 }, { threshold: 47000, rate: 0.1275 }, { threshold: 100000, rate: 0.174 }] }
+        ]
+      },
+      {
+        id: 'SK', name: 'Saskatchewan', deductibles: [
+           { name: 'SK Tax', description: 'Saskatchewan Tax.', type: 'progressive', exemptAmount: 18491, brackets: [{ threshold: 0, rate: 0.105 }, { threshold: 52057, rate: 0.125 }, { threshold: 148728, rate: 0.145 }] }
+        ]
+      },
+      {
+        id: 'NB', name: 'New Brunswick', deductibles: [
+           { name: 'NB Tax', description: 'New Brunswick Tax.', type: 'progressive', exemptAmount: 13044, brackets: [{ threshold: 0, rate: 0.094 }, { threshold: 49958, rate: 0.14 }, { threshold: 99916, rate: 0.16 }, { threshold: 162452, rate: 0.195 }] }
+        ]
+      },
+      {
+        id: 'PE', name: 'Prince Edward Island', deductibles: [
+           { name: 'PE Tax', description: 'PEI Tax (2024 System).', type: 'progressive', exemptAmount: 13500, brackets: [{ threshold: 0, rate: 0.095 }, { threshold: 32656, rate: 0.138 }, { threshold: 64313, rate: 0.167 }] }
+        ]
+      },
+      {
+        id: 'NL', name: 'Newfoundland and Labrador', deductibles: [
+           { name: 'NL Tax', description: 'NL Tax.', type: 'progressive', exemptAmount: 10818, brackets: [{ threshold: 0, rate: 0.087 }, { threshold: 43198, rate: 0.145 }, { threshold: 86396, rate: 0.158 }, { threshold: 154200, rate: 0.178 }, { threshold: 205590, rate: 0.198 }] }
         ]
       }
     ]
@@ -603,7 +670,9 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       { id: 'BS', name: 'Basel-Stadt', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.12 }] },
       { id: 'LU', name: 'Luzern', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.09 }] },
       { id: 'ZG', name: 'Zug', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.06 }] },
-      { id: 'TI', name: 'Ticino', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.13 }] }
+      { id: 'TI', name: 'Ticino', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.13 }] },
+      { id: 'SG', name: 'St. Gallen', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.11 }] },
+      { id: 'AG', name: 'Aargau', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.10 }] }
     ]
   },
   [CountryCode.NOR]: {

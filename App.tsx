@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CountryCode, UserInputs, CalculationResult } from './types';
 import { COUNTRY_RULES } from './constants';
@@ -259,7 +260,7 @@ const CurrencyDropdown = ({ value, onChange, className, useShortName }: { value:
   ), [search]);
 
   return (
-      <div className={`relative z-[100] ${className || 'w-[45%] sm:w-[42%]'}`} ref={ref}>
+      <div className={`relative ${open ? 'z-[300]' : 'z-[100]'} ${className || 'w-[45%] sm:w-[42%]'}`} ref={ref}>
           <button 
               onClick={() => setOpen(!open)}
               className="w-full h-14 pl-3 pr-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl flex items-center gap-3 cursor-pointer outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white dark:focus:bg-[#252528] hover:bg-white/50 dark:hover:bg-[#252528] transition-all duration-200 shadow-sm group"
@@ -358,13 +359,12 @@ const RegionDropdown = ({ country, value, onChange }: { country: CountryCode, va
       r.name.toLowerCase().includes(search.toLowerCase())
   ), [subRules, search]);
 
-  // Correctly handle conditional return AFTER hooks to prevent Error #300
   if (!subRules.length) return null;
 
   const selectedRegion = subRules.find(r => r.id === value);
 
   return (
-      <div className="relative w-full z-[90]" ref={ref}>
+      <div className={`relative w-full ${open ? 'z-[290]' : 'z-[90]'}`} ref={ref}>
            <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">{rule.subNationalLabel}</label>
            <button 
               onClick={() => setOpen(!open)}
@@ -1017,7 +1017,7 @@ const App: React.FC = () => {
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 relative items-start">
                     
                     {/* SCENARIO A (LEFT) */}
-                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 hover:z-[60] focus-within:z-[60] transition-all duration-300">
+                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 focus-within:z-[60] transition-all duration-300">
                          {/* Input Card A */}
                          <div className="bg-white dark:bg-[#101012] rounded-[28px] border border-slate-200 dark:border-[#333] shadow-sm p-6 relative group hover:shadow-xl hover:border-blue-200 dark:hover:border-blue-900/50 transition-all">
                               <div className="absolute top-6 left-0 w-1.5 h-12 bg-blue-500 rounded-r-md"></div>
@@ -1055,7 +1055,7 @@ const App: React.FC = () => {
                                             value={inputs.grossIncome} 
                                             onChangeValue={(v) => setInputs({...inputs, grossIncome: v})}
                                             prefix={currentRules.currencySymbol}
-                                            inputClassName="w-full h-12 pl-10 pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold text-slate-900 dark:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all"
+                                            inputClassName={`w-full h-12 ${currentRules.currencySymbol.length > 1 ? 'pl-16' : 'pl-10'} pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold text-slate-900 dark:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all`}
                                         />
                                    </div>
                                    <div className="grid grid-cols-2 gap-3">
@@ -1098,7 +1098,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* MIDDLE COLUMN (ANALYSIS & CONTROLS) */}
-                    <div className="xl:col-span-1 flex flex-col gap-6 relative z-20 hover:z-[60] focus-within:z-[60] transition-all duration-300">
+                    <div className="xl:col-span-1 flex flex-col gap-6 relative z-20 focus-within:z-[60] transition-all duration-300">
                          {/* The VS Badge */}
                          <div className="hidden xl:flex mx-auto w-14 h-14 bg-white dark:bg-[#1c1c1e] rounded-full border-[3px] border-slate-100 dark:border-[#333] items-center justify-center shadow-sm text-lg font-black text-slate-300 dark:text-slate-600 z-30 -mb-8 -mt-2">
                              VS
@@ -1193,7 +1193,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* SCENARIO B (RIGHT) */}
-                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 hover:z-[60] focus-within:z-[60] transition-all duration-300">
+                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 focus-within:z-[60] transition-all duration-300">
                          {/* Input Card B */}
                          <div className="bg-white dark:bg-[#101012] rounded-[28px] border border-slate-200 dark:border-[#333] shadow-sm p-6 relative group hover:shadow-xl hover:border-purple-200 dark:hover:border-purple-900/50 transition-all">
                               <div className="absolute top-6 right-0 w-1.5 h-12 bg-purple-500 rounded-l-md"></div>
@@ -1222,13 +1222,13 @@ const App: React.FC = () => {
                                    <div className="space-y-1">
                                        <div className="flex items-center gap-1 mb-1">
                                           <label className="text-[11px] font-bold text-slate-400 uppercase">Annual Gross</label>
-                                          <InfoTooltip text="Target salary in that country's local currency." direction="right" />
+                                          <InfoTooltip text="Target salary in that country's local currency." direction="left" />
                                        </div>
                                        <SmartNumberInput 
                                             value={inputsB.grossIncome} 
                                             onChangeValue={(v) => setInputsB({...inputsB, grossIncome: v})}
                                             prefix={rulesB.currencySymbol}
-                                            inputClassName="w-full h-12 pl-10 pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold text-slate-900 dark:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all"
+                                            inputClassName={`w-full h-12 ${rulesB.currencySymbol.length > 1 ? 'pl-16' : 'pl-10'} pr-4 bg-gray-50 dark:bg-[#1c1c1e] rounded-xl font-bold text-slate-900 dark:text-white border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all`}
                                         />
                                    </div>
 
@@ -1244,7 +1244,7 @@ const App: React.FC = () => {
                                         <div className="flex justify-between items-center mb-3">
                                             <div className="flex items-center gap-1">
                                                 <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Cost of Living Adj.</label>
-                                                <InfoTooltip text="Use this to approximate real value. If moving to a city that is 20% more expensive (e.g. Austin to NY), set to +20%." direction="right" />
+                                                <InfoTooltip text="Use this to approximate real value. If moving to a city that is 20% more expensive (e.g. Austin to NY), set to +20%." direction="left" />
                                             </div>
                                             <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${colDiff > 0 ? 'bg-red-100 text-red-600' : colDiff < 0 ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-500'}`}>
                                                 {colDiff > 0 ? '+' : ''}{colDiff}%
