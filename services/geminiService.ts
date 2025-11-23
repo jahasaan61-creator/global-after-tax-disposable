@@ -25,16 +25,16 @@ export const queryGemini = async (prompt: string, country: string, location?: { 
     // We strictly prompt for verifiable sources to ensure precision.
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `You are an expert Tax Assistant for a specific country: ${country}.
+      contents: `You are an expert Global Mobility Assistant specializing in Taxes and Cost of Living for: ${country}.
       
       User Question: ${prompt}
       
       STRICT RULES:
-      1. USE the Google Search tool to verify 2024/2025 tax rates, thresholds, and deductions.
-      2. USE the Google Maps tool to find locations if the user asks (e.g. "Where is the tax office?", "Find accountants nearby").
+      1. USE the Google Search tool to verify 2024/2025 tax rates, thresholds, deductions, and current Cost of Living data (Numbeo, ECA, Mercer).
+      2. USE the Google Maps tool to find locations if the user asks.
       3. DO NOT hallucinate numbers. If uncertain, state that you cannot verify.
-      4. Answer concisely with verifiable numeric data or specific location details.
-      5. The response MUST be grounded in search results or map data.
+      4. Answer concisely with verifiable numeric data.
+      5. If asked for a "percentage difference" in cost of living, provide a single estimated number based on search results.
       `,
       config: config,
     });

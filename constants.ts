@@ -597,7 +597,13 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
     ],
     subNationalRules: [
       { id: 'ZH', name: 'Zurich', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.10 }] },
-      { id: 'GE', name: 'Geneva', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.15 }] }
+      { id: 'GE', name: 'Geneva', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.15 }] },
+      { id: 'BE', name: 'Bern', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.14 }] },
+      { id: 'VD', name: 'Vaud', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.14 }] },
+      { id: 'BS', name: 'Basel-Stadt', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.12 }] },
+      { id: 'LU', name: 'Luzern', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.09 }] },
+      { id: 'ZG', name: 'Zug', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.06 }] },
+      { id: 'TI', name: 'Ticino', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.13 }] }
     ]
   },
   [CountryCode.NOR]: {

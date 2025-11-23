@@ -4,6 +4,7 @@ import { CountryCode, UserInputs, CalculationResult } from './types';
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
 import { GeminiAssistant } from './components/GeminiAssistant';
+import { queryGemini } from './services/geminiService';
 
 // Declare jsPDF and html2canvas on Window interface
 declare global {
@@ -165,41 +166,61 @@ const SmartNumberInput = ({
 interface InfoTooltipProps {
   text: string;
   className?: string;
-  direction?: 'top' | 'bottom';
+  direction?: 'top' | 'bottom' | 'left' | 'right';
   align?: 'start' | 'center' | 'end';
 }
 
 const InfoTooltip = ({ text, className = "text-current", direction = 'top', align = 'center' }: InfoTooltipProps) => {
-  // Determine container alignment classes
-  let alignClasses = 'left-1/2 -translate-x-1/2'; // Center default
-  let arrowAlignClasses = 'left-1/2 -translate-x-1/2';
+  let posClasses = '';
+  let animClasses = '';
+  let arrowClasses = '';
 
-  if (align === 'start') {
-    alignClasses = 'left-0';
-    arrowAlignClasses = 'left-2.5';
-  } else if (align === 'end') {
-    alignClasses = 'right-0';
-    arrowAlignClasses = 'right-2.5';
+  // Default Arrow Size/Shape classes
+  const arrowBase = "absolute border-4 border-transparent"; 
+
+  if (direction === 'top') {
+      posClasses = 'bottom-full mb-3 left-1/2 -translate-x-1/2';
+      if (align === 'start') posClasses = 'bottom-full mb-3 left-0';
+      if (align === 'end') posClasses = 'bottom-full mb-3 right-0';
+      
+      animClasses = 'translate-y-1 group-hover/info:translate-y-0';
+      arrowClasses = `${arrowBase} top-full border-t-slate-900 dark:border-t-white`;
+      
+      if (align === 'start') arrowClasses += ' left-2.5';
+      else if (align === 'end') arrowClasses += ' right-2.5';
+      else arrowClasses += ' left-1/2 -translate-x-1/2';
+
+  } else if (direction === 'bottom') {
+      posClasses = 'top-full mt-3 left-1/2 -translate-x-1/2';
+      if (align === 'start') posClasses = 'top-full mt-3 left-0';
+      if (align === 'end') posClasses = 'top-full mt-3 right-0';
+
+      animClasses = '-translate-y-1 group-hover/info:translate-y-0';
+      arrowClasses = `${arrowBase} bottom-full border-b-slate-900 dark:border-b-white`;
+      
+      if (align === 'start') arrowClasses += ' left-2.5';
+      else if (align === 'end') arrowClasses += ' right-2.5';
+      else arrowClasses += ' left-1/2 -translate-x-1/2';
+
+  } else if (direction === 'right') {
+      posClasses = 'left-full ml-3 top-1/2 -translate-y-1/2';
+      animClasses = '-translate-x-1 group-hover/info:translate-x-0';
+      arrowClasses = `${arrowBase} right-full top-1/2 -translate-y-1/2 border-r-slate-900 dark:border-r-white`;
+      
+  } else if (direction === 'left') {
+      posClasses = 'right-full mr-3 top-1/2 -translate-y-1/2';
+      animClasses = 'translate-x-1 group-hover/info:translate-x-0';
+      arrowClasses = `${arrowBase} left-full top-1/2 -translate-y-1/2 border-l-slate-900 dark:border-l-white`;
   }
 
-  // Determine vertical direction classes
-  const verticalClasses = direction === 'top' 
-    ? 'bottom-full mb-3 transform translate-y-1 group-hover/info:translate-y-0'
-    : 'top-full mt-3 transform -translate-y-1 group-hover/info:translate-y-0';
-
-  const arrowDirectionClasses = direction === 'top'
-    ? 'top-full border-t-slate-900 dark:border-t-white'
-    : 'bottom-full border-b-slate-900 dark:border-b-white';
-
   return (
-    <div className={`relative group/info z-50 inline-flex ml-1.5 ${className}`}>
+    <div className={`relative group/info z-[200] inline-flex ml-1.5 ${className}`}>
       <button className="w-4 h-4 rounded-full border border-current opacity-40 hover:opacity-100 flex items-center justify-center transition-all hover:scale-110 hover:bg-white/10 cursor-help">
          <i className="fas fa-info text-[8px] font-bold"></i>
       </button>
-      <div className={`absolute ${alignClasses} ${verticalClasses} w-56 p-3 bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] leading-relaxed font-medium rounded-xl shadow-2xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 pointer-events-none text-center z-[200]`}>
+      <div className={`absolute ${posClasses} ${animClasses} w-48 p-2.5 bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] leading-relaxed font-medium rounded-xl shadow-xl opacity-0 invisible group-hover/info:opacity-100 group-hover/info:visible transition-all duration-200 pointer-events-none text-center z-[200] whitespace-normal break-words`}>
          {text}
-         {/* Arrow */}
-         <div className={`absolute ${arrowAlignClasses} ${arrowDirectionClasses} border-4 border-transparent`}></div>
+         <div className={arrowClasses}></div>
       </div>
     </div>
   );
@@ -238,7 +259,7 @@ const CurrencyDropdown = ({ value, onChange, className, useShortName }: { value:
   ), [search]);
 
   return (
-      <div className={`relative ${className || 'w-[45%] sm:w-[42%]'}`} ref={ref}>
+      <div className={`relative z-[100] ${className || 'w-[45%] sm:w-[42%]'}`} ref={ref}>
           <button 
               onClick={() => setOpen(!open)}
               className="w-full h-14 pl-3 pr-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl flex items-center gap-3 cursor-pointer outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white dark:focus:bg-[#252528] hover:bg-white/50 dark:hover:bg-[#252528] transition-all duration-200 shadow-sm group"
@@ -343,7 +364,7 @@ const RegionDropdown = ({ country, value, onChange }: { country: CountryCode, va
   const selectedRegion = subRules.find(r => r.id === value);
 
   return (
-      <div className="relative w-full z-20" ref={ref}>
+      <div className="relative w-full z-[90]" ref={ref}>
            <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">{rule.subNationalLabel}</label>
            <button 
               onClick={() => setOpen(!open)}
@@ -517,6 +538,7 @@ const App: React.FC = () => {
       details: { age: 30, maritalStatus: 'single', churchTax: false, isExpat: false }
   });
   const [colDiff, setColDiff] = useState<number>(0); // Cost of Living difference % for Scenario B
+  const [estimatingCola, setEstimatingCola] = useState(false);
 
   const [mode, setMode] = useState<CalcMode>('gross');
   const [targetNet, setTargetNet] = useState<number>(40000);
@@ -646,6 +668,39 @@ const App: React.FC = () => {
       const temp = { ...inputs };
       setInputs({ ...inputsB, country: inputsB.country });
       setInputsB({ ...temp, country: temp.country });
+  };
+
+  const handleAutoCalibrateCOLA = async () => {
+    if (!inputs.country || !inputsB.country || estimatingCola) return;
+    setEstimatingCola(true);
+
+    const regionA = inputs.subRegion ? COUNTRY_RULES[inputs.country].subNationalRules?.find(r => r.id === inputs.subRegion)?.name : '';
+    const locationA = regionA ? `${regionA}, ${COUNTRY_RULES[inputs.country].name}` : COUNTRY_RULES[inputs.country].name;
+
+    const regionB = inputsB.subRegion ? COUNTRY_RULES[inputsB.country].subNationalRules?.find(r => r.id === inputsB.subRegion)?.name : '';
+    const locationB = regionB ? `${regionB}, ${COUNTRY_RULES[inputsB.country].name}` : COUNTRY_RULES[inputsB.country].name;
+
+    const prompt = `Compare the cost of living difference between ${locationA} and ${locationB}.
+    I need a single percentage number representing how much more or less expensive ${locationB} is compared to ${locationA}.
+    - If ${locationB} is 20% more expensive, return "20".
+    - If ${locationB} is 15% cheaper, return "-15".
+    - Return ONLY the number. Do not add % symbol or text.`;
+
+    try {
+        const res = await queryGemini(prompt, 'Global'); // Using 'Global' context for multi-country
+        // Simple regex to find a number (integer)
+        const match = res.match(/-?\d+/);
+        if (match) {
+            const val = parseInt(match[0]);
+            // Clamp between -50 and 100 to match slider
+            const clamped = Math.min(Math.max(val, -50), 100);
+            setColDiff(clamped);
+        }
+    } catch (e) {
+        console.error("COLA Est failed", e);
+    } finally {
+        setEstimatingCola(false);
+    }
   };
 
   // Derived values for Breakdown
@@ -934,7 +989,7 @@ const App: React.FC = () => {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6 pb-20">
                 
                 {/* Comparison Header / Controls */}
-                <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-[#101012] p-5 rounded-[24px] border border-slate-200 dark:border-[#333] shadow-sm gap-4">
+                <div className="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-[#101012] p-5 rounded-[24px] border border-slate-200 dark:border-[#333] shadow-sm gap-4 relative z-40">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
                             <i className="fas fa-balance-scale-right text-xl"></i>
@@ -942,7 +997,7 @@ const App: React.FC = () => {
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="font-extrabold text-slate-900 dark:text-white leading-none text-lg">Salary Comparison</h2>
-                                <InfoTooltip text="Compare two tax scenarios side-by-side. Great for analyzing job offers in different countries." />
+                                <InfoTooltip text="Compare two tax scenarios side-by-side. Great for analyzing job offers in different countries." direction="bottom" />
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-1">Analyze net pay differences across borders</p>
                         </div>
@@ -955,14 +1010,14 @@ const App: React.FC = () => {
                             onChange={(v) => setComparisonCurrencyMode(v)}
                             dark={darkMode}
                          />
-                         <InfoTooltip text="Native: Shows raw values (e.g. 50k GBP vs 50k USD). Convert: Translates Scenario B into Base currency for direct comparison." align="end" />
+                         <InfoTooltip text="Native: Shows raw values (e.g. 50k GBP vs 50k USD). Convert: Translates Scenario B into Base currency for direct comparison." align="end" direction="bottom" />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 relative items-start">
                     
                     {/* SCENARIO A (LEFT) */}
-                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 hover:z-50 transition-all duration-300">
+                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 hover:z-[60] focus-within:z-[60] transition-all duration-300">
                          {/* Input Card A */}
                          <div className="bg-white dark:bg-[#101012] rounded-[28px] border border-slate-200 dark:border-[#333] shadow-sm p-6 relative group hover:shadow-xl hover:border-blue-200 dark:hover:border-blue-900/50 transition-all">
                               <div className="absolute top-6 left-0 w-1.5 h-12 bg-blue-500 rounded-r-md"></div>
@@ -975,14 +1030,26 @@ const App: React.FC = () => {
                                    <div className="space-y-1">
                                        <div className="flex items-center gap-1 mb-1">
                                           <label className="text-[11px] font-bold text-slate-400 uppercase">Location</label>
-                                          <InfoTooltip text="The country you are currently in or using as your baseline." />
+                                          <InfoTooltip text="The country you are currently in or using as your baseline." direction="right" />
                                        </div>
-                                       <CurrencyDropdown value={inputs.country} onChange={(v) => setInputs({...inputs, country: v})} className="w-full" />
+                                       <CurrencyDropdown 
+                                          value={inputs.country} 
+                                          onChange={(v) => setInputs({...inputs, country: v, subRegion: undefined})} 
+                                          className="w-full" 
+                                        />
                                    </div>
+                                   
+                                   {/* REGION DROPDOWN FOR SCENARIO A */}
+                                   <RegionDropdown 
+                                        country={inputs.country}
+                                        value={inputs.subRegion || ''}
+                                        onChange={(val) => setInputs({...inputs, subRegion: val })}
+                                    />
+
                                    <div className="space-y-1">
                                        <div className="flex items-center gap-1 mb-1">
                                           <label className="text-[11px] font-bold text-slate-400 uppercase">Annual Gross</label>
-                                          <InfoTooltip text="Total annual salary before tax in the local currency." />
+                                          <InfoTooltip text="Total annual salary before tax in the local currency." direction="right" />
                                        </div>
                                        <SmartNumberInput 
                                             value={inputs.grossIncome} 
@@ -1031,7 +1098,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* MIDDLE COLUMN (ANALYSIS & CONTROLS) */}
-                    <div className="xl:col-span-1 flex flex-col gap-6 relative z-20">
+                    <div className="xl:col-span-1 flex flex-col gap-6 relative z-20 hover:z-[60] focus-within:z-[60] transition-all duration-300">
                          {/* The VS Badge */}
                          <div className="hidden xl:flex mx-auto w-14 h-14 bg-white dark:bg-[#1c1c1e] rounded-full border-[3px] border-slate-100 dark:border-[#333] items-center justify-center shadow-sm text-lg font-black text-slate-300 dark:text-slate-600 z-30 -mb-8 -mt-2">
                              VS
@@ -1039,11 +1106,13 @@ const App: React.FC = () => {
 
                          {/* Analysis Card */}
                          {result && resultB && (
-                             <div className="bg-slate-900 dark:bg-black text-white rounded-[28px] shadow-2xl p-8 text-center border border-slate-800 dark:border-[#222] relative flex-grow flex flex-col justify-center overflow-hidden group">
-                                  {/* Background FX */}
-                                  <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                                  <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-blue-500/30 transition-all duration-700"></div>
-                                  <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none group-hover:bg-purple-500/30 transition-all duration-700"></div>
+                             <div className="bg-slate-900 dark:bg-black text-white rounded-[28px] shadow-2xl p-8 text-center border border-slate-800 dark:border-[#222] relative flex-grow flex flex-col justify-center group isolate">
+                                  {/* Background FX - Wrapped in absolute container to allow clipping while parent has visible overflow for tooltips */}
+                                  <div className="absolute inset-0 overflow-hidden rounded-[28px] z-0">
+                                      <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                                      <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:bg-blue-500/30 transition-all duration-700"></div>
+                                      <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none group-hover:bg-purple-500/30 transition-all duration-700"></div>
+                                  </div>
                                   
                                   {/* Dynamic Feedback based on diff */}
                                   <div className="relative z-10">
@@ -1124,7 +1193,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* SCENARIO B (RIGHT) */}
-                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 hover:z-50 transition-all duration-300">
+                    <div className="xl:col-span-1 flex flex-col gap-4 relative z-30 hover:z-[60] focus-within:z-[60] transition-all duration-300">
                          {/* Input Card B */}
                          <div className="bg-white dark:bg-[#101012] rounded-[28px] border border-slate-200 dark:border-[#333] shadow-sm p-6 relative group hover:shadow-xl hover:border-purple-200 dark:hover:border-purple-900/50 transition-all">
                               <div className="absolute top-6 right-0 w-1.5 h-12 bg-purple-500 rounded-l-md"></div>
@@ -1135,9 +1204,25 @@ const App: React.FC = () => {
                               
                               <div className="space-y-5">
                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-1 mb-1">
+                                            <label className="text-[11px] font-bold text-slate-400 uppercase">Location</label>
+                                            <InfoTooltip text="The country you want to compare against." direction="bottom" />
+                                        </div>
+                                        <CurrencyDropdown 
+                                            value={inputsB.country} 
+                                            onChange={(v) => setInputsB({...inputsB, country: v, subRegion: undefined})} 
+                                            className="w-full" 
+                                        />
+                                   </div>
+                                   <RegionDropdown 
+                                        country={inputsB.country}
+                                        value={inputsB.subRegion || ''}
+                                        onChange={(val) => setInputsB({...inputsB, subRegion: val })}
+                                    />
+                                   <div className="space-y-1">
                                        <div className="flex items-center gap-1 mb-1">
                                           <label className="text-[11px] font-bold text-slate-400 uppercase">Annual Gross</label>
-                                          <InfoTooltip text="Target salary in that country's local currency." />
+                                          <InfoTooltip text="Target salary in that country's local currency." direction="right" />
                                        </div>
                                        <SmartNumberInput 
                                             value={inputsB.grossIncome} 
@@ -1148,11 +1233,18 @@ const App: React.FC = () => {
                                    </div>
 
                                    {/* COLA Slider */}
-                                   <div className="bg-slate-50 dark:bg-[#1c1c1e] rounded-xl p-4 border border-slate-100 dark:border-[#333]">
+                                   <div className="bg-slate-50 dark:bg-[#1c1c1e] rounded-xl p-4 border border-slate-100 dark:border-[#333] relative">
+                                        {estimatingCola && (
+                                            <div className="absolute inset-0 bg-white/80 dark:bg-black/80 z-20 flex items-center justify-center backdrop-blur-sm rounded-xl">
+                                                <div className="flex items-center gap-2 text-purple-600 font-bold text-xs animate-pulse">
+                                                    <i className="fas fa-magic"></i> Estimating...
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between items-center mb-3">
                                             <div className="flex items-center gap-1">
                                                 <label className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Cost of Living Adj.</label>
-                                                <InfoTooltip text="Use this to approximate real value. If moving to a city that is 20% more expensive (e.g. Austin to NY), set to +20%. Check sites like Numbeo for data." />
+                                                <InfoTooltip text="Use this to approximate real value. If moving to a city that is 20% more expensive (e.g. Austin to NY), set to +20%." direction="right" />
                                             </div>
                                             <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${colDiff > 0 ? 'bg-red-100 text-red-600' : colDiff < 0 ? 'bg-green-100 text-green-600' : 'bg-slate-200 text-slate-500'}`}>
                                                 {colDiff > 0 ? '+' : ''}{colDiff}%
@@ -1165,10 +1257,17 @@ const App: React.FC = () => {
                                             onChange={(e) => setColDiff(parseInt(e.target.value))}
                                             className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-purple-600 hover:accent-purple-500"
                                         />
-                                        <div className="flex justify-between mt-1 text-[9px] text-slate-400 font-bold">
+                                        <div className="flex justify-between mt-1 text-[9px] text-slate-400 font-bold mb-2">
                                             <span>Cheaper</span>
                                             <span>More Expensive</span>
                                         </div>
+                                        <button 
+                                            onClick={handleAutoCalibrateCOLA}
+                                            disabled={estimatingCola}
+                                            className="w-full py-2 rounded-lg bg-purple-100 dark:bg-purple-900/20 hover:bg-purple-200 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-[10px] font-extrabold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <i className="fas fa-magic"></i> Auto-Estimate
+                                        </button>
                                    </div>
 
                                    <div className="grid grid-cols-2 gap-3">
@@ -1276,7 +1375,7 @@ const App: React.FC = () => {
             {/* Left Column: Inputs */}
             <div className="lg:col-span-4 space-y-6">
                 {/* Income Section */}
-                <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl relative hover:z-50">
+                <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl relative hover:z-50 focus-within:z-50">
                     {/* Gradient Header Background (Clipped) */}
                     <div className="absolute top-0 left-0 right-0 h-[120px] rounded-t-[32px] overflow-hidden z-0">
                         <div className="absolute inset-0 bg-gradient-to-r from-[#0034b8] to-[#0c58fa]"></div>
@@ -1319,9 +1418,9 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Body Content (Z-Index 20) */}
+                    {/* Body Content (Z-20) */}
                     <div className="p-6 md:p-8 -mt-4 bg-white dark:bg-[#101012] rounded-b-[32px] rounded-t-[32px] relative z-20 flex flex-col gap-5">
-                        <div className="relative z-30">
+                        <div className="relative z-[110]">
                             <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">Where do you live?</label>
                             <CurrencyDropdown 
                                 value={inputs.country} 
