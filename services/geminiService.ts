@@ -78,3 +78,43 @@ export const queryGemini = async (prompt: string, country: string, location?: { 
     return "Sorry, I encountered an error verifying the data. Please check your connection and try again.";
   }
 };
+
+export const getTaxReport = async (
+  country: string,
+  gross: number,
+  net: number,
+  deductions: { name: string; amount: number }[],
+  currency: string
+): Promise<string> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `
+      You are a friendly local tax expert for ${country}.
+      Analyze this salary breakdown:
+      - Gross Annual Income: ${currency} ${gross.toLocaleString()}
+      - Net Annual Income: ${currency} ${net.toLocaleString()}
+      - Deductions:
+      ${deductions.map(d => `  - ${d.name}: ${currency} ${d.amount.toLocaleString()}`).join('\n')}
+
+      Please provide a concise, easy-to-understand summary (around 150 words).
+      1. Explain clearly where the biggest chunk of money is going.
+      2. Mention if the effective tax rate (${((1 - net/gross)*100).toFixed(1)}%) seems standard for this income level in ${country}.
+      3. Provide one actionable tip or insight regarding these specific deductions.
+      
+      Formatting rules:
+      - Use **bold** for key terms and numbers.
+      - Use bullet points for lists.
+      - Keep it professional but encouraging.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    return response.text || "Could not generate report.";
+  } catch (error) {
+    console.error("AI Report Error:", error);
+    return "Sorry, I couldn't generate the tax report at this time. Please check your API key or connection.";
+  }
+};

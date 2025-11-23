@@ -1,11 +1,9 @@
-
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CountryCode, UserInputs, CalculationResult } from './types';
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
 import { GeminiAssistant } from './components/GeminiAssistant';
-import { queryGemini } from './services/geminiService';
+import { queryGemini, getTaxReport } from './services/geminiService';
 
 // Declare jsPDF and html2canvas on Window interface
 declare global {
@@ -518,6 +516,37 @@ const SegmentedControl = ({ options, value, onChange, dark }: { options: {label:
 </div>
 );
 
+// Simple Markdown Renderer for AI Analysis
+const MarkdownRenderer = ({ content }: { content: string }) => {
+  if (!content) return null;
+  return (
+    <div className="space-y-1.5 text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+      {content.split('\n').map((line, i) => {
+        if (!line.trim()) return <div key={i} className="h-2" />;
+        const isListItem = line.trim().startsWith('-') || line.trim().startsWith('* ') || /^\d+\./.test(line.trim());
+        const cleanLine = line.replace(/^[\-\*]\s/, '').replace(/^\d+\.\s/, '');
+        
+        // Basic bold parser
+        const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
+        
+        return (
+          <div key={i} className={`flex ${isListItem ? 'pl-2' : ''}`}>
+             {isListItem && <span className="mr-2 text-indigo-500 mt-1">•</span>}
+             <p className="flex-1">
+             {parts.map((part, j) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    return <strong key={j} className="font-extrabold text-slate-900 dark:text-white">{part.slice(2, -2)}</strong>;
+                }
+                return <span key={j}>{part}</span>;
+             })}
+             </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const App: React.FC = () => {
   const [inputs, setInputs] = useState<UserInputs>({
     grossIncome: 50000,
@@ -547,6 +576,10 @@ const App: React.FC = () => {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [highlightIncome, setHighlightIncome] = useState(false);
   const [netPayFreq, setNetPayFreq] = useState<'monthly' | 'bi-weekly' | 'weekly'>('monthly'); // Net Pay Card Toggle
+
+  // AI Report State
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const [darkMode, setDarkMode] = useState(() => {
       if (typeof window !== 'undefined') {
@@ -580,6 +613,11 @@ const App: React.FC = () => {
       }
       localStorage.setItem('gnp_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  useEffect(() => {
+      // Clear analysis on input change
+      setAiAnalysis(null);
+  }, [inputs.country, inputs.grossIncome, inputs.annualBonus]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -701,6 +739,22 @@ const App: React.FC = () => {
     } finally {
         setEstimatingCola(false);
     }
+  };
+
+  const handleAnalyze = async () => {
+    if (!result) return;
+    setAnalyzing(true);
+    setAiAnalysis(null);
+    const deductions = result.deductionsBreakdown.map(d => ({ name: d.name, amount: d.amount }));
+    const report = await getTaxReport(
+        currentRules.name,
+        result.grossAnnual,
+        result.netAnnual,
+        deductions,
+        currentRules.currencySymbol
+    );
+    setAiAnalysis(report);
+    setAnalyzing(false);
   };
 
   // Derived values for Breakdown
@@ -1958,10 +2012,38 @@ const App: React.FC = () => {
                                     <h3 className="font-extrabold text-lg text-white tracking-tight">Payslip Breakdown</h3>
                                     <InfoTooltip text="A line-by-line explanation of every tax and deduction taken from your salary." className="text-white" direction="bottom" />
                                 </div>
-                                <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
-                                    <i className="fas fa-arrow-down-to-line"></i> Get PDF
-                                </button>
+                                <div className="flex items-center">
+                                    <button 
+                                        onClick={handleAnalyze} 
+                                        disabled={analyzing}
+                                        className="relative z-10 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-200/20 text-indigo-100 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150 mr-2 disabled:opacity-50"
+                                    >
+                                        {analyzing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>}
+                                        {analyzing ? 'Analyzing...' : 'AI Analysis'}
+                                    </button>
+                                    <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
+                                        <i className="fas fa-arrow-down-to-line"></i> Get PDF
+                                    </button>
+                                </div>
                             </div>
+
+                            {/* AI Report Display */}
+                            {aiAnalysis && (
+                                <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/10 border-b border-indigo-100 dark:border-indigo-900/30 relative z-20 animate-in fade-in slide-in-from-top-4">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 mt-1">
+                                            <i className="fas fa-robot text-indigo-600 dark:text-indigo-400"></i>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-100 mb-2">AI Tax Insights</h4>
+                                            <MarkdownRenderer content={aiAnalysis} />
+                                        </div>
+                                        <button onClick={() => setAiAnalysis(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                            <i className="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Body Content (Z-20) */}
                             <div className="p-0 overflow-x-auto relative z-20 rounded-b-[32px] bg-white dark:bg-[#101012]">
