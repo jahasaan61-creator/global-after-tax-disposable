@@ -134,25 +134,24 @@ export const estimateLivingCosts = async (
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const location = region ? `${region}, ${country}` : country;
     
-    // Construct a profile-based prompt with strict output controls
     const prompt = `
-      Estimate realistic MONTHLY living costs in ${location} (${currency}) for a person with this profile:
-      - Status: ${profile.maritalStatus}
-      - Age: ${profile.age}
-      - Annual Income Level: ${currency} ${profile.income}
+      Act as a local cost-of-living expert in ${location}.
+      Estimate specific MONTHLY costs in ${currency} for a person with this profile:
+      - Annual Gross Income: ${currency} ${profile.income} (Assume ~30% tax for net estimation to determine lifestyle bracket: Budget vs Luxury).
+      - Status: ${profile.maritalStatus} (If married, assume shared costs for Housing, but higher for Groceries/Utilities).
+      - Age: ${profile.age}.
+
+      Provide single, realistic integer numbers for 2024.
       
-      Instructions:
-      1. All values MUST be for ONE MONTH only. Do not provide annual figures.
-      2. Values MUST be in ${currency}.
-      3. Tailor the 'Rent' based on the income level. If high income, assume a nice apartment in a good area. If low income, assume budget accommodation.
-      4. If 'Married', increase Groceries and Utilities for a 2-person household.
-      5. Provide realistic estimates for:
-         - Rent (Housing)
-         - Groceries (Food/Household items)
-         - Utilities (Electricity, Water, Internet, Phone)
-         - Transport (Public transit or fuel/maintenance avg)
-         - Insurance (Health/Life supplement if common in ${country})
-      
+      Logic:
+      1. Rent: Based on inferred NET income. Rule of thumb: Rent is usually 25-35% of net income for this bracket in this specific city.
+         - If income is high, assume a nice 1-2 bedroom apartment in a good area.
+         - If income is low, assume a shared flat or studio.
+      2. Groceries: Local market prices for 1 person (or 2 if married).
+      3. Utilities: Electricity, heating, water, internet.
+      4. Transport: Public pass cost OR fuel/maintenance if car is common in this city.
+      5. Insurance: Private health add-ons or contents insurance typical for this demographic.
+
       Return ONLY raw numbers in JSON format.
     `;
 

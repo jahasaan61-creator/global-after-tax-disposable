@@ -1167,6 +1167,7 @@ const App: React.FC = () => {
 
   // Auto-Fill State
   const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [autoFillSuccess, setAutoFillSuccess] = useState(false);
 
   const [darkMode, setDarkMode] = useState(() => {
       if (typeof window !== 'undefined') {
@@ -1347,6 +1348,7 @@ const App: React.FC = () => {
 
   const handleAutoFillCosts = async () => {
       setIsAutoFilling(true);
+      setAutoFillSuccess(false);
       const regionName = inputs.subRegion ? COUNTRY_RULES[inputs.country].subNationalRules?.find(r => r.id === inputs.subRegion)?.name : undefined;
       
       const estimates = await estimateLivingCosts(
@@ -1372,6 +1374,8 @@ const App: React.FC = () => {
                   insurance: estimates.insurance || 0
               }
           }));
+          setAutoFillSuccess(true);
+          setTimeout(() => setAutoFillSuccess(false), 3000);
       } else {
           alert("Could not estimate costs. Please try again or check your API key.");
       }
@@ -2258,10 +2262,21 @@ const App: React.FC = () => {
                             <button 
                                 onClick={handleAutoFillCosts}
                                 disabled={isAutoFilling}
-                                className="h-6 px-2.5 text-[9px] font-extrabold uppercase tracking-wide bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                                className={`h-5 px-2 rounded-md border text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50 ${
+                                    autoFillSuccess 
+                                    ? 'bg-green-500/20 border-green-500/30 text-green-100' 
+                                    : 'bg-white/10 hover:bg-white/20 border-white/10 text-white/80 hover:text-white'
+                                }`}
+                                title="Auto-estimate costs based on location & income profile"
                             >
-                                {isAutoFilling ? <i className="fas fa-spinner fa-spin text-[8px]"></i> : <i className="fas fa-magic text-[8px]"></i>}
-                                {isAutoFilling ? 'Filling...' : 'Auto-Fill'}
+                                {isAutoFilling ? (
+                                    <i className="fas fa-spinner fa-spin text-[8px]"></i>
+                                ) : autoFillSuccess ? (
+                                    <i className="fas fa-check text-[8px]"></i>
+                                ) : (
+                                    <i className="fas fa-wand-magic-sparkles text-[8px]"></i>
+                                )}
+                                <span>{isAutoFilling ? 'Estimating...' : autoFillSuccess ? 'Filled' : 'Auto-Fill'}</span>
                             </button>
                         </div>
                     </div>
@@ -2373,12 +2388,12 @@ const App: React.FC = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Right Column: Results - Extracted to Memoized Component */}
+            
+            {/* Right Column: Results */}
             <ResultsSection 
-                result={result}
-                inputs={debouncedInputs} // Passing Debounced Inputs Here prevents re-renders while typing!
-                mode={mode}
+                result={result} 
+                inputs={debouncedInputs} 
+                mode={mode} 
                 currentRules={currentRules}
                 analyzing={analyzing}
                 aiAnalysis={aiAnalysis}
@@ -2404,150 +2419,108 @@ const App: React.FC = () => {
                 employeeDeductions={employeeDeductions}
                 employerDeductions={employerDeductions}
             />
-
-            </div>
-        )}
+            
+         </div>
+       )}
       </main>
-      {/* Hidden Invoice Template for PDF Generation - USES DEBOUNCED INPUTS */}
-      <div id="pdf-invoice-template" className="fixed top-0 left-0 -z-50 bg-white text-slate-900 p-12 w-[210mm] min-h-[297mm]" style={{ fontFamily: 'sans-serif' }}>
-            {/* Header */}
-            <div className="flex justify-between items-start mb-12 border-b border-gray-200 pb-8">
-                <div className="flex items-center gap-4">
-                     <div className="w-16 h-16 bg-black rounded-xl flex items-center justify-center text-yellow-400">
-                        <i className="fas fa-coins text-3xl"></i>
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Global Net Pay Calculator</h1>
-                        <p className="text-gray-500 text-sm font-medium mt-1">Salary & Tax Estimation Statement</p>
-                    </div>
-                </div>
-                <div className="text-right">
-                    <h2 className="text-xl font-bold text-slate-800 uppercase tracking-widest mb-2">INVOICE / STATEMENT</h2>
-                    <p className="text-sm font-bold text-gray-500">Date: {new Date().toLocaleDateString()}</p>
-                    <p className="text-sm font-bold text-gray-500">Ref: {debouncedInputs.country}-{new Date().getFullYear()}</p>
-                </div>
-            </div>
 
-            {/* Summary Section */}
-            <div className="flex justify-between items-end mb-10">
-                <div className="space-y-1">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Employee Details</p>
-                    <div className="grid grid-cols-[100px_1fr] gap-y-1 text-sm">
-                        <span className="font-bold text-slate-700">Country:</span>
-                        <span className="font-medium">{currentRules.name}</span>
-                        <span className="font-bold text-slate-700">Age:</span>
-                        <span className="font-medium">{debouncedInputs.details.age}</span>
-                        <span className="font-bold text-slate-700">Status:</span>
-                        <span className="font-medium capitalize">{debouncedInputs.details.maritalStatus}</span>
-                    </div>
-                </div>
-                <div className="text-right">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">SUMMARY</p>
-                    <h1 className="text-5xl font-extrabold text-slate-900">{formatCurrency(result.grossAnnual)}</h1>
-                    <p className="text-sm font-bold text-slate-500 mt-1">Gross Annual Income</p>
-                </div>
-            </div>
+      <GeminiAssistant country={inputs.country} countryName={COUNTRY_RULES[inputs.country].name} />
 
-            {/* Main Table */}
-            <div className="mb-10">
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="bg-slate-100 text-slate-600 uppercase text-xs font-bold">
-                            <th className="py-3 px-4 text-left rounded-l-lg">Description</th>
-                            <th className="py-3 px-4 text-right">Annual</th>
-                            <th className="py-3 px-4 text-right">Monthly</th>
-                            <th className="py-3 px-4 text-right rounded-r-lg w-20">%</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-slate-800">
-                        {/* Gross */}
-                        <tr className="font-bold border-b border-gray-100">
-                            <td className="py-4 px-4">Gross Income</td>
-                            <td className="py-4 px-4 text-right">{formatCurrency(result.grossAnnual)}</td>
-                            <td className="py-4 px-4 text-right">{formatCurrency(result.grossMonthly)}</td>
-                            <td className="py-4 px-4 text-right">100%</td>
-                        </tr>
-                        
-                        {/* Bonus */}
-                        {debouncedInputs.annualBonus > 0 && (
-                            <tr className="border-b border-gray-100">
-                                <td className="py-3 px-4 pl-8 text-slate-600 italic">Included Bonus</td>
-                                <td className="py-3 px-4 text-right text-slate-600">{formatCurrency(debouncedInputs.annualBonus)}</td>
-                                <td className="py-3 px-4 text-right text-slate-600">-</td>
-                                <td className="py-3 px-4 text-right text-slate-600">-</td>
-                            </tr>
-                        )}
+      {/* PDF Template (Hidden) */}
+      <div id="pdf-invoice-template" className="fixed top-0 left-0 -z-50 w-[800px] bg-white p-12 text-slate-900 invisible font-sans">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-12 border-b border-slate-100 pb-8">
+              <div>
+                  <div className="flex items-center gap-3 mb-2">
+                       <div className="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center text-yellow-400">
+                           <i className="fas fa-coins text-lg"></i>
+                       </div>
+                       <h1 className="text-2xl font-bold text-slate-900">Global Net Pay</h1>
+                  </div>
+                  <p className="text-slate-500 text-sm font-medium">Salary Estimate Report</p>
+              </div>
+              <div className="text-right">
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Estimated Net Annual</p>
+                  <h2 className="text-3xl font-black text-slate-900 tracking-tight">{formatCurrency(result?.netAnnual || 0)}</h2>
+              </div>
+          </div>
+          
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 gap-12 mb-12">
+              <div>
+                  <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-wider">Employee Profile</h3>
+                  <div className="space-y-2 text-sm">
+                      <div className="flex justify-between border-b border-slate-50 pb-1">
+                          <span className="text-slate-500">Location</span>
+                          <span className="font-bold text-slate-900">{currentRules.name} {inputs.subRegion ? `(${inputs.subRegion})` : ''}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-50 pb-1">
+                           <span className="text-slate-500">Status</span>
+                           <span className="font-bold text-slate-900">{inputs.details.maritalStatus === 'single' ? 'Single' : 'Married'}, Age {inputs.details.age}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-50 pb-1">
+                           <span className="text-slate-500">Calculated On</span>
+                           <span className="font-bold text-slate-900">{new Date().toLocaleDateString()}</span>
+                      </div>
+                  </div>
+              </div>
+              <div>
+                  <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-wider">Income Details</h3>
+                   <div className="space-y-2 text-sm">
+                      <div className="flex justify-between border-b border-slate-50 pb-1">
+                          <span className="text-slate-500">Gross Annual</span>
+                          <span className="font-bold text-slate-900">{formatCurrency(result?.grossAnnual || 0)}</span>
+                      </div>
+                      {inputs.annualBonus > 0 && (
+                          <div className="flex justify-between border-b border-slate-50 pb-1">
+                              <span className="text-slate-500">Annual Bonus</span>
+                              <span className="font-bold text-slate-900">{formatCurrency(inputs.annualBonus)}</span>
+                          </div>
+                      )}
+                      <div className="flex justify-between border-b border-slate-50 pb-1">
+                           <span className="text-slate-500">Effective Tax Rate</span>
+                           <span className="font-bold text-slate-900">{result?.grossAnnual ? ((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1) : 0}%</span>
+                      </div>
+                  </div>
+              </div>
+          </div>
 
-                        {/* Deductions */}
-                        {employeeDeductions.map((d: DeductionResult, i: number) => (
-                            <tr key={i} className="border-b border-gray-50 text-red-600">
-                                <td className="py-3 px-4">{d.name}</td>
-                                <td className="py-3 px-4 text-right">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount))}</td>
-                                <td className="py-3 px-4 text-right">{d.amount < 0 ? '+' : '-'}{formatCurrency(Math.abs(d.amount/12))}</td>
-                                <td className="py-3 px-4 text-right">{(d.amount / result.grossAnnual * 100).toFixed(1)}%</td>
-                            </tr>
-                        ))}
-
-                        {/* Net Pay Highlight */}
-                        <tr className="bg-slate-50 font-extrabold text-lg">
-                            <td className="py-5 px-4 uppercase tracking-tight">NET INCOME</td>
-                            <td className="py-5 px-4 text-right">{formatCurrency(result.netAnnual)}</td>
-                            <td className="py-5 px-4 text-right">{formatCurrency(result.netMonthly)}</td>
-                            <td className="py-5 px-4 text-right text-base">{(result.netAnnual / result.grossAnnual * 100).toFixed(1)}%</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Monthly Costs Breakdown (PDF) */}
-            {result.personalCostsTotal > 0 && (
-                 <div className="mb-8 border rounded-xl p-6 bg-slate-50 border-slate-200">
-                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">Monthly Living Costs Breakdown</h3>
-                    <div className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm">
-                         {costFields.map(field => {
-                             const val = (debouncedInputs.costs as any)[field.key];
-                             if (!val) return null;
-                             return (
-                                 <div key={field.key} className="flex justify-between">
-                                     <span className="text-slate-600 font-medium">{field.label}</span>
-                                     <span className="text-slate-900 font-bold">{formatCurrency(val)}</span>
-                                 </div>
-                             )
-                         })}
-                         <div className="flex justify-between mt-2 pt-2 border-t border-slate-300 font-bold">
-                             <span>Total Costs</span>
-                             <span>{formatCurrency(result.personalCostsTotal)}</span>
-                         </div>
-                    </div>
-                 </div>
-            )}
-
-            {/* Disposable Income Highlight */}
-            <div className="bg-[#effef3] border border-[#bbf7d0] rounded-2xl p-8 flex justify-between items-center mb-12">
-                <div>
-                    <h3 className="text-xl font-extrabold text-[#15803d] uppercase tracking-tight">Disposable Income (Free Cash)</h3>
-                    <p className="text-sm font-bold text-[#16a34a]">After Taxes & Living Costs</p>
-                </div>
-                <div className="flex gap-12 text-right">
-                    <div>
-                         <p className="text-3xl font-extrabold text-[#15803d]">{formatCurrency(Math.max(0, result.netAnnual - (result.personalCostsTotal * 12)))}</p>
-                         <p className="text-xs font-bold text-[#16a34a] uppercase mt-1">Annual</p>
-                    </div>
-                    <div>
-                         <p className="text-3xl font-extrabold text-[#15803d]">{formatCurrency(result.disposableMonthly)}</p>
-                         <p className="text-xs font-bold text-[#16a34a] uppercase mt-1">Monthly</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Footer */}
-            <div className="text-center border-t border-gray-100 pt-8 text-xs text-gray-400 leading-relaxed">
-                <p>Generated by Global Net Pay Calculator. This document is for estimation purposes only and does not constitute official financial advice.</p>
-                <p className="mt-2">Source Rules: {currentRules.sources.map(s => s.label).join(', ')}</p>
-            </div>
+          {/* Breakdown Table */}
+          <div className="mb-8">
+              <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-wider">Deduction Breakdown</h3>
+              <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+                      <tr>
+                          <th className="py-3 pl-4 rounded-l-lg">Description</th>
+                          <th className="py-3 text-right pr-4 rounded-r-lg">Amount</th>
+                      </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                      {result?.deductionsBreakdown.filter(d => !d.isEmployer).map((d, i) => (
+                          <tr key={i}>
+                              <td className="py-3 pl-4 text-slate-700 font-medium">{d.name}</td>
+                              <td className="py-3 pr-4 text-right text-red-500 font-medium">-{formatCurrency(d.amount)}</td>
+                          </tr>
+                      ))}
+                  </tbody>
+                  <tfoot className="border-t-2 border-slate-100">
+                      <tr>
+                          <td className="py-4 pl-4 font-bold text-slate-900">Total Deductions</td>
+                          <td className="py-4 pr-4 text-right font-bold text-red-600">-{formatCurrency(result?.totalDeductionsMonthly * 12 || 0)}</td>
+                      </tr>
+                      <tr className="bg-blue-50/30 text-lg">
+                          <td className="py-4 pl-4 font-black text-blue-900">Net Pay</td>
+                          <td className="py-4 pr-4 text-right font-black text-blue-600">{formatCurrency(result?.netAnnual || 0)}</td>
+                      </tr>
+                  </tfoot>
+              </table>
+          </div>
+          
+          <div className="pt-8 border-t border-slate-100 text-center">
+               <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">GlobalNetPay Estimate</p>
+               <p className="text-[10px] text-slate-400">Figures are based on 2024/2025 statutory tax rules and may not reflect your specific situation.</p>
+          </div>
       </div>
-
-      <GeminiAssistant country={inputs.country} countryName={currentRules.name} />
     </div>
   );
 };
