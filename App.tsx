@@ -3,7 +3,7 @@ import { CountryCode, UserInputs, CalculationResult } from './types';
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
 import { GeminiAssistant } from './components/GeminiAssistant';
-import { queryGemini, getTaxReport } from './services/geminiService';
+import { queryGemini, getTaxReport, estimateLivingCosts } from './services/geminiService';
 
 // Declare jsPDF and html2canvas on Window interface
 declare global {
@@ -363,16 +363,27 @@ const RegionDropdown = ({ country, value, onChange }: { country: CountryCode, va
 
   return (
       <div className={`relative w-full ${open ? 'z-[290]' : 'z-[90]'}`} ref={ref}>
-           <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider mb-2 pl-1">{rule.subNationalLabel}</label>
+           <div className="flex items-center justify-between mb-2 pl-1">
+               <div className="flex items-center gap-1.5">
+                   <label className="block text-[11px] font-bold text-[#86868b] dark:text-slate-500 uppercase tracking-wider">{rule.subNationalLabel}</label>
+                   <InfoTooltip text={`Tax rates in ${rule.name} vary significantly by ${rule.subNationalLabel}. Please select your specific location for the most accurate calculation.`} direction="right" />
+               </div>
+               {!value && (
+                   <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30">
+                       <i className="fas fa-exclamation-circle text-[9px] text-amber-500"></i>
+                       <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 animate-pulse">Select for accuracy</span>
+                   </div>
+               )}
+           </div>
            <button 
               onClick={() => setOpen(!open)}
-              className="w-full h-14 pl-3 pr-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl flex items-center gap-3 cursor-pointer outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white dark:focus:bg-[#252528] hover:bg-white/50 dark:hover:bg-[#252528] transition-all duration-200 shadow-sm group"
+              className={`w-full h-14 pl-3 pr-3 bg-[#F2F2F7] dark:bg-[#1c1c1e] border ${!value ? 'border-amber-200 dark:border-amber-900/50' : 'border-transparent'} hover:border-slate-200 dark:hover:border-slate-700 rounded-2xl flex items-center gap-3 cursor-pointer outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white dark:focus:bg-[#252528] hover:bg-white/50 dark:hover:bg-[#252528] transition-all duration-200 shadow-sm group`}
           >
               <div className="w-9 h-9 rounded-2xl bg-white dark:bg-[#2c2c2e] flex items-center justify-center border border-black/5 dark:border-white/10 shadow-sm shrink-0 group-hover:scale-110 transition-transform duration-200">
                  <i className="fas fa-map-marker-alt text-slate-400 dark:text-slate-500 group-hover:text-blue-500 transition-colors"></i>
               </div>
               <div className="flex flex-col items-start overflow-hidden text-left">
-                  <span className="text-sm font-extrabold text-slate-900 dark:text-white leading-tight">
+                  <span className={`text-sm font-extrabold leading-tight ${!value ? 'text-slate-400 dark:text-slate-500' : 'text-slate-900 dark:text-white'}`}>
                       {selectedRegion ? selectedRegion.name : `Select ${rule.subNationalLabel}`}
                   </span>
               </div>
@@ -581,6 +592,9 @@ const App: React.FC = () => {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
 
+  // Auto-Fill State
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+
   const [darkMode, setDarkMode] = useState(() => {
       if (typeof window !== 'undefined') {
           const saved = localStorage.getItem('gnp_theme');
@@ -757,6 +771,39 @@ const App: React.FC = () => {
     setAnalyzing(false);
   };
 
+  const handleAutoFillCosts = async () => {
+      setIsAutoFilling(true);
+      const regionName = inputs.subRegion ? COUNTRY_RULES[inputs.country].subNationalRules?.find(r => r.id === inputs.subRegion)?.name : undefined;
+      
+      const estimates = await estimateLivingCosts(
+          currentRules.name, 
+          regionName, 
+          currentRules.currencySymbol,
+          {
+              income: result.grossAnnual,
+              maritalStatus: inputs.details.maritalStatus,
+              age: inputs.details.age
+          }
+      );
+
+      if (estimates) {
+          setInputs(prev => ({
+              ...prev,
+              costs: {
+                  ...prev.costs,
+                  rent: estimates.rent || 0,
+                  groceries: estimates.groceries || 0,
+                  utilities: estimates.utilities || 0,
+                  transport: estimates.transport || 0,
+                  insurance: estimates.insurance || 0
+              }
+          }));
+      } else {
+          alert("Could not estimate costs. Please try again or check your API key.");
+      }
+      setIsAutoFilling(false);
+  };
+
   // Derived values for Breakdown
   const employeeDeductions = result ? result.deductionsBreakdown.filter(d => !d.isEmployer) : [];
   const employerDeductions = result ? result.deductionsBreakdown.filter(d => d.isEmployer) : [];
@@ -845,8 +892,8 @@ const App: React.FC = () => {
             backgroundColor: '#ffffff',
         });
 
-        // Use JPEG with 0.8 quality instead of default PNG (which is huge)
-        const imgData = canvas.toDataURL('image/jpeg', 0.8);
+        // Use JPEG with 0.7 quality to significantly reduce file size (usually < 1MB)
+        const imgData = canvas.toDataURL('image/jpeg', 0.7);
         const { jsPDF } = window.jspdf;
         
         // A4 size
@@ -868,6 +915,48 @@ const App: React.FC = () => {
         alert("Failed to generate PDF");
         document.body.style.cursor = 'default';
     }
+  };
+
+  const downloadCSV = () => {
+    if (!result) return;
+    
+    // Create CSV Data Rows
+    const csvRows = [
+        ['Category', 'Description', 'Annual', 'Monthly'],
+        ['Income', 'Gross Income', result.grossAnnual.toFixed(2), result.grossMonthly.toFixed(2)],
+    ];
+    
+    if (inputs.annualBonus > 0) {
+        csvRows.push(['Income', 'Annual Bonus', inputs.annualBonus.toFixed(2), '-']);
+    }
+    
+    // Employee Deductions
+    result.deductionsBreakdown.filter(d => !d.isEmployer).forEach(d => {
+        csvRows.push(['Deduction', d.name, (-d.amount).toFixed(2), (-d.amount/12).toFixed(2)]);
+    });
+    
+    // Results
+    csvRows.push(['Result', 'Net Pay', result.netAnnual.toFixed(2), result.netMonthly.toFixed(2)]);
+    
+    // Costs
+    Object.keys(inputs.costs).forEach(key => {
+        const val = (inputs.costs as any)[key];
+        if (val > 0) {
+             csvRows.push(['Cost', key.charAt(0).toUpperCase() + key.slice(1), (-val * 12).toFixed(2), (-val).toFixed(2)]);
+        }
+    });
+    
+    // Disposable
+    csvRows.push(['Result', 'Disposable Income', (result.netAnnual - result.personalCostsTotal * 12).toFixed(2), result.disposableMonthly.toFixed(2)]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `GlobalNetPay_${inputs.country}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const shareLink = () => {
@@ -1633,7 +1722,14 @@ const App: React.FC = () => {
                                 <h2 className="text-xl font-extrabold tracking-tight">Monthly Costs</h2>
                                 <InfoTooltip text="Input your recurring monthly costs (rent, groceries, etc.) to see your disposable income." className="text-white" direction="bottom" />
                             </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wide bg-white/20 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">Optional</span>
+                            <button 
+                                onClick={handleAutoFillCosts}
+                                disabled={isAutoFilling}
+                                className="h-6 px-2.5 text-[9px] font-extrabold uppercase tracking-wide bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5 transition-all disabled:opacity-50"
+                            >
+                                {isAutoFilling ? <i className="fas fa-spinner fa-spin text-[8px]"></i> : <i className="fas fa-magic text-[8px]"></i>}
+                                {isAutoFilling ? 'Filling...' : 'Auto-Fill'}
+                            </button>
                         </div>
                     </div>
 
@@ -2021,6 +2117,9 @@ const App: React.FC = () => {
                                     >
                                         {analyzing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-magic"></i>}
                                         {analyzing ? 'Analyzing...' : 'AI Analysis'}
+                                    </button>
+                                    <button onClick={downloadCSV} className="relative z-10 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-200/20 text-emerald-100 text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150 mr-2">
+                                        <i className="fas fa-file-csv"></i> Get CSV
                                     </button>
                                     <button onClick={downloadPDF} className="relative z-10 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-2 transition-colors backdrop-blur-md active:scale-95 duration-150">
                                         <i className="fas fa-arrow-down-to-line"></i> Get PDF

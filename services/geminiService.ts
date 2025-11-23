@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 export const queryGemini = async (prompt: string, country: string, location?: { latitude: number; longitude: number }): Promise<string> => {
   try {
@@ -116,5 +116,68 @@ export const getTaxReport = async (
   } catch (error) {
     console.error("AI Report Error:", error);
     return "Sorry, I couldn't generate the tax report at this time. Please check your API key or connection.";
+  }
+};
+
+export const estimateLivingCosts = async (
+  country: string,
+  region: string | undefined,
+  currency: string,
+  profile: {
+    income: number;
+    maritalStatus: string;
+    age: number;
+  }
+): Promise<{ rent: number; groceries: number; utilities: number; transport: number; insurance: number } | null> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const location = region ? `${region}, ${country}` : country;
+    
+    // Construct a profile-based prompt
+    const prompt = `
+      Estimate realistic monthly living costs in ${location} (${currency}) for a person with this profile:
+      - Status: ${profile.maritalStatus}
+      - Age: ${profile.age}
+      - Annual Income Level: ${currency} ${profile.income}
+      
+      Instructions:
+      1. Tailor the 'Rent' based on the income level. If high income, assume a nice apartment in a good area. If low income, assume budget accommodation.
+      2. If 'Married', increase Groceries and Utilities for a 2-person household.
+      3. Provide realistic estimates for:
+         - Rent (Housing)
+         - Groceries (Food/Household items)
+         - Utilities (Electricity, Water, Internet, Phone)
+         - Transport (Public transit or fuel/maintenance avg)
+         - Insurance (Health/Life supplement if common in ${country})
+      
+      Return ONLY raw numbers in JSON format.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            rent: { type: Type.NUMBER },
+            groceries: { type: Type.NUMBER },
+            utilities: { type: Type.NUMBER },
+            transport: { type: Type.NUMBER },
+            insurance: { type: Type.NUMBER },
+          },
+          required: ["rent", "groceries", "utilities", "transport", "insurance"],
+        },
+      },
+    });
+
+    if (response.text) {
+        return JSON.parse(response.text);
+    }
+    return null;
+  } catch (error) {
+    console.error("Cost Estimation Error:", error);
+    return null;
   }
 };
