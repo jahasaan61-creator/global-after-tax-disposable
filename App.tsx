@@ -845,7 +845,8 @@ const App: React.FC = () => {
             backgroundColor: '#ffffff',
         });
 
-        const imgData = canvas.toDataURL('image/png');
+        // Use JPEG with 0.8 quality instead of default PNG (which is huge)
+        const imgData = canvas.toDataURL('image/jpeg', 0.8);
         const { jsPDF } = window.jspdf;
         
         // A4 size
@@ -855,7 +856,7 @@ const App: React.FC = () => {
         const imgProps = pdf.getImageProperties(imgData);
         const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
         
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, imgHeight);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
         
         const dateStr = new Date().toISOString().split('T')[0];
         const fileName = `Payslip_${inputs.country}_${dateStr}.pdf`;
