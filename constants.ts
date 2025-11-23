@@ -672,7 +672,16 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRules> = {
       { id: 'ZG', name: 'Zug', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.06 }] },
       { id: 'TI', name: 'Ticino', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.13 }] },
       { id: 'SG', name: 'St. Gallen', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.11 }] },
-      { id: 'AG', name: 'Aargau', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.10 }] }
+      { id: 'AG', name: 'Aargau', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.10 }] },
+      // New ones
+      { id: 'SZ', name: 'Schwyz', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.08 }] },
+      { id: 'BL', name: 'Basel-Landschaft', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.125 }] },
+      { id: 'VS', name: 'Valais', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.135 }] },
+      { id: 'FR', name: 'Fribourg', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.14 }] },
+      { id: 'SO', name: 'Solothurn', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.125 }] },
+      { id: 'TG', name: 'Thurgau', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.115 }] },
+      { id: 'GR', name: 'Graubünden', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.12 }] },
+      { id: 'NE', name: 'Neuchâtel', deductibles: [{ name: 'Cantonal Tax (Est.)', type: 'percentage', rate: 0.155 }] }
     ]
   },
   [CountryCode.NOR]: {
