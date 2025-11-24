@@ -1256,13 +1256,40 @@ const App: React.FC = () => {
                 }));
             } catch (e) {}
         }
+
+        // Essential Feature: Restore Comparison State
+        const savedB = localStorage.getItem('gnp_inputs_b');
+        const savedCompareActive = localStorage.getItem('gnp_compare_active');
+        const savedCola = localStorage.getItem('gnp_cola');
+
+        if (savedB) {
+             try {
+                const parsedB = JSON.parse(savedB);
+                setInputsB(prev => ({ 
+                    ...prev, 
+                    ...parsedB,
+                    details: { ...prev.details, ...(parsedB.details || {}) }
+                }));
+             } catch (e) {}
+        }
+        if (savedCompareActive === 'true') setIsComparison(true);
+        if (savedCola) setColDiff(parseInt(savedCola));
     }
   }, []);
 
   // Persistence Effect
   useEffect(() => {
       localStorage.setItem('gnp_inputs', JSON.stringify(inputs));
-  }, [inputs]);
+      
+      // Essential Feature: Persist Comparison Data
+      localStorage.setItem('gnp_inputs_b', JSON.stringify(inputsB));
+      localStorage.setItem('gnp_cola', colDiff.toString());
+      if (isComparison) {
+          localStorage.setItem('gnp_compare_active', 'true');
+      } else {
+          localStorage.removeItem('gnp_compare_active');
+      }
+  }, [inputs, inputsB, isComparison, colDiff]);
 
   // OPTIMIZATION: Use useMemo instead of useEffect for synchronous heavy calculations to prevent extra render cycles
   const result = useMemo(() => {
@@ -1279,6 +1306,32 @@ const App: React.FC = () => {
       if (!isComparison) return null;
       return calculateNetPay(debouncedInputsB);
   }, [debouncedInputsB, isComparison]);
+  
+  // Cool Feature: Purchasing Power Parity Analysis
+  const pppAnalysis = useMemo(() => {
+    if (!result || !resultB) return null;
+    
+    // 1. Calculate Equivalent Net needed in B
+    const rateA = currentRules.exchangeRatePerUSD;
+    const rateB = rulesB.exchangeRatePerUSD;
+    
+    // Net A in USD
+    const netA_USD = result.netAnnual / rateA;
+    // Apply COLA (e.g. if B is +20% exp, we need 20% more net in USD terms)
+    const equivalentNet_USD = netA_USD * (1 + colDiff/100);
+    // Convert back to B currency
+    const equivalentNet_B = equivalentNet_USD * rateB;
+    
+    // 2. Reverse calculate Gross needed in B to achieve that Net
+    // We use the calculateGrossFromNet function using B's tax rules
+    const requiredGrossB = calculateGrossFromNet(equivalentNet_B, debouncedInputsB);
+    
+    return {
+        requiredGrossB,
+        equivalentNet_B,
+        diffPercent: inputsB.grossIncome > 0 ? ((requiredGrossB - inputsB.grossIncome) / inputsB.grossIncome) * 100 : 0
+    };
+  }, [result, resultB, colDiff, currentRules, rulesB, debouncedInputsB]);
 
   // OPTIMIZATION: Memoize currency conversion
   const convertedResult = useMemo(() => {
@@ -1293,13 +1346,42 @@ const App: React.FC = () => {
   }, [debouncedConvertAmount, fromCurrency, toCurrency]);
   
   const syncAtoB = () => {
-      setInputsB({ ...inputs, grossIncome: inputs.grossIncome });
+      // Essential Feature: Smart Sync (Convert Currency & Preserve Country)
+      const rateA = COUNTRY_RULES[inputs.country].exchangeRatePerUSD;
+      const rateB = COUNTRY_RULES[inputsB.country].exchangeRatePerUSD;
+      
+      // Convert Gross Income: (GrossA / RateA) * RateB
+      const convertedGross = (inputs.grossIncome / rateA) * rateB;
+      
+      // Round to nearest 100 for cleaner UI
+      const roundedGross = Math.round(convertedGross / 100) * 100;
+
+      setInputsB(prev => ({
+          ...prev, // Preserve B's Country/Region
+          grossIncome: roundedGross,
+          details: { ...inputs.details } // Sync Profile
+      }));
   };
   
   const swapScenarios = () => {
       const temp = { ...inputs };
-      setInputs({ ...inputsB, country: inputsB.country });
-      setInputsB({ ...temp, country: temp.country });
+      
+      // IMPROVED LOGIC: Mathematically invert the Cost of Living Adjustment
+      // If B was +20% (Factor 1.2) vs A, then A is (1/1.2 = 0.833) -16.6% vs B.
+      const currentFactor = 1 + (colDiff / 100);
+      let newDiff = 0;
+      
+      if (currentFactor > 0.1) { // Prevent division by zero or extreme values
+           const newFactor = 1 / currentFactor;
+           newDiff = Math.round((newFactor - 1) * 100);
+      }
+      
+      // Clamp to slider limits to ensure UI consistency
+      newDiff = Math.max(-50, Math.min(100, newDiff));
+
+      setInputs({ ...inputsB });
+      setInputsB({ ...temp });
+      setColDiff(newDiff);
   };
 
   const handleAutoCalibrateCOLA = async () => {
@@ -1312,11 +1394,15 @@ const App: React.FC = () => {
     const regionB = inputsB.subRegion ? COUNTRY_RULES[inputsB.country].subNationalRules?.find(r => r.id === inputsB.subRegion)?.name : '';
     const locationB = regionB ? `${regionB}, ${COUNTRY_RULES[inputsB.country].name}` : COUNTRY_RULES[inputsB.country].name;
 
-    const prompt = `Compare the cost of living difference between ${locationA} and ${locationB}.
-    I need a single percentage number representing how much more or less expensive ${locationB} is compared to ${locationA}.
-    - If ${locationB} is 20% more expensive, return "20".
-    - If ${locationB} is 15% cheaper, return "-15".
-    - Return ONLY the number. Do not add % symbol or text.`;
+    // IMPROVED PROMPT: Explicitly ask for Rent & Consumer Prices
+    const prompt = `Compare the overall cost of living (specifically including Rent, Groceries, and Consumer Prices) between ${locationA} and ${locationB}.
+    I need a single percentage number representing how much higher (positive) or lower (negative) the cost of living in ${locationB} is compared to ${locationA}.
+    
+    Examples:
+    - If ${locationB} is 20% more expensive overall, return "20".
+    - If ${locationB} is 15% cheaper overall, return "-15".
+    
+    Return ONLY the integer number. Do not add % symbol or text.`;
 
     try {
         const res = await queryGemini(prompt, 'Global'); // Using 'Global' context for multi-country
@@ -1496,7 +1582,7 @@ const App: React.FC = () => {
         });
 
         // Use JPEG with 0.7 quality to significantly reduce file size (usually < 1MB)
-        const imgData = canvas.toDataURL('image/jpeg', 0.7);
+        const imgData = canvas.toDataURL('image/jpeg', 0.8);
         const { jsPDF } = window.jspdf;
         
         // A4 size
@@ -1509,7 +1595,7 @@ const App: React.FC = () => {
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
         
         const dateStr = new Date().toISOString().split('T')[0];
-        const fileName = `Payslip_${inputs.country}_${dateStr}.pdf`;
+        const fileName = `Statement_${inputs.country}_${dateStr}.pdf`;
         
         pdf.save(fileName);
         document.body.style.cursor = 'default';
@@ -1679,7 +1765,7 @@ const App: React.FC = () => {
       <header className="sticky top-0 z-[110] bg-slate-50/80 dark:bg-[#050505]/80 backdrop-blur-xl border-b border-gray-200/60 dark:border-[#222]">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
             <div className="flex items-center gap-3">
-                 <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center shadow-lg text-yellow-400 overflow-hidden border-2 border-white/20">
+                 <div className="w-14 h-14 bg-black rounded-2xl flex items-center justify-center text-yellow-400 overflow-hidden border-2 border-white/20">
                     <i className="fas fa-coins text-2xl"></i>
                 </div>
                 <h1 className="text-xl font-bold tracking-tight hidden sm:block dark:text-white">Global Net Pay</h1>
@@ -1912,7 +1998,7 @@ const App: React.FC = () => {
                                           </>
                                       )}
                                       
-                                      {/* Purchasing Power Insight */}
+                                      {/* Purchasing Power Insight & Lifestyle Matcher */}
                                       {comparisonCurrencyMode === 'base' && colDiff !== 0 && (
                                           <div className="mt-6 pt-6 border-t border-white/10">
                                               <div className="flex items-center justify-center gap-1 mb-2">
@@ -1923,6 +2009,17 @@ const App: React.FC = () => {
                                                   {normalized.purchasingPowerDiff >= 0 ? <i className="fas fa-arrow-trend-up"></i> : <i className="fas fa-arrow-trend-down"></i>}
                                                   {normalized.purchasingPowerDiff >= 0 ? 'Gains' : 'Loses'} {formatCurrency(Math.abs(normalized.purchasingPowerDiff), inputs.country)} value
                                               </div>
+                                              
+                                              {/* Lifestyle Matcher */}
+                                              {pppAnalysis && (
+                                                  <div className="mt-4 bg-white/5 rounded-xl p-3 border border-white/10">
+                                                      <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">To match Scenario A lifestyle in B, you need:</p>
+                                                      <p className="text-xl font-black text-white">{formatCurrency(pppAnalysis.requiredGrossB, inputsB.country)}</p>
+                                                      <p className={`text-[9px] font-bold mt-1 ${pppAnalysis.diffPercent > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                                          (Requires {Math.abs(pppAnalysis.diffPercent).toFixed(1)}% {pppAnalysis.diffPercent > 0 ? 'more' : 'less'} Gross)
+                                                      </p>
+                                                  </div>
+                                              )}
                                           </div>
                                       )}
                                   </div>
@@ -2067,6 +2164,59 @@ const App: React.FC = () => {
                          )}
                     </div>
                 </div>
+                
+                {/* Detailed Comparison Table */}
+                {result && resultB && (
+                    <div className="bg-white dark:bg-[#101012] rounded-[28px] border border-slate-200 dark:border-[#333] shadow-sm p-6 overflow-x-auto">
+                        <table className="w-full text-left text-sm whitespace-nowrap">
+                            <thead>
+                                <tr className="border-b border-gray-100 dark:border-[#333]">
+                                    <th className="pb-4 pl-4 font-extrabold text-slate-400 uppercase text-xs">Metric</th>
+                                    <th className="pb-4 text-blue-600 dark:text-blue-400 font-bold">{currentRules.name}</th>
+                                    <th className="pb-4 text-purple-600 dark:text-purple-400 font-bold">{rulesB.name}</th>
+                                    <th className="pb-4 pr-4 text-right font-bold text-slate-400">Diff</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 dark:divide-[#222]">
+                                <tr>
+                                    <td className="py-4 pl-4 font-bold text-slate-700 dark:text-slate-300">Gross Income</td>
+                                    <td className="py-4">{formatCurrency(result.grossAnnual, inputs.country)}</td>
+                                    <td className="py-4">{formatCurrency(inputsB.grossIncome, inputsB.country)}</td>
+                                    <td className="py-4 pr-4 text-right text-slate-500 font-medium">
+                                        {comparisonCurrencyMode === 'base' 
+                                            ? formatCurrency(normalized.netB - normalized.netA + (result.totalDeductionsMonthly * 12) - (resultB.totalDeductionsMonthly * 12), inputs.country) // Approx Gross Diff
+                                            : '-'
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td className="py-4 pl-4 font-bold text-slate-700 dark:text-slate-300">Effective Tax Rate</td>
+                                    <td className="py-4">{((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1)}%</td>
+                                    <td className="py-4">{((1 - resultB.netAnnual/resultB.grossAnnual)*100).toFixed(1)}%</td>
+                                    <td className={`py-4 pr-4 text-right font-bold ${((1 - resultB.netAnnual/resultB.grossAnnual) - (1 - result.netAnnual/result.grossAnnual)) > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                        {(((1 - resultB.netAnnual/resultB.grossAnnual) - (1 - result.netAnnual/result.grossAnnual)) * 100).toFixed(1)}%
+                                    </td>
+                                </tr>
+                                <tr className="bg-slate-50/50 dark:bg-[#1c1c1e]">
+                                    <td className="py-4 pl-4 font-extrabold text-slate-900 dark:text-white">Net Pay (Annual)</td>
+                                    <td className="py-4 font-bold">{formatCurrency(result.netAnnual, inputs.country)}</td>
+                                    <td className="py-4 font-bold">{formatCurrency(resultB.netAnnual, inputsB.country)}</td>
+                                    <td className={`py-4 pr-4 text-right font-extrabold ${normalized.diff >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                        {comparisonCurrencyMode === 'base' ? (normalized.diff >= 0 ? '+' : '') + formatCurrency(normalized.diff, inputs.country) : 'N/A'}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td className="py-4 pl-4 font-bold text-slate-700 dark:text-slate-300">Purchasing Power (Adj)</td>
+                                    <td className="py-4">{formatCurrency(result.netAnnual, inputs.country)}</td>
+                                    <td className="py-4 text-slate-500">{comparisonCurrencyMode === 'base' ? formatCurrency(normalized.adjustedNetB, inputs.country) : 'N/A'}</td>
+                                    <td className={`py-4 pr-4 text-right font-bold ${normalized.purchasingPowerDiff >= 0 ? 'text-teal-500' : 'text-orange-500'}`}>
+                                        {comparisonCurrencyMode === 'base' ? (normalized.purchasingPowerDiff >= 0 ? '+' : '') + formatCurrency(normalized.purchasingPowerDiff, inputs.country) : 'N/A'}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 animate-in fade-in zoom-in-95 duration-300">
@@ -2501,99 +2651,154 @@ const App: React.FC = () => {
 
       <GeminiAssistant country={inputs.country} countryName={COUNTRY_RULES[inputs.country].name} />
 
-      {/* PDF Template (Hidden) */}
-      <div id="pdf-invoice-template" className="fixed top-0 left-0 -z-50 w-[800px] bg-white p-12 text-slate-900 invisible font-sans">
+      {/* PDF Template (Hidden but Rendered) */}
+      <div id="pdf-invoice-template" className="fixed top-0 left-[-9999px] z-[-1] w-[1000px] bg-white p-16 text-slate-900 font-sans antialiased">
+          
           {/* Header */}
-          <div className="flex justify-between items-start mb-12 border-b border-slate-100 pb-8">
-              <div>
-                  <div className="flex items-center gap-3 mb-2">
-                       <div className="w-10 h-10 bg-slate-900 rounded-lg flex items-center justify-center text-yellow-400">
-                           <i className="fas fa-coins text-lg"></i>
-                       </div>
-                       <h1 className="text-2xl font-bold text-slate-900">Global Net Pay</h1>
-                  </div>
-                  <p className="text-slate-500 text-sm font-medium">Salary Estimate Report</p>
+          <div className="flex justify-between items-start mb-16">
+              <div className="flex items-center gap-4">
+                   <div className="w-16 h-16 bg-slate-950 rounded-2xl flex items-center justify-center text-yellow-400 shadow-sm">
+                       <i className="fas fa-coins text-3xl"></i>
+                   </div>
+                   <div>
+                       <h1 className="text-3xl font-black text-slate-950 tracking-tight leading-none mb-1">Global Net Pay Calculator</h1>
+                       <p className="text-slate-500 text-sm font-medium tracking-wide">Salary & Tax Estimation Statement</p>
+                   </div>
               </div>
               <div className="text-right">
-                  <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Estimated Net Annual</p>
-                  <h2 className="text-3xl font-black text-slate-900 tracking-tight">{formatCurrency(result?.netAnnual || 0)}</h2>
+                  <h2 className="text-lg font-bold text-slate-400 uppercase tracking-widest mb-1">INVOICE / STATEMENT</h2>
+                  <div className="text-xs text-slate-500 font-medium">
+                    <p>Date: {new Date().toLocaleDateString()}</p>
+                    <p>Ref: {inputs.country}-{new Date().getFullYear()}</p>
+                  </div>
               </div>
           </div>
           
-          {/* Info Grid */}
-          <div className="grid grid-cols-2 gap-12 mb-12">
-              <div>
-                  <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-wider">Employee Profile</h3>
-                  <div className="space-y-2 text-sm">
-                      <div className="flex justify-between border-b border-slate-50 pb-1">
-                          <span className="text-slate-500">Location</span>
-                          <span className="font-bold text-slate-900">{currentRules.name} {inputs.subRegion ? `(${inputs.subRegion})` : ''}</span>
-                      </div>
-                      <div className="flex justify-between border-b border-slate-50 pb-1">
-                           <span className="text-slate-500">Status</span>
-                           <span className="font-bold text-slate-900">{inputs.details.maritalStatus === 'single' ? 'Single' : 'Married'}, Age {inputs.details.age}</span>
-                      </div>
-                      <div className="flex justify-between border-b border-slate-50 pb-1">
-                           <span className="text-slate-500">Calculated On</span>
-                           <span className="font-bold text-slate-900">{new Date().toLocaleDateString()}</span>
-                      </div>
+          {/* Hero Section */}
+          <div className="flex justify-between items-start mb-16">
+              {/* Employee Details */}
+              <div className="w-1/3">
+                  <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest border-b border-slate-100 pb-2">EMPLOYEE DETAILS</h3>
+                  <div className="grid grid-cols-[80px_1fr] gap-y-2 text-sm">
+                      <span className="font-bold text-slate-700">Country:</span>
+                      <span className="font-medium text-slate-900">{currentRules.name} {inputs.subRegion ? `(${inputs.subRegion})` : ''}</span>
+                      
+                      <span className="font-bold text-slate-700">Age:</span>
+                      <span className="font-medium text-slate-900">{inputs.details.age}</span>
+                      
+                      <span className="font-bold text-slate-700">Status:</span>
+                      <span className="font-medium text-slate-900 capitalize">{inputs.details.maritalStatus}</span>
                   </div>
               </div>
-              <div>
-                  <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-wider">Income Details</h3>
-                   <div className="space-y-2 text-sm">
-                      <div className="flex justify-between border-b border-slate-50 pb-1">
-                          <span className="text-slate-500">Gross Annual</span>
-                          <span className="font-bold text-slate-900">{formatCurrency(result?.grossAnnual || 0)}</span>
-                      </div>
-                      {inputs.annualBonus > 0 && (
-                          <div className="flex justify-between border-b border-slate-50 pb-1">
-                              <span className="text-slate-500">Annual Bonus</span>
-                              <span className="font-bold text-slate-900">{formatCurrency(inputs.annualBonus)}</span>
-                          </div>
-                      )}
-                      <div className="flex justify-between border-b border-slate-50 pb-1">
-                           <span className="text-slate-500">Effective Tax Rate</span>
-                           <span className="font-bold text-slate-900">{result?.grossAnnual ? ((1 - result.netAnnual/result.grossAnnual)*100).toFixed(1) : 0}%</span>
-                      </div>
-                  </div>
+
+              {/* Summary */}
+              <div className="text-right">
+                  <h3 className="text-xs font-bold uppercase text-slate-400 mb-1 tracking-widest">SUMMARY</h3>
+                  <h2 className="text-6xl font-black text-slate-900 tracking-tighter leading-none">{formatCurrency(result?.grossAnnual || 0)}</h2>
+                  <p className="text-slate-500 font-medium mt-1">Gross Annual Income</p>
               </div>
           </div>
 
           {/* Breakdown Table */}
-          <div className="mb-8">
-              <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-wider">Deduction Breakdown</h3>
-              <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase text-xs">
+          <div className="mb-12">
+              <table className="w-full text-left">
+                  <thead className="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
                       <tr>
-                          <th className="py-3 pl-4 rounded-l-lg">Description</th>
-                          <th className="py-3 text-right pr-4 rounded-r-lg">Amount</th>
+                          <th className="py-3 pl-6 rounded-l-lg">DESCRIPTION</th>
+                          <th className="py-3 text-right">ANNUAL</th>
+                          <th className="py-3 text-right">MONTHLY</th>
+                          <th className="py-3 pr-6 text-right rounded-r-lg w-24">%</th>
                       </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="text-sm font-medium">
+                      {/* Gross */}
+                      <tr className="border-b border-slate-50">
+                          <td className="py-5 pl-6 font-bold text-slate-900">Gross Income</td>
+                          <td className="py-5 text-right font-bold text-slate-900">{formatCurrency(result?.grossAnnual || 0)}</td>
+                          <td className="py-5 text-right font-bold text-slate-900">{formatCurrency(result?.grossMonthly || 0)}</td>
+                          <td className="py-5 pr-6 text-right font-bold text-slate-900">100%</td>
+                      </tr>
+                      
+                      {/* Deductions */}
                       {result?.deductionsBreakdown.filter(d => !d.isEmployer).map((d, i) => (
-                          <tr key={i}>
-                              <td className="py-3 pl-4 text-slate-700 font-medium">{d.name}</td>
-                              <td className="py-3 pr-4 text-right text-red-500 font-medium">-{formatCurrency(d.amount)}</td>
+                          <tr key={i} className="border-b border-slate-50">
+                              <td className="py-5 pl-6 text-red-500">{d.name}</td>
+                              <td className="py-5 text-right text-red-500">-{formatCurrency(d.amount)}</td>
+                              <td className="py-5 text-right text-red-500">-{formatCurrency(d.amount/12)}</td>
+                              <td className="py-5 pr-6 text-right text-red-500">{((Math.abs(d.amount)/(result?.grossAnnual||1))*100).toFixed(1)}%</td>
                           </tr>
                       ))}
+
+                      {/* Net Income */}
+                      <tr className="text-lg">
+                          <td className="py-8 pl-6 font-black text-slate-950 uppercase">NET INCOME</td>
+                          <td className="py-8 text-right font-black text-slate-950">{formatCurrency(result?.netAnnual || 0)}</td>
+                          <td className="py-8 text-right font-black text-slate-950">{formatCurrency(result?.netMonthly || 0)}</td>
+                          <td className="py-8 pr-6 text-right font-black text-slate-950">{((result?.netAnnual/(result?.grossAnnual||1))*100).toFixed(1)}%</td>
+                      </tr>
                   </tbody>
-                  <tfoot className="border-t-2 border-slate-100">
-                      <tr>
-                          <td className="py-4 pl-4 font-bold text-slate-900">Total Deductions</td>
-                          <td className="py-4 pr-4 text-right font-bold text-red-600">-{formatCurrency(result?.totalDeductionsMonthly * 12 || 0)}</td>
-                      </tr>
-                      <tr className="bg-blue-50/30 text-lg">
-                          <td className="py-4 pl-4 font-black text-blue-900">Net Pay</td>
-                          <td className="py-4 pr-4 text-right font-black text-blue-600">{formatCurrency(result?.netAnnual || 0)}</td>
-                      </tr>
-                  </tfoot>
               </table>
           </div>
+
+          {/* Living Costs Breakdown */}
+          <div className="bg-slate-50 rounded-2xl p-8 mb-8">
+              <h3 className="text-xs font-bold uppercase text-slate-400 mb-6 tracking-widest border-b border-slate-200 pb-2">MONTHLY LIVING COSTS BREAKDOWN</h3>
+              <div className="grid grid-cols-2 gap-x-12 gap-y-4 text-sm font-medium text-slate-700">
+                   {/* Left Column */}
+                   <div className="space-y-3">
+                       {['rent', 'utilities', 'insurance', 'emergencyFund'].map(key => {
+                           const val = (inputs.costs as any)[key];
+                           if(val <= 0) return null;
+                           return (
+                               <div key={key} className="flex justify-between">
+                                   <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                   <span className="font-bold text-slate-900">{formatCurrency(val)}</span>
+                               </div>
+                           )
+                       })}
+                   </div>
+                   {/* Right Column */}
+                   <div className="space-y-3">
+                       {['groceries', 'transport', 'debt', 'freedomFund'].map(key => {
+                           const val = (inputs.costs as any)[key];
+                           if(val <= 0) return null;
+                           return (
+                               <div key={key} className="flex justify-between">
+                                   <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                   <span className="font-bold text-slate-900">{formatCurrency(val)}</span>
+                               </div>
+                           )
+                       })}
+                   </div>
+              </div>
+              <div className="border-t border-slate-200 mt-6 pt-4 flex justify-between items-center font-bold text-slate-900">
+                  <span>Total Costs</span>
+                  <span>{formatCurrency(result?.personalCostsTotal || 0)}</span>
+              </div>
+          </div>
           
-          <div className="pt-8 border-t border-slate-100 text-center">
-               <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">GlobalNetPay Estimate</p>
-               <p className="text-[10px] text-slate-400">Figures are based on 2024/2025 statutory tax rules and may not reflect your specific situation.</p>
+          {/* Disposable Income Footer */}
+          <div className="bg-green-50 rounded-2xl p-8 flex justify-between items-center border border-green-100">
+              <div>
+                  <h3 className="text-xl font-black text-green-700 uppercase tracking-tight">DISPOSABLE INCOME (FREE CASH)</h3>
+                  <p className="text-green-600 font-medium text-sm mt-1">After Taxes & Living Costs</p>
+              </div>
+              <div className="flex gap-12 text-right">
+                  <div>
+                      <h2 className="text-3xl font-black text-green-800 leading-none">{formatCurrency((result?.disposableMonthly || 0) * 12)}</h2>
+                      <p className="text-green-600 text-[10px] font-bold uppercase mt-1 tracking-wider">ANNUAL</p>
+                  </div>
+                  <div>
+                      <h2 className="text-3xl font-black text-green-800 leading-none">{formatCurrency(result?.disposableMonthly || 0)}</h2>
+                      <p className="text-green-600 text-[10px] font-bold uppercase mt-1 tracking-wider">MONTHLY</p>
+                  </div>
+              </div>
+          </div>
+
+          {/* Footer Legal */}
+          <div className="mt-16 text-center">
+               <p className="text-[10px] text-slate-300 font-medium mb-1">Generated by Global Net Pay Calculator. This document is for estimation purposes only and does not constitute official financial advice.</p>
+               <p className="text-[10px] text-slate-300">Source Rules: {currentRules.sources.map(s => s.label).join(', ')}</p>
           </div>
       </div>
     </div>

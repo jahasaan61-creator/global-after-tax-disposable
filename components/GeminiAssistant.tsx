@@ -76,10 +76,11 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
         const result = await chatRef.current.sendMessageStream({ message: textToSend });
         
         let fullText = "";
+        let finalChunk: GenerateContentResponse | null = null;
         
         // Stream chunks
-        for await (const chunk of result.stream) {
-            const chunkText = chunk.text();
+        for await (const chunk of result) {
+            const chunkText = chunk.text;
             if (chunkText) {
                 fullText += chunkText;
                 setMessages(prev => {
@@ -88,18 +89,23 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                     return newMsg;
                 });
             }
+            // Capture the chunk to check for grounding metadata later
+            // Usually metadata comes in the last chunk(s)
+            if (chunk.candidates?.[0]?.groundingMetadata) {
+                finalChunk = chunk;
+            }
         }
 
-        // Get final aggregated response for metadata/grounding
-        const response: GenerateContentResponse = await result.response;
-        const citations = formatCitations(response);
-        
-        if (citations) {
-            setMessages(prev => {
-                const newMsg = [...prev];
-                newMsg[newMsg.length - 1].text = fullText + citations;
-                return newMsg;
-            });
+        // Get citations from the chunk containing metadata
+        if (finalChunk) {
+            const citations = formatCitations(finalChunk);
+            if (citations) {
+                setMessages(prev => {
+                    const newMsg = [...prev];
+                    newMsg[newMsg.length - 1].text = fullText + citations;
+                    return newMsg;
+                });
+            }
         }
 
     } catch (error) {
