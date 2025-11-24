@@ -3,7 +3,7 @@ import { CountryCode, UserInputs, CalculationResult, TaxReliefs, CountryRules, D
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
 import { GeminiAssistant } from './components/GeminiAssistant';
-import { queryGemini, getTaxReport, estimateLivingCosts } from './services/geminiService';
+import { queryGemini, getTaxReport, estimateLivingCosts, getOptimizationTips } from './services/geminiService';
 
 // Declare jsPDF and html2canvas on Window interface
 declare global {
@@ -1164,6 +1164,10 @@ const App: React.FC = () => {
   // AI Report State
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  
+  // AI Tips State
+  const [aiTips, setAiTips] = useState<string | null>(null);
+  const [loadingTips, setLoadingTips] = useState(false);
 
   // Auto-Fill State
   const [isAutoFilling, setIsAutoFilling] = useState(false);
@@ -1205,6 +1209,7 @@ const App: React.FC = () => {
   useEffect(() => {
       // Clear analysis on input change
       setAiAnalysis(null);
+      setAiTips(null);
   }, [inputs.country, inputs.grossIncome, inputs.annualBonus]);
 
   useEffect(() => {
@@ -1345,6 +1350,19 @@ const App: React.FC = () => {
     setAiAnalysis(report);
     setAnalyzing(false);
   }, [result, currentRules]);
+  
+  const handleGetTips = async () => {
+    if (!result) return;
+    setLoadingTips(true);
+    const tips = await getOptimizationTips(
+        currentRules.name,
+        result.grossAnnual,
+        currentRules.currencySymbol,
+        inputs
+    );
+    setAiTips(tips);
+    setLoadingTips(false);
+  };
 
   const handleAutoFillCosts = async () => {
       setIsAutoFilling(true);
@@ -1418,7 +1436,7 @@ const App: React.FC = () => {
   const handleReliefChange = (key: keyof TaxReliefs, val: number) => {
     setInputs(prev => ({
         ...prev,
-        taxReliefs: { ...(prev.taxReliefs || {}), [key]: val }
+        taxReliefs: { ...prev.taxReliefs, [key]: val }
     }));
   };
 
@@ -2385,6 +2403,63 @@ const App: React.FC = () => {
                                 </div>
                             )})}
                         </div>
+                    </div>
+                </div>
+
+                {/* AI Tips Card */}
+                <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl flex flex-col relative hover:z-50 overflow-hidden group">
+                    {/* Header Background */}
+                    <div className="absolute top-0 left-0 right-0 h-[100px] rounded-t-[32px] overflow-hidden z-0">
+                        <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500"></div>
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                    </div>
+                    
+                    <div className="p-6 md:p-8 pb-8 relative z-30 text-white shrink-0">
+                        <div className="flex justify-between items-start">
+                             <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
+                                    <i className="fas fa-lightbulb text-white"></i>
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-extrabold tracking-tight">Smart Tips</h2>
+                                    <p className="text-[10px] font-bold opacity-90 uppercase tracking-wide">Optimization & Savings</p>
+                                </div>
+                            </div>
+                            {aiTips && (
+                                <button 
+                                    onClick={handleGetTips} 
+                                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors backdrop-blur-md"
+                                    title="Regenerate"
+                                >
+                                    <i className={`fas fa-sync-alt text-xs ${loadingTips ? 'fa-spin' : ''}`}></i>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="p-6 md:p-8 -mt-6 bg-white dark:bg-[#101012] rounded-t-[32px] rounded-b-[32px] relative z-20 flex-grow flex flex-col gap-4">
+                        {!aiTips ? (
+                            <div className="text-center py-4">
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 font-medium leading-relaxed">
+                                    Get personalized, AI-powered suggestions on how to increase your take-home pay in {currentRules.name}.
+                                </p>
+                                <button 
+                                    onClick={handleGetTips}
+                                    disabled={loadingTips}
+                                    className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/30 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {loadingTips ? <i className="fas fa-circle-notch fa-spin"></i> : <i className="fas fa-magic"></i>}
+                                    {loadingTips ? 'Analyzing...' : 'Generate Optimization Tips'}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="animate-in fade-in slide-in-from-bottom-2">
+                                <MarkdownRenderer content={aiTips} />
+                                <p className="text-[10px] text-slate-400 mt-4 text-center">
+                                    *Suggestions are generated by AI. Always consult a qualified tax professional.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

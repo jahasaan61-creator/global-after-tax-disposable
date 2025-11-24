@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CountryCode } from '../types';
-import { queryGemini } from '../services/geminiService';
+import { createTaxChat, formatCitations } from '../services/geminiService';
+import { Chat, GenerateContentResponse } from '@google/genai';
 
 interface Props {
   country: CountryCode;
@@ -20,6 +21,8 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
   ]);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | undefined>(undefined);
+  
+  const chatRef = useRef<Chat | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,28 +54,74 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
     }
   }, []);
 
-  // Reset chat when country changes
+  // Initialize Chat Session when country changes
   useEffect(() => {
     setMessages([{ role: 'ai', text: `Hello! I'm your AI Tax Assistant. I can look up the very latest 2025 tax changes, specific deductions, or nearby tax offices for ${countryName}.` }]);
+    chatRef.current = createTaxChat(countryName, location);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [country]);
+  }, [country, countryName, location]);
 
   const handleSend = async (textOverride?: string) => {
     const textToSend = textOverride || query;
-    if (!textToSend.trim()) return;
+    if (!textToSend.trim() || !chatRef.current) return;
 
     setQuery('');
     setMessages(prev => [...prev, { role: 'user', text: textToSend }]);
     setLoading(true);
 
-    const response = await queryGemini(textToSend, countryName, location);
+    try {
+        // Create a placeholder message for the streaming response
+        setMessages(prev => [...prev, { role: 'ai', text: '' }]);
 
-    setMessages(prev => [...prev, { role: 'ai', text: response }]);
-    setLoading(false);
+        const result = await chatRef.current.sendMessageStream({ message: textToSend });
+        
+        let fullText = "";
+        
+        // Stream chunks
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            if (chunkText) {
+                fullText += chunkText;
+                setMessages(prev => {
+                    const newMsg = [...prev];
+                    newMsg[newMsg.length - 1].text = fullText;
+                    return newMsg;
+                });
+            }
+        }
+
+        // Get final aggregated response for metadata/grounding
+        const response: GenerateContentResponse = await result.response;
+        const citations = formatCitations(response);
+        
+        if (citations) {
+            setMessages(prev => {
+                const newMsg = [...prev];
+                newMsg[newMsg.length - 1].text = fullText + citations;
+                return newMsg;
+            });
+        }
+
+    } catch (error) {
+        console.error("Chat Error:", error);
+        setMessages(prev => {
+             // Remove the empty placeholder if it exists and failed immediately, or append error
+             const newMsg = [...prev];
+             if (newMsg[newMsg.length - 1].text === '') {
+                 newMsg[newMsg.length - 1].text = "Sorry, I encountered an error. Please try again.";
+             } else {
+                 newMsg.push({ role: 'ai', text: "\n\n[System Error: Connection interrupted]" });
+             }
+             return newMsg;
+        });
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleClear = () => {
       setMessages([{ role: 'ai', text: `Chat cleared. How else can I help you with ${countryName} taxes?` }]);
+      chatRef.current = createTaxChat(countryName, location); // Reset context
   };
 
   const quickPrompts = [
@@ -193,10 +242,14 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                     }`}>
                       <div className="whitespace-pre-wrap font-medium">
                           {renderMessageWithLinks(msg.text)}
+                          {/* Blinking Cursor for streaming */}
+                          {loading && idx === messages.length - 1 && msg.role === 'ai' && (
+                              <span className="inline-block w-1.5 h-3.5 bg-blue-500 ml-1 align-middle animate-pulse"></span>
+                          )}
                       </div>
                       
                       {/* Timestamp/Status (Visual only) */}
-                      {idx === messages.length - 1 && (
+                      {idx === messages.length - 1 && !loading && (
                           <div className={`text-[9px] mt-1 opacity-0 group-hover:opacity-60 transition-opacity absolute -bottom-5 ${msg.role === 'user' ? 'right-0' : 'left-0'} text-slate-400 whitespace-nowrap font-medium`}>
                               {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                           </div>
@@ -205,8 +258,8 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                   </div>
                 ))}
 
-                {/* Typing Indicator */}
-                {loading && (
+                {/* Loading Indicator (Initial connection only, before first chunk) */}
+                {loading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
                   <div className="flex justify-start items-end gap-3">
                     <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center shrink-0 mb-1">
                          <i className="fas fa-robot text-[10px] text-slate-500 dark:text-slate-400"></i>
@@ -255,7 +308,7 @@ export const GeminiAssistant: React.FC<Props> = ({ country, countryName }) => {
                         disabled={loading || !query.trim()}
                         className="absolute right-2 w-9 h-9 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20 flex items-center justify-center hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600 transition-all active:scale-90"
                     >
-                        {loading ? <i className="fas fa-spinner fa-spin text-xs"></i> : <i className="fas fa-paper-plane text-xs"></i>}
+                        {loading ? <i className="fas fa-stop text-xs"></i> : <i className="fas fa-paper-plane text-xs"></i>}
                     </button>
                 </div>
                 

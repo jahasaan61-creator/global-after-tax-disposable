@@ -1,4 +1,76 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Chat, GenerateContentResponse } from "@google/genai";
+
+// Helper to format citations from Grounding Metadata
+export const formatCitations = (response: GenerateContentResponse): string => {
+  let text = "";
+  const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+  
+  if (chunks && chunks.length > 0) {
+      const uniqueLinks = new Map<string, string>();
+      const mapLinks = new Map<string, string>();
+
+      chunks.forEach((c: any) => {
+          if (c.web?.uri && c.web?.title) {
+              uniqueLinks.set(c.web.uri, c.web.title);
+          }
+          if (c.maps?.uri && c.maps?.title) {
+              mapLinks.set(c.maps.uri, c.maps.title);
+          }
+      });
+
+      if (uniqueLinks.size > 0) {
+          text += `\n\n**Verified Sources:**\n`;
+          uniqueLinks.forEach((title, uri) => {
+              text += `- [${title}](${uri})\n`;
+          });
+      }
+
+      if (mapLinks.size > 0) {
+          text += `\n\n**Relevant Locations:**\n`;
+          mapLinks.forEach((title, uri) => {
+              text += `- [${title}](${uri})\n`;
+          });
+      }
+  }
+  return text;
+};
+
+export const createTaxChat = (country: string, location?: { latitude: number; longitude: number }): Chat => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  const tools: any[] = [
+    { googleSearch: {} },
+    { googleMaps: {} }
+  ];
+
+  const config: any = { tools };
+
+  if (location) {
+    config.toolConfig = {
+      retrievalConfig: {
+        latLng: {
+          latitude: location.latitude,
+          longitude: location.longitude
+        }
+      }
+    };
+  }
+  
+  return ai.chats.create({
+    model: "gemini-2.5-flash",
+    config: {
+      ...config,
+      systemInstruction: `You are an expert Global Mobility Assistant specializing in Taxes and Cost of Living for: ${country}.
+      
+      STRICT RULES:
+      1. USE the Google Search tool to verify 2024/2025 tax rates, thresholds, deductions, and current Cost of Living data.
+      2. USE the Google Maps tool to find locations if the user asks.
+      3. DO NOT hallucinate numbers. If uncertain, state that you cannot verify.
+      4. Answer concisely with verifiable numeric data.
+      5. Maintain conversation context. If the user refers to "it" or "that", use previous messages to understand.`
+    }
+  });
+};
 
 export const queryGemini = async (prompt: string, country: string, location?: { latitude: number; longitude: number }): Promise<string> => {
   try {
@@ -41,36 +113,7 @@ export const queryGemini = async (prompt: string, country: string, location?: { 
 
     // Extract text and grounding info
     let text = response.text || "";
-    
-    // Append citations if available from grounding chunks
-    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-    if (chunks && chunks.length > 0) {
-        const uniqueLinks = new Map<string, string>();
-        const mapLinks = new Map<string, string>();
-
-        chunks.forEach((c: any) => {
-            if (c.web?.uri && c.web?.title) {
-                uniqueLinks.set(c.web.uri, c.web.title);
-            }
-            if (c.maps?.uri && c.maps?.title) {
-                mapLinks.set(c.maps.uri, c.maps.title);
-            }
-        });
-
-        if (uniqueLinks.size > 0) {
-            text += `\n\n**Verified Sources:**\n`;
-            uniqueLinks.forEach((title, uri) => {
-                text += `- [${title}](${uri})\n`;
-            });
-        }
-
-        if (mapLinks.size > 0) {
-            text += `\n\n**Relevant Locations:**\n`;
-            mapLinks.forEach((title, uri) => {
-                text += `- [${title}](${uri})\n`;
-            });
-        }
-    }
+    text += formatCitations(response);
 
     return text || "I couldn't verify that information. Please try again.";
   } catch (error) {
@@ -181,5 +224,39 @@ export const estimateLivingCosts = async (
   } catch (error) {
     console.error("Cost Estimation Error:", error);
     return null;
+  }
+};
+
+export const getOptimizationTips = async (
+  country: string,
+  gross: number,
+  currency: string,
+  inputs: any // UserInputs
+): Promise<string> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `
+      Act as a tax advisor for ${country}.
+      Profile: Gross Income ${currency} ${gross}, Age ${inputs.details.age}, Status ${inputs.details.maritalStatus}.
+      
+      Provide exactly 3 short, actionable tips (max 1-2 sentences each) on how this specific user can legally reduce their tax bill, maximize allowances, or increase net pay efficiency in ${country} for the 2024/2025 tax year.
+      
+      Focus on high-impact strategies applicable to this income level, such as:
+      - Specific tax-advantaged accounts (e.g. 401k/HSA for US, ISA/Pension for UK, Pillar 3a for CH).
+      - Deductions they might be missing (Work expenses, home office).
+      - Salary sacrifice schemes if applicable.
+      
+      Format as a clean markdown list. Do not include introductory text or "Here are your tips".
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    return response.text || "No tips available.";
+  } catch (error) {
+    console.error("AI Tips Error:", error);
+    return "Could not generate tips at this time.";
   }
 };
