@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { CountryCode, UserInputs, CalculationResult, TaxReliefs, CountryRules, DeductionResult } from './types';
 import { COUNTRY_RULES } from './constants';
 import { calculateNetPay, calculateGrossFromNet } from './services/taxService';
 import { GeminiAssistant } from './components/GeminiAssistant';
-import { queryGemini, getTaxReport, estimateLivingCosts, getOptimizationTips } from './services/geminiService';
+import { queryGemini, getTaxReport, estimateLivingCosts } from './services/geminiService';
 
 // Declare jsPDF and html2canvas on Window interface
 declare global {
@@ -15,31 +16,19 @@ declare global {
 
 // --- HELPER FUNCTIONS ---
 
-const getFlagUrl = (code: CountryCode) => {
-  const map: Record<string, string> = {
-      [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
-      [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
-      [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
-      [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
-      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl',
-      [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae', [CountryCode.FRA]: 'fr',
-      [CountryCode.ITA]: 'it', [CountryCode.PRT]: 'pt', [CountryCode.SWE]: 'se'
-  };
-  return `https://flagcdn.com/w40/${map[code] || 'us'}.png`;
+const FLAG_MAP: Record<string, string> = {
+  [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
+  [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
+  [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
+  [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
+  [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl',
+  [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae', [CountryCode.FRA]: 'fr',
+  [CountryCode.ITA]: 'it', [CountryCode.PRT]: 'pt', [CountryCode.SWE]: 'se'
 };
 
-const getHDFlagUrl = (code: CountryCode) => {
-  const map: Record<string, string> = {
-      [CountryCode.USA]: 'us', [CountryCode.CHE]: 'ch', [CountryCode.CAN]: 'ca',
-      [CountryCode.DEU]: 'de', [CountryCode.IRL]: 'ie', [CountryCode.NZL]: 'nz',
-      [CountryCode.NOR]: 'no', [CountryCode.SGP]: 'sg', [CountryCode.BGD]: 'bd',
-      [CountryCode.ESP]: 'es', [CountryCode.GBR]: 'gb', [CountryCode.IND]: 'in',
-      [CountryCode.JPN]: 'jp', [CountryCode.AUS]: 'au', [CountryCode.NLD]: 'nl',
-      [CountryCode.SAU]: 'sa', [CountryCode.ARE]: 'ae', [CountryCode.FRA]: 'fr',
-      [CountryCode.ITA]: 'it', [CountryCode.PRT]: 'pt', [CountryCode.SWE]: 'se'
-  };
-  return `https://flagcdn.com/w640/${map[code] || 'us'}.png`;
-};
+const getFlagUrl = (code: CountryCode) => `https://flagcdn.com/w40/${FLAG_MAP[code] || 'us'}.png`;
+
+const getHDFlagUrl = (code: CountryCode) => `https://flagcdn.com/w640/${FLAG_MAP[code] || 'us'}.png`;
 
 // --- COMPONENTS ---
 
@@ -1164,10 +1153,6 @@ const App: React.FC = () => {
   // AI Report State
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  
-  // AI Tips State
-  const [aiTips, setAiTips] = useState<string | null>(null);
-  const [loadingTips, setLoadingTips] = useState(false);
 
   // Auto-Fill State
   const [isAutoFilling, setIsAutoFilling] = useState(false);
@@ -1209,7 +1194,6 @@ const App: React.FC = () => {
   useEffect(() => {
       // Clear analysis on input change
       setAiAnalysis(null);
-      setAiTips(null);
   }, [inputs.country, inputs.grossIncome, inputs.annualBonus]);
 
   useEffect(() => {
@@ -1350,8 +1334,12 @@ const App: React.FC = () => {
       const rateA = COUNTRY_RULES[inputs.country].exchangeRatePerUSD;
       const rateB = COUNTRY_RULES[inputsB.country].exchangeRatePerUSD;
       
+      // Use the effective calculated gross if we are in Net Mode (user sees target net, calc engine holds real gross)
+      // Otherwise use the input gross directly
+      const sourceGross = mode === 'net' ? result.grossAnnual : inputs.grossIncome;
+
       // Convert Gross Income: (GrossA / RateA) * RateB
-      const convertedGross = (inputs.grossIncome / rateA) * rateB;
+      const convertedGross = (sourceGross / rateA) * rateB;
       
       // Round to nearest 100 for cleaner UI
       const roundedGross = Math.round(convertedGross / 100) * 100;
@@ -1437,19 +1425,6 @@ const App: React.FC = () => {
     setAnalyzing(false);
   }, [result, currentRules]);
   
-  const handleGetTips = async () => {
-    if (!result) return;
-    setLoadingTips(true);
-    const tips = await getOptimizationTips(
-        currentRules.name,
-        result.grossAnnual,
-        currentRules.currencySymbol,
-        inputs
-    );
-    setAiTips(tips);
-    setLoadingTips(false);
-  };
-
   const handleAutoFillCosts = async () => {
       setIsAutoFilling(true);
       setAutoFillSuccess(false);
@@ -1629,7 +1604,7 @@ const App: React.FC = () => {
     
     // Costs
     Object.keys(inputs.costs).forEach(key => {
-        const val = (inputs.costs as any)[key];
+        const val = inputs.costs[key as keyof UserInputs['costs']];
         if (val > 0) {
              csvRows.push(['Cost', key.charAt(0).toUpperCase() + key.slice(1), (-val * 12).toFixed(2), (-val).toFixed(2)]);
         }
@@ -1659,7 +1634,7 @@ const App: React.FC = () => {
       url.searchParams.set('bonus', inputs.annualBonus.toString());
 
       Object.keys(inputs.costs).forEach(key => {
-          const val = (inputs.costs as any)[key];
+          const val = inputs.costs[key as keyof UserInputs['costs']];
           url.searchParams.set(key, val.toString());
       });
       
@@ -1669,7 +1644,10 @@ const App: React.FC = () => {
       });
   };
 
-  const costFields = [
+  type CostKey = keyof UserInputs['costs'];
+  type ReliefKey = keyof TaxReliefs;
+
+  const costFields: Array<{ key: CostKey; label: string }> = [
     { key: 'rent', label: 'Rent' },
     { key: 'groceries', label: 'Groceries' },
     { key: 'utilities', label: 'Utilities' },
@@ -1680,7 +1658,7 @@ const App: React.FC = () => {
     { key: 'freedomFund', label: 'Freedom/Runway Fund' }
   ];
 
-  const reliefFields = [
+  const reliefFields: Array<{ key: ReliefKey; label: string; tooltip: string }> = [
       { key: 'pensionContribution', label: 'Pension / 401k', tooltip: 'Pre-tax contributions to retirement funds (e.g. 401k, Superannuation, Pillar 2).' },
       { key: 'privateHealth', label: 'Health Insurance', tooltip: 'Private medical insurance premiums if tax deductible in your country.' },
       { key: 'mortgageInterest', label: 'Mortgage Interest', tooltip: 'Interest paid on your home loan (common deduction in US, Switzerland, etc.).' },
@@ -2487,7 +2465,7 @@ const App: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-x-4 gap-y-5">
                             {costFields.map((field) => {
-                                const val = (inputs.costs as any)[field.key];
+                                const val = inputs.costs[field.key];
                                 const pct = (result && result.netMonthly > 0 && val > 0) ? (val / result.netMonthly) * 100 : 0;
                                 return (
                                 <div key={field.key} className="relative">
@@ -2502,7 +2480,7 @@ const App: React.FC = () => {
                                     
                                     <SmartNumberInput
                                         value={val || 0}
-                                        onChangeValue={(v) => handleCostChange(field.key as any, v)}
+                                        onChangeValue={(v) => handleCostChange(field.key, v)}
                                         step={50}
                                         min={0}
                                         prefix={currentRules.currencySymbol}
@@ -2544,7 +2522,7 @@ const App: React.FC = () => {
                                     </div>
                                     <SmartNumberInput
                                         value={val}
-                                        onChangeValue={(v) => handleReliefChange(field.key as any, v)}
+                                        onChangeValue={(v) => handleReliefChange(field.key, v)}
                                         step={50}
                                         min={0}
                                         prefix={currentRules.currencySymbol}
@@ -2553,63 +2531,6 @@ const App: React.FC = () => {
                                 </div>
                             )})}
                         </div>
-                    </div>
-                </div>
-
-                {/* AI Tips Card */}
-                <div className="bg-white dark:bg-[#101012] rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)] border border-white dark:border-[#222] transition-all duration-300 hover:shadow-2xl flex flex-col relative hover:z-50 overflow-hidden group">
-                    {/* Header Background */}
-                    <div className="absolute top-0 left-0 right-0 h-[100px] rounded-t-[32px] overflow-hidden z-0">
-                        <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-orange-500"></div>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                    </div>
-                    
-                    <div className="p-6 md:p-8 pb-8 relative z-30 text-white shrink-0">
-                        <div className="flex justify-between items-start">
-                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/10 flex items-center justify-center shadow-lg">
-                                    <i className="fas fa-lightbulb text-white"></i>
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-extrabold tracking-tight">Smart Tips</h2>
-                                    <p className="text-[10px] font-bold opacity-90 uppercase tracking-wide">Optimization & Savings</p>
-                                </div>
-                            </div>
-                            {aiTips && (
-                                <button 
-                                    onClick={handleGetTips} 
-                                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors backdrop-blur-md"
-                                    title="Regenerate"
-                                >
-                                    <i className={`fas fa-sync-alt text-xs ${loadingTips ? 'fa-spin' : ''}`}></i>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="p-6 md:p-8 -mt-6 bg-white dark:bg-[#101012] rounded-t-[32px] rounded-b-[32px] relative z-20 flex-grow flex flex-col gap-4">
-                        {!aiTips ? (
-                            <div className="text-center py-4">
-                                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 font-medium leading-relaxed">
-                                    Get personalized, AI-powered suggestions on how to increase your take-home pay in {currentRules.name}.
-                                </p>
-                                <button 
-                                    onClick={handleGetTips}
-                                    disabled={loadingTips}
-                                    className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white text-sm font-bold shadow-lg shadow-orange-500/30 hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
-                                >
-                                    {loadingTips ? <i className="fas fa-circle-notch fa-spin"></i> : <i className="fas fa-magic"></i>}
-                                    {loadingTips ? 'Analyzing...' : 'Generate Optimization Tips'}
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="animate-in fade-in slide-in-from-bottom-2">
-                                <MarkdownRenderer content={aiTips} />
-                                <p className="text-[10px] text-slate-400 mt-4 text-center">
-                                    *Suggestions are generated by AI. Always consult a qualified tax professional.
-                                </p>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
@@ -2747,7 +2668,7 @@ const App: React.FC = () => {
                    {/* Left Column */}
                    <div className="space-y-3">
                        {['rent', 'utilities', 'insurance', 'emergencyFund'].map(key => {
-                           const val = (inputs.costs as any)[key];
+                           const val = inputs.costs[key as keyof UserInputs['costs']];
                            if(val <= 0) return null;
                            return (
                                <div key={key} className="flex justify-between">
@@ -2760,7 +2681,7 @@ const App: React.FC = () => {
                    {/* Right Column */}
                    <div className="space-y-3">
                        {['groceries', 'transport', 'debt', 'freedomFund'].map(key => {
-                           const val = (inputs.costs as any)[key];
+                           const val = inputs.costs[key as keyof UserInputs['costs']];
                            if(val <= 0) return null;
                            return (
                                <div key={key} className="flex justify-between">
