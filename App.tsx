@@ -1052,7 +1052,8 @@ const ResultsSection = React.memo(({
                                                 </tr>
                                             )}
                                             </React.Fragment>
-                                        ))) : (
+                                            );
+                                        })) : (
                                             <tr>
                                                 <td colSpan={4} className="px-6 py-8 text-center text-slate-400 text-sm italic">No employee deductions found for this salary.</td>
                                             </tr>
