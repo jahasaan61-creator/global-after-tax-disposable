@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { CountryCode, UserInputs, CalculationResult, TaxReliefs, CountryRules, DeductionResult } from './types';
 import { COUNTRY_RULES } from './constants';
@@ -1331,7 +1330,7 @@ const App: React.FC = () => {
       return 0;
   }, [debouncedConvertAmount, fromCurrency, toCurrency]);
   
-  const syncAtoB = () => {
+  const syncAtoB = useCallback(() => {
       // Essential Feature: Smart Sync (Convert Currency & Preserve Country)
       const rateA = COUNTRY_RULES[inputs.country].exchangeRatePerUSD;
       const rateB = COUNTRY_RULES[inputsB.country].exchangeRatePerUSD;
@@ -1351,9 +1350,9 @@ const App: React.FC = () => {
           grossIncome: roundedGross,
           details: { ...inputs.details } // Sync Profile
       }));
-  };
+  }, [inputs.country, inputsB.country, inputs.grossIncome, inputs.details, mode, result.grossAnnual]);
   
-  const swapScenarios = () => {
+  const swapScenarios = useCallback(() => {
       const temp = { ...inputs };
       
       // IMPROVED LOGIC: Mathematically invert the Cost of Living Adjustment
@@ -1372,9 +1371,9 @@ const App: React.FC = () => {
       setInputs({ ...inputsB });
       setInputsB({ ...temp });
       setColDiff(newDiff);
-  };
+  }, [inputs, inputsB, colDiff]);
 
-  const handleAutoCalibrateCOLA = async () => {
+  const handleAutoCalibrateCOLA = useCallback(async () => {
     if (!inputs.country || !inputsB.country || estimatingCola) return;
     setEstimatingCola(true);
 
@@ -1409,7 +1408,7 @@ const App: React.FC = () => {
     } finally {
         setEstimatingCola(false);
     }
-  };
+  }, [inputs.country, inputsB.country, inputs.subRegion, inputsB.subRegion, estimatingCola]);
 
   const handleAnalyze = useCallback(async () => {
     if (!result) return;
@@ -1427,7 +1426,7 @@ const App: React.FC = () => {
     setAnalyzing(false);
   }, [result, currentRules]);
   
-  const handleAutoFillCosts = async () => {
+  const handleAutoFillCosts = useCallback(async () => {
       setIsAutoFilling(true);
       setAutoFillSuccess(false);
       const regionName = inputs.subRegion ? COUNTRY_RULES[inputs.country].subNationalRules?.find(r => r.id === inputs.subRegion)?.name : undefined;
@@ -1461,7 +1460,7 @@ const App: React.FC = () => {
           alert("Could not estimate costs. Please try again or check your API key.");
       }
       setIsAutoFilling(false);
-  };
+  }, [inputs.country, inputs.subRegion, inputs.details, result.grossAnnual, currentRules]);
 
   // Derived values for Breakdown
   const employeeDeductions = useMemo(() => result ? result.deductionsBreakdown.filter(d => !d.isEmployer) : [], [result]);
@@ -1489,22 +1488,22 @@ const App: React.FC = () => {
     setTimeout(() => setHighlightIncome(false), 1500);
   }, [toCurrency, convertedResult]);
 
-  const handleCostChange = (key: keyof UserInputs['costs'], val: number) => {
+  const handleCostChange = useCallback((key: keyof UserInputs['costs'], val: number) => {
     setInputs(prev => ({
       ...prev,
       costs: { ...prev.costs, [key]: val }
     }));
-  };
+  }, []);
 
-  const handleReliefChange = (key: keyof TaxReliefs, val: number) => {
+  const handleReliefChange = useCallback((key: keyof TaxReliefs, val: number) => {
     setInputs(prev => ({
         ...prev,
         taxReliefs: { ...prev.taxReliefs, [key]: val }
     }));
-  };
+  }, []);
 
   // Function to sync values when toggling mode
-  const handleModeToggle = (newMode: CalcMode) => {
+  const handleModeToggle = useCallback((newMode: CalcMode) => {
     if (newMode === mode) return;
 
     const isMonthly = inputs.frequency === 'monthly';
@@ -1521,7 +1520,7 @@ const App: React.FC = () => {
         setInputs(prev => ({ ...prev, grossIncome: Math.round(currentGross) }));
     }
     setMode(newMode);
-  };
+  }, [mode, inputs.frequency, result]);
 
   const formatCurrency = useCallback((amount: number, code?: CountryCode) => {
     const rules = code ? COUNTRY_RULES[code] : currentRules;
@@ -1738,6 +1737,11 @@ const App: React.FC = () => {
           default: return result.netMonthly;
       }
   };
+
+  // Optimization: Memoize total cost calculation
+  const totalMonthlyCosts = useMemo(() => 
+    Object.values(inputs.costs).reduce((a: number, b) => a + (Number(b) || 0), 0), 
+  [inputs.costs]);
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-slate-900 dark:text-slate-100 bg-slate-50 dark:bg-[#050505] transition-colors duration-300 selection:bg-blue-500/30">
@@ -2490,6 +2494,19 @@ const App: React.FC = () => {
                                     />
                                 </div>
                             )})}
+                        </div>
+
+                        {/* Live Total Display */}
+                        <div className="mt-6 pt-4 border-t border-dashed border-slate-200 dark:border-[#333] flex justify-between items-center animate-in fade-in duration-300">
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-[#2c2c2e] flex items-center justify-center text-slate-400">
+                                    <i className="fas fa-coins text-[10px]"></i>
+                                </div>
+                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Monthly Costs</span>
+                            </div>
+                            <span className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                                {formatCurrency(totalMonthlyCosts)}
+                            </span>
                         </div>
                     </div>
                 </div>
