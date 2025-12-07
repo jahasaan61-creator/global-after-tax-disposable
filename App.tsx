@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { CountryCode, UserInputs, CalculationResult, TaxReliefs, CountryRules, DeductionResult } from './types';
 import { COUNTRY_RULES } from './constants';
@@ -2441,7 +2442,7 @@ const App: React.FC = () => {
                                             <span className={`text-xl font-extrabold ${result.personalCostsTotal > result.netMonthly ? 'text-red-500' : 'text-slate-900 dark:text-white'}`}>
                                                 {((result.personalCostsTotal / result.netMonthly) * 100).toFixed(0)}%
                                             </span>
-                                            <span className="text-[11px] font-bold text-slate-400">of Net Pay</span>
+                                            <span className="text-[11px] font-bold text-slate-400">({formatCurrency(result.personalCostsTotal)})</span>
                                         </div>
                                     </div>
                                     <div className="text-right">
